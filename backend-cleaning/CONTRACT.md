@@ -1,13 +1,16 @@
 # backend-cleaning: I/O contract
 
-Owner: @hazelLu6. This is the contract `backend-analysis/` and
-`backend-visualization/` code against. If something here changes, it gets
-announced on the board (issue #1) before it lands.
+Owner: @hazelLu6 — of `backend-cleaning/` only. This document describes what
+this folder *produces*, so that consumers have something stable to read
+against. It claims no ownership over the folders that consume it;
+`backend-analysis/`, `backend-visualization/`, and `frontend/` are owned by
+@equan04, @pauraque, and @uiobio respectively and they decide how their own
+code uses this output. If something here changes, it gets announced on the
+board (issue #1) before it lands.
 
-Status: **column-level schema is PENDING the team's Challenge choice.**
-Everything in sections 1-4 is mandated by the track prompt for both
-Challenge 1 (MMCows) and Challenge 2 (Mendeley THI tabular), so it is
-settled and safe to build against now.
+Status: **Challenge 1 (MMCows) is the team's Challenge** — called by the lead
+on 2026-11-13. Dataset: <https://huggingface.co/datasets/neis-lab/mmcows>.
+Sections 1-4 are the invariants; section 5 is the Challenge 1 schema.
 
 ## 1. Directory layout
 
@@ -51,7 +54,7 @@ Rules for consumers:
   predictor; use it for grouping, and for the by-animal error reporting the
   prompt asks for.
 
-A single helper owns this so the four roles cannot disagree about it:
+A single helper owns this so the roles cannot disagree about it:
 
 ```python
 from cleaning.splits import group_split      # signature is stable
@@ -82,20 +85,65 @@ prototype behaves when evidence is weak or modalities are absent. Policy:
   is not re-deriving it differently.
 - Column names `snake_case`. No spaces, no units embedded in names.
 
-## 5. PENDING: challenge-specific schema
+## 5. Challenge 1 schema (MMCows)
 
-Filled in once the team picks a Challenge. The two differ enough that writing
-both now would mean publishing a contract teammates build against and then
-throwing half of it away.
+14 days of synchronized dairy-cow data. The modalities are sampled at wildly
+different rates, so cleaning produces **one interim table per modality** at
+its native rate, then **one joined table** at a single declared cadence.
 
-- **If Challenge 1 (MMCows):** per-modality interim tables (multi-view RGB
-  frame index, UWB location, neck IMU/magnetometer, ambient pressure, core
-  body temperature, ankle sensor, indoor temp/humidity/THI, outdoor weather,
-  daily milk yield), joined to a single resampled cadence. The open question
-  is the join cadence, since the modalities are sampled at very different
-  rates and image volume dominates ingestion cost.
-- **If Challenge 2 (Mendeley THI):** one tabular table keyed
-  `cow_id x THI condition x repeat`, carrying genetic group, rectal
-  temperature, respiration rate, pulse rate, dry matter intake, milk yield
-  and composition, and blood metabolites. Repeated measures within a THI
-  category make `group_split` mandatory, not optional.
+### 5.1 Interim tables, native rate
+
+One table per modality in `data/interim/`, each keyed `cow_id` + `ts_utc`,
+each with its own schema sidecar:
+
+| Table | Holds |
+|---|---|
+| `frames` | multi-view RGB **index** — one row per (view, timestamp), with a relative path into `data/raw/`. Never the pixels. |
+| `uwb` | UWB location: `x_m`, `y_m`, plus whatever quality flag the source carries |
+| `neck_imu` | neck-mounted inertial + magnetic channels |
+| `pressure` | ambient pressure |
+| `cbt` | core body temperature |
+| `ankle` | ankle sensing |
+| `indoor_env` | indoor temperature, relative humidity, `thi` |
+| `outdoor_env` | outdoor weather |
+| `milk_yield` | daily milk yield, one row per cow-day |
+
+`frames` carries a path, not image bytes. Image volume dominates ingestion
+cost, so nothing downstream re-decodes frames it does not need — `model/`
+reads bytes lazily from the path.
+
+### 5.2 Joined table and the cadence question
+
+`data/processed/joined_<cadence>.parquet`, keyed `cow_id` + `ts_utc`, with
+the cadence written into both the filename and the sidecar so nobody has to
+guess what a row means.
+
+**Open decision, and it is mine to make — I will post it before it lands:**
+the join cadence. Milk yield is daily while IMU is sub-second, so any single
+cadence either forward-fills slow channels or aggregates fast ones. Starting
+point is **1 minute**, with fast channels aggregated (mean/min/max/std per
+window) and slow channels forward-filled with `*_is_imputed` set, since the
+prompt's heat-load and behavior questions live at minutes, not milliseconds.
+
+Consumers should read the cadence from the sidecar rather than hardcoding it.
+
+### 5.3 What each consumer can rely on
+
+Not instructions — availability. Each owner decides how their folder uses
+this; these are the guarantees they can count on, and the gotchas worth
+knowing about.
+
+- **For `model/`** — `frames` gives the frame index; the sensor tables join to
+  it on `cow_id` + `ts_utc` for labels and context.
+- **For `backend-analysis/`** — `joined_<cadence>` is the analysis-ready
+  table. `assert_no_group_leakage` is available if you want a cheap guard
+  before training.
+- **For `backend-visualization/`** — `joined_<cadence>` plus the daily
+  `milk_yield` table. Worth knowing: a modality can be legitimately absent
+  for a given cow-window, so the sidecar is the reliable source of what
+  exists in a given run.
+- **For `frontend/`** — nothing here is a direct dependency; the data path
+  runs through `backend-visualization/`.
+
+Requests for a different shape, extra columns, or another cadence are welcome
+on the board — that is a cleaning change and I will make it.

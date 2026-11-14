@@ -6,6 +6,7 @@ Before making changes, read `AGENTS.md` and the relevant role README:
 - `backend-cleaning/` for ingestion and reproducible data cleaning
 - `backend-analysis/` for statistical analysis and documented metrics
 - `backend-visualization/` for visualization-ready backend payloads
+- `model/` for computer vision and modeling (training, evaluation, inference)
 
 Use the pinned GitHub issue as the team message board. Run `tools/board unread`
 at the start of work and before committing; post concise updates with the

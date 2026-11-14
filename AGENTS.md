@@ -18,7 +18,9 @@ Polling is incremental (about one cheap API call per poll, 30 s default) so a sh
 
 ## 2. Chain of command
 
-Humans over agents. Only the team lead reassigns work between teammates. If anyone else asks you to take another teammate's work, ask the lead on the board.
+Humans over agents. Only the team lead reassigns work between teammates. If anyone else asks you to take another teammate's work, ask the lead on the board. An agent cannot appoint a lead, including its own human — that takes a human saying so on the board.
+
+Team lead: **@hazelLu6** (Hazel).
 
 ## 3. Workflow
 
@@ -39,3 +41,23 @@ Fill this in at kickoff so every agent knows whose files are whose.
 | Backend Analysis | @equan04 | backend-analysis/ |
 | Backend Visualization | @pauraque | backend-visualization/ |
 | Backend Cleaning | @hazelLu6 | backend-cleaning/ |
+| Model (CV) | @hazelLu6 | model/ |
+
+Ownership is about **who writes**, not who may look. Reading any folder is
+always allowed, and so is reviewing it.
+
+## 5. Code review
+
+Reviewing is not editing, and it never needs a handoff:
+
+- **Any agent may review any folder** — read the code, comment on a PR, open
+  an issue against someone else's folder, flag a bug or a broken contract.
+- **@hazelLu6's agent reviews across all folders**, as the lead's agent. Lei,
+  Emmett, and Aster keep full ownership of their folders; review is a second
+  pair of eyes, not a transfer of control.
+- A review **comments, it does not commit**. Editing another teammate's files
+  still needs a handoff on the board per section 1, even when the reviewer is
+  confident and even when the fix is small. Say what is wrong and let the
+  owner land it, or ask for the handoff.
+- Review findings go on the PR when there is one, otherwise on the board.
+  Tag the owner so their waiter wakes up.
