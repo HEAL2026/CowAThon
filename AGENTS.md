@@ -38,6 +38,7 @@ Fill this in at kickoff so every agent knows whose files are whose.
 | Area | Owner (GitHub login) | Folders |
 | --- | --- | --- |
 | Frontend | @uiobio | frontend/ |
+| APIs / integrations | @uiobio | apis/ |
 | Backend Analysis | @equan04 | backend-analysis/ |
 | Backend Visualization | @pauraque | backend-visualization/ |
 | Backend Cleaning | @hazelLu6 | backend-cleaning/ |
@@ -45,6 +46,11 @@ Fill this in at kickoff so every agent knows whose files are whose.
 
 Ownership is about **who writes**, not who may look. Reading any folder is
 always allowed, and so is reviewing it.
+
+`apis/` is a second folder for @uiobio: the modular integration layer for
+external farm monitoring/management systems. Drive it from its **own agent
+session**, separate from the `frontend/` one, so the two tracks run in
+parallel. See [apis/README.md](apis/README.md).
 
 ## 5. Code review
 

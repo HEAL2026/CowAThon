@@ -2,7 +2,7 @@
 
 ![The hacking floor at Cal Hacks](docs/banner.jpg)
 
-This repository is organized into five directly-owned application roles:
+This repository is organized into directly-owned application roles:
 
 | Folder | Responsibility |
 |---|---|
@@ -11,6 +11,7 @@ This repository is organized into five directly-owned application roles:
 | `backend-analysis/` | Statistical analysis, aggregations, and documented metrics |
 | `backend-visualization/` | Visualization-ready queries, summaries, and payloads |
 | `model/` | Computer vision and modeling: training, evaluation, inference |
+| `apis/` | Modular integrations with external farm systems, plus mocks |
 
 Each folder contains a README describing its boundary. Keep shared contracts
 documented at the role that owns them and keep rendering code in `frontend`.
@@ -54,7 +55,7 @@ My teams ran this at two hackathons, and both boards are public if you want to s
 ### Copilot setup
 
 This repository includes `.github/copilot-instructions.md`, which tells
-Copilot to read `AGENTS.md`, respect the five role boundaries, and use the
+Copilot to read `AGENTS.md`, respect the role boundaries, and use the
 message board workflow. Copilot reads that file automatically when working in
 the repository.
 
