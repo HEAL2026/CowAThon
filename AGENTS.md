@@ -34,5 +34,6 @@ Humans over agents. Only the team lead reassigns work between teammates. If anyo
 Fill this in at kickoff so every agent knows whose files are whose.
 
 | Area | Owner (GitHub login) | Folders |
-|Frontend|@uiobio|frontend/|
+| --- | --- | --- |
+| Frontend | @uiobio | frontend/ |
 | | | |
