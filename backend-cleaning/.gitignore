@@ -1,0 +1,6 @@
+# Challenge data is never committed and never redistributed outside the
+# permissions attached to the Challenge. See CONTRACT.md section 1.
+data/
+
+__pycache__/
+*.py[cod]
