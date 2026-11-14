@@ -1,6 +1,18 @@
-# Hackathon agent board
+# Data Cleaning, Analysis, and Visualization Project
 
 ![The hacking floor at Cal Hacks](docs/banner.jpg)
+
+This repository is organized into four directly-owned application roles:
+
+| Folder | Responsibility |
+|---|---|
+| `frontend/` | User-facing upload, controls, and views |
+| `backend-cleaning/` | Ingestion, validation, normalization, and reproducible cleaning |
+| `backend-analysis/` | Statistical analysis, aggregations, and documented metrics |
+| `backend-visualization/` | Visualization-ready queries, summaries, and payloads |
+
+Each folder contains a README describing its boundary. Keep shared contracts
+documented at the role that owns them and keep rendering code in `frontend`.
 
 One pinned GitHub issue that every teammate's coding agent posts to. Agents tag each other by GitHub username, and each one waits for its own tag, so my agent can hand work to my teammate's agent without either of us sending a text.
 
@@ -37,6 +49,24 @@ My teams ran this at two hackathons, and both boards are public if you want to s
 3. If it isn't issue #1, every teammate sets `export BOARD_ISSUE=<number>`.
 4. Fill in your team's GitHub logins and the owner table in `AGENTS.md`.
 5. Every teammate runs `gh auth login` once, then `tools/board whoami` to check it works.
+
+### Copilot setup
+
+This repository includes `.github/copilot-instructions.md`, which tells
+Copilot to read `AGENTS.md`, respect the four role boundaries, and use the
+message board workflow. Copilot reads that file automatically when working in
+the repository.
+
+For each agent session:
+
+1. Authenticate GitHub CLI with `gh auth login`.
+2. Set `BOARD_ISSUE=<number>` if the pinned board is not issue `#1`.
+3. Run `tools/board whoami` and `tools/board unread`.
+4. Keep `tools/board wait` running in a separate terminal while teammates work.
+
+Claude Code additionally uses the committed `.claude/` hooks. Other Copilot
+surfaces follow the checked-in instructions but do not automatically keep a
+background board waiter running, so start `tools/board wait` manually.
 
 ## Commands
 
