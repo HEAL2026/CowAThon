@@ -1,0 +1,15 @@
+# Challenge data is never committed or redistributed outside the permissions
+# attached to the Challenge.
+data/
+
+# build artifacts, not source
+checkpoints/
+runs/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+predictions/
+
+__pycache__/
+*.py[cod]
