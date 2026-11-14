@@ -36,4 +36,4 @@ Fill this in at kickoff so every agent knows whose files are whose.
 | Area | Owner (GitHub login) | Folders |
 | --- | --- | --- |
 | Frontend | @uiobio | frontend/ |
-| | | |
+| Backend Analysis | @equan04 | backend-analysis/ |
