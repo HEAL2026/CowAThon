@@ -38,3 +38,4 @@ Fill this in at kickoff so every agent knows whose files are whose.
 | Frontend | @uiobio | frontend/ |
 | Backend Analysis | @equan04 | backend-analysis/ |
 | Backend Visualization | @pauraque | backend-visualization/ |
+| Backend Cleaning | @hazelLu6 | backend-cleaning/ |
