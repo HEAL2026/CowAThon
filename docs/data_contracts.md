@@ -70,6 +70,7 @@ the same pen. Resting-route exposure (S8) is only counted **within** a window.
 | `flag_id` | string | |
 | `cow_id` | string | |
 | `flagged_at` | timestamp UTC | |
+| `onset_utc` | timestamp UTC, opt | first clinical sign if known; the backtrace infectious window starts 48 h before it (see `docs/backtrace_spec.md` §3.1) |
 | `source` | `manual` \| `auto` | |
 | `type` | `clinical` \| `subclinical` \| `suspected` | |
 | `quarter` | `LF` \| `RF` \| `LR` \| `RR`, opt | |
@@ -82,6 +83,27 @@ the same pen. Resting-route exposure (S8) is only counted **within** a window.
 Wording rule carried from the frontend review: a flag is a **watch‑list /
 suspected** state, not a diagnosis. UI copy says "flagged for review", never
 "ill".
+
+## lying_bouts and resting_spots — real, backend‑cleaning
+
+`lying_bouts.parquet` (real): `cow_id, start_utc, end_utc, duration_min, x_m, y_m, z_m, n_fixes, in_pen_frac`
+— 1,462 bouts, 1,296 of them ≥ 20 min, in the centred UWB frame
+(x −11.99..11.91, y −8.81..7.88).
+
+`resting_spots.parquet` (real, derived): one row per cubicle‑level spot,
+clusters of bout centres with ≤ 1.5 m linkage, dwell‑weighted centroid.
+
+| column | type | notes |
+|---|---|---|
+| `spot_id` | string | `spot_01`… ordered by total dwell |
+| `center_x_m`, `center_y_m` | float | centred UWB frame |
+| `radius_m` | float | 1.5 |
+| `n_bouts`, `n_cows` | int | over all bouts ≥ 20 min |
+| `dwell_min` | float | total |
+| `is_synthetic` | bool | False |
+
+On the real data: 5 spots, four used by all 10 cows. The backtrace (spec §3.2)
+assigns each bout to its spot; per‑bout circles are a rendering, not a resource.
 
 ## manual — farmer‑entered, per cow
 
@@ -113,6 +135,15 @@ in `data/interim/` (uwb 15 s, labels 1 s; 10 Hz IMU stays in raw CSV).
 **Not in MMCows, so synthetic:** per‑visit milk, unit assignment and order,
 sanitation, conductivity/SCC, mastitis cases, bedding changes. Health records
 exist in `sub_data/health_records` (16 small files) and are being pulled.
+
+## Backtrace windows and bounds
+
+Set in `docs/backtrace_spec.md`. The investigation window is anchored at the
+flagged cows' `onset_utc` (fallback `flagged_at`), never at `max(flagged_at) − 72 h`.
+Resting successions stop at the next `bedding.changed_at`; milking successions
+stop at the unit's next `sanitation.sanitized_at` and at the session boundary.
+The synthetic sanitation table fires once per unit **after** each session, so it
+never separates two cows milked in the same session.
 
 ## Answers from Aster (board, 2026‑11‑15)
 
