@@ -5,6 +5,8 @@ const state = {
   overlay: false,
   selectedCow: null,
   restingFilter: false,
+  currentTsUtc: "2023-08-04T11:59:00Z",
+  currentPenId: null,
   modelWatchList: new Set(["Fern 221"]),
   manualWatchList: new Set(),
   groupFlags: new Map(),
@@ -21,6 +23,101 @@ const timeLabel = document.querySelector("#time-label");
 const slider = document.querySelector("#time-slider");
 const views = ["barn", "milking", "alerts", "messages"];
 const queryParams = new URLSearchParams(window.location.search);
+if (queryParams.get("ts_utc")) state.currentTsUtc = queryParams.get("ts_utc");
+if (queryParams.get("pen_id")) state.currentPenId = queryParams.get("pen_id");
+
+const TIME_RANGE = {
+  startMs: new Date("2023-07-21T17:30:00Z").getTime(),
+  endMs: new Date("2023-08-04T12:00:00Z").getTime(),
+  defaultMs: new Date("2023-08-04T11:59:00Z").getTime(), // 9 of 10 cows have UWB fixes
+  stepMs: 60 * 1000,
+};
+const TOTAL_MINUTES = Math.round((TIME_RANGE.endMs - TIME_RANGE.startMs) / TIME_RANGE.stepMs); // 19830 steps
+const DEFAULT_STEP = Math.round((TIME_RANGE.defaultMs - TIME_RANGE.startMs) / TIME_RANGE.stepMs); // 19829
+
+function stepToIso(step) {
+  const ms = TIME_RANGE.startMs + Math.round(Number(step)) * TIME_RANGE.stepMs;
+  return new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+function isoToStep(iso) {
+  const ms = new Date(iso).getTime();
+  if (isNaN(ms)) return DEFAULT_STEP;
+  const clamped = Math.max(TIME_RANGE.startMs, Math.min(TIME_RANGE.endMs, ms));
+  return Math.round((clamped - TIME_RANGE.startMs) / TIME_RANGE.stepMs);
+}
+
+function formatDisplayTime(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const month = d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+  const day = d.getUTCDate();
+  let hours = d.getUTCHours();
+  const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  return `${month} ${day}, ${hours}:${minutes} ${ampm} UTC`;
+}
+
+function getGridBounds(payload) {
+  const grid = payload?.grid || state.s12.penMap?.grid || {};
+  const cows = payload?.cows || state.s12.penMap?.cows || [];
+  const restingAreas = payload?.resting_areas || payload?.implicated_resting_areas || state.s12.penMap?.resting_areas || [];
+
+  if (grid.x_min_m != null && grid.x_max_m != null && grid.y_min_m != null && grid.y_max_m != null) {
+    const xMin = Number(grid.x_min_m);
+    const xMax = Number(grid.x_max_m);
+    const yMin = Number(grid.y_min_m);
+    const yMax = Number(grid.y_max_m);
+    return {
+      xMin,
+      xMax,
+      yMin,
+      yMax,
+      width: xMax - xMin || 24.9,
+      height: yMax - yMin || 17.7,
+      isCentered: true,
+    };
+  }
+
+  const hasNegativeCoords = cows.some((c) => {
+    const x = Number(c.uwb_x_m ?? c.x_coord);
+    const y = Number(c.uwb_y_m ?? c.y_coord);
+    return (!isNaN(x) && x < 0) || (!isNaN(y) && y < 0);
+  }) || restingAreas.some((a) => {
+    const x = Number(a.center_x_m ?? a.x_m);
+    const y = Number(a.center_y_m ?? a.y_m);
+    return (!isNaN(x) && x < 0) || (!isNaN(y) && y < 0);
+  }) || grid.origin === "center" || payload?.coordinate_system === "centered";
+
+  if (hasNegativeCoords) {
+    // Real barn with 0.5 m margin: 24.90 m x 17.70 m (aspect 1.407)
+    // x in [-11.99, 11.91] with 0.5m margin -> [-12.45, 12.45]
+    // y in [-8.81, 7.88] with 0.5m margin -> [-9.31, 8.39]
+    return {
+      xMin: -12.45,
+      xMax: 12.45,
+      yMin: -9.31,
+      yMax: 8.39,
+      width: 24.90,
+      height: 17.70,
+      isCentered: true,
+    };
+  }
+
+  // Fallback to legacy positive 0..width_m, 0..height_m space (synthetic default)
+  const width = Number(grid.width_m || 30);
+  const height = Number(grid.height_m || 15);
+  return {
+    xMin: 0,
+    xMax: width,
+    yMin: 0,
+    yMax: height,
+    width,
+    height,
+    isCentered: false,
+  };
+}
 const configuredApiBase = window.HERDWISE_API_BASE || queryParams.get("api");
 const apiBase = (configuredApiBase || "http://127.0.0.1:8000").replace(/\/$/, "");
 const interactiveApiBase = (
@@ -96,16 +193,33 @@ function ensureCowDot(record, index) {
     polygon.append(dot);
     attachCowDot(dot);
   }
+  dot.classList.add("api-cow");
   dot.dataset.cow = cowLabel(record);
   dot.dataset.restZone = record.zone || "zone-a";
-  dot.title = `${cowLabel(record)} · ${record.flag_status === "flagged" ? "Flagged for review" : "Observed by model"}`;
-  const width = state.s12.penMap?.grid?.width_m || 30;
-  const height = state.s12.penMap?.grid?.height_m || 15;
-  const x = Number(record.uwb_x_m ?? record.x_coord ?? ((index + 1) * width) / 10);
-  const y = Number(record.uwb_y_m ?? record.y_coord ?? ((index + 1) * height) / 10);
-  dot.style.left = `${Math.max(3, Math.min(95, (x / width) * 100))}%`;
-  dot.style.top = `${Math.max(8, Math.min(90, (y / height) * 100))}%`;
+
+  const rawX = record.uwb_x_m ?? record.x_coord;
+  const rawY = record.uwb_y_m ?? record.y_coord;
+  const isOutOfPen = Boolean(record.out_of_pen);
+  const hasCoordinates = rawX != null && rawY != null && !isNaN(Number(rawX)) && !isNaN(Number(rawY));
+
+  // Gaps / out-of-pen cows render as absent rather than snapping to edge
+  if (isOutOfPen || !hasCoordinates) {
+    dot.hidden = true;
+    dot.title = `${cowLabel(record)} · ${isOutOfPen ? "Out of pen" : "No UWB fix"}`;
+    state.cowRecords.set(dot.dataset.cow, record);
+    return dot;
+  }
+
+  const bounds = getGridBounds(state.s12.penMap);
+  const x = Number(rawX);
+  const y = Number(rawY);
+  const leftPct = ((x - bounds.xMin) / bounds.width) * 100;
+  const topPct = ((y - bounds.yMin) / bounds.height) * 100;
+
+  dot.style.left = `${Math.max(1, Math.min(98, leftPct))}%`;
+  dot.style.top = `${Math.max(1, Math.min(98, topPct))}%`;
   dot.hidden = false;
+  dot.title = `${cowLabel(record)} · ${record.flag_status === "flagged" ? "Flagged for review" : "Observed by model"}`;
   dot.classList.toggle("api-flagged", record.flag_status === "flagged");
   dot.classList.toggle("api-exposed", Number(record.exposure_score || 0) > 0.35);
   dot.classList.toggle("api-source", Boolean(record.is_source_candidate));
@@ -116,7 +230,8 @@ function ensureCowDot(record, index) {
 function renderPenMap(payload) {
   state.s12.penMap = payload;
   const records = payload?.cows || [];
-  document.querySelectorAll(".cow-dot.api-cow").forEach((dot) => { dot.hidden = true; });
+  // Hide all dots first so unobserved/out-of-pen/absent cows do not persist
+  document.querySelectorAll(".cow-dot").forEach((dot) => { dot.hidden = true; });
   records.forEach((record, index) => ensureCowDot(record, index));
   const polygon = document.querySelector(".barn-polygon");
   polygon.classList.toggle("api-risk-overlay", records.some((record) => record.flag_status === "flagged" || Number(record.exposure_score || 0) > 0.35));
@@ -140,18 +255,21 @@ function renderRestingOverlays(payload) {
     || payload?.implicatedRestingCircles
     || payload?.implicated_elements?.resting_areas
     || [];
-  const width = Number(payload?.grid?.width_m || state.s12.penMap?.grid?.width_m || 30);
-  const height = Number(payload?.grid?.height_m || state.s12.penMap?.grid?.height_m || 15);
+  const bounds = getGridBounds(payload);
   areas.forEach((area, index) => {
     const x = Number(area.center_x_m ?? area.x_m ?? area.x ?? 0);
     const y = Number(area.center_y_m ?? area.y_m ?? area.y ?? 0);
     const radius = Number(area.radius_m ?? area.radius ?? 1.5);
     const circle = document.createElement("div");
     circle.className = "resting-circle";
-    circle.style.left = `${Math.max(0, ((x - radius) / width) * 100)}%`;
-    circle.style.top = `${Math.max(0, ((y - radius) / height) * 100)}%`;
-    circle.style.width = `${(radius * 2 / width) * 100}%`;
-    circle.style.height = `${(radius * 2 / height) * 100}%`;
+    const leftPct = ((x - radius - bounds.xMin) / bounds.width) * 100;
+    const topPct = ((y - radius - bounds.yMin) / bounds.height) * 100;
+    const widthPct = ((radius * 2) / bounds.width) * 100;
+    const heightPct = ((radius * 2) / bounds.height) * 100;
+    circle.style.left = `${Math.max(0, leftPct)}%`;
+    circle.style.top = `${Math.max(0, topPct)}%`;
+    circle.style.width = `${Math.max(1, widthPct)}%`;
+    circle.style.height = `${Math.max(1, heightPct)}%`;
     const cutoff = area.until_bedding_change_utc ? ` · until bedding change ${area.until_bedding_change_utc}` : "";
     circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius${cutoff}`;
     target.append(circle);
@@ -246,11 +364,12 @@ function renderAttribution(payload) {
     || payload?.implicated_circles
     || payload?.implicatedRestingCircles
     || payload?.transmission_source?.resting_areas
+    || state.s12.penMap?.resting_areas
     || [];
   const restingSummary = restingAreas.length
     ? `<div class="source-note"><strong>Real resting areas:</strong> ${restingAreas.map((area) => area.zone_id || area.cell_id || `circle (${area.center_x_m ?? "—"}m, ${area.center_y_m ?? "—"}m)`).join(", ")} · 1.5 m contact radius, bounded by bedding changes.</div>`
     : "";
-  const sourceSummary = restingAreas.length
+  const sourceSummary = (source.identifier || restingAreas.length)
     ? `<div class="source-note"><strong>Source candidate:</strong> ${source.identifier || "Real resting area"}${source.primary_index_cow ? ` · ${source.primary_index_cow}` : ""}</div>`
     : payload?.likely_route === "resting_area" || payload?.likely_route === "resting_cubicle_route"
       ? '<div class="source-note"><strong>Source candidate:</strong> Real-coordinate resting area data is pending.</div>'
@@ -286,13 +405,17 @@ function updateDataBadge(payloads) {
   document.querySelector("#connection-status").innerHTML = `<span class="status-dot"></span> ${allSynthetic ? "Demo service" : "API connected"}`;
 }
 
-async function loadS12Data() {
+async function loadS12Data(tsUtc = state.currentTsUtc) {
   try {
+    const params = new URLSearchParams();
+    if (tsUtc) params.set("ts_utc", tsUtc);
+    if (state.currentPenId) params.set("pen_id", state.currentPenId);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     const [penMap, herdHealth, attribution, impact] = await Promise.all([
-      fetchApi("/api/pen-map"),
-      fetchApi("/api/herd-health"),
-      fetchApi("/api/attribution"),
-      fetchApi("/api/impact"),
+      fetchApi(`/api/pen-map${qs}`),
+      fetchApi(`/api/herd-health${qs}`),
+      fetchApi(`/api/attribution${qs}`),
+      fetchApi(`/api/impact${qs}`),
     ]);
     renderPenMap(penMap);
     renderHerdHealth(herdHealth);
@@ -497,12 +620,50 @@ cowSearch.addEventListener("input", () => {
   cowSearchStatus.textContent = `${match.dataset.cow} highlighted`;
 });
 
-slider.addEventListener("input", () => {
-  const hour = Number(slider.value);
-  const suffix = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour % 12 || 12;
-  timeLabel.textContent = `Today, ${displayHour}:00 ${suffix}`;
-});
+let sliderDebounceTimer = null;
+if (slider) {
+  slider.min = "0";
+  slider.max = String(TOTAL_MINUTES);
+  slider.step = "1";
+  slider.value = String(isoToStep(state.currentTsUtc));
+
+  slider.addEventListener("input", () => {
+    const iso = stepToIso(slider.value);
+    state.currentTsUtc = iso;
+    if (timeLabel) timeLabel.textContent = formatDisplayTime(iso);
+    clearTimeout(sliderDebounceTimer);
+    sliderDebounceTimer = setTimeout(() => {
+      loadS12Data(iso);
+    }, 120);
+  });
+
+  slider.addEventListener("change", () => {
+    clearTimeout(sliderDebounceTimer);
+    const iso = stepToIso(slider.value);
+    state.currentTsUtc = iso;
+    if (timeLabel) timeLabel.textContent = formatDisplayTime(iso);
+    loadS12Data(iso);
+  });
+}
+
+const datePresets = [
+  { label: "Latest fix minute (Aug 4, 11:59 AM)", iso: "2023-08-04T11:59:00Z" },
+  { label: "Last full herd minute (Aug 4, 11:56 AM)", iso: "2023-08-04T11:56:00Z" },
+  { label: "Outbreak reference snapshot (Jul 28, 2:00 PM)", iso: "2023-07-28T14:00:00Z" },
+  { label: "Study start (Jul 21, 5:30 PM)", iso: "2023-07-21T17:30:00Z" },
+];
+let presetIndex = 0;
+const dateBtn = document.querySelector("#date-button");
+if (dateBtn) {
+  dateBtn.addEventListener("click", () => {
+    presetIndex = (presetIndex + 1) % datePresets.length;
+    const preset = datePresets[presetIndex];
+    state.currentTsUtc = preset.iso;
+    if (slider) slider.value = String(isoToStep(preset.iso));
+    if (timeLabel) timeLabel.textContent = formatDisplayTime(preset.iso);
+    loadS12Data(preset.iso);
+  });
+}
 
 document.querySelectorAll(".stall").forEach((stall) => {
   stall.addEventListener("click", () => {
@@ -577,4 +738,5 @@ document.querySelectorAll(".role-button").forEach((button) => {
 
 applyRolePresentation();
 showView("barn");
-loadS12Data();
+if (timeLabel) timeLabel.textContent = formatDisplayTime(state.currentTsUtc);
+loadS12Data(state.currentTsUtc);
