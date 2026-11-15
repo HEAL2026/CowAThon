@@ -31,6 +31,22 @@ class TestS5S7Pipeline(unittest.TestCase):
         c01_row = day_df[day_df["cow_id"] == "C01"].iloc[0]
         self.assertGreater(c01_row["cbt_mean"], 38.0)
         self.assertGreater(c01_row["daily_milk_yield_kg"], 20.0)
+        # Without classifier columns, clf_* fields are None
+        self.assertIsNone(c01_row["clf_lying_time_min"])
+        self.assertIsNone(c01_row["clf_rumination_time_min"])
+
+    def test_aggregate_cow_day_features_with_classifier(self):
+        df_clf = self.df.copy()
+        # Add classifier predictions
+        df_clf["behavior_name"] = ["lying", "ruminating", "feeding", "walking"] * (len(df_clf) // 4)
+        day_df = aggregate_cow_day_features(df_clf)
+        c01_row = day_df[day_df["cow_id"] == "C01"].iloc[0]
+        self.assertIsNotNone(c01_row["clf_lying_time_min"])
+        self.assertIsNotNone(c01_row["clf_rumination_time_min"])
+        self.assertEqual(c01_row["clf_lying_time_min"], 15)
+        self.assertEqual(c01_row["clf_rumination_time_min"], 15)
+        self.assertEqual(c01_row["clf_feeding_time_min"], 15)
+        self.assertEqual(c01_row["clf_walking_time_min"], 15)
 
     def test_tiered_baselines_cold_start_progression(self):
         current_day = aggregate_cow_day_features(self.df)

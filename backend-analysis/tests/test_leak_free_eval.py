@@ -3,7 +3,7 @@
 import unittest
 import numpy as np
 import pandas as pd
-from tests.fixtures import generate_synthetic_mmcows_data
+from analysis.fixtures import generate_synthetic_mmcows_data
 from analysis.evaluation import group_kfold, assert_no_group_leakage
 from analysis.baselines import evaluate_baselines_vs_multimodal
 

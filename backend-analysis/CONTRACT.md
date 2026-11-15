@@ -76,6 +76,12 @@ Analysis consumes the canonical processed joined table produced by `backend-clea
   - **Posture State**:
     - `resting`: $\text{activity\_index} < \tau_{\text{rest}}$ or `lying == 1`
     - `active`: $\text{activity\_index} \ge \tau_{\text{rest}}$
+  - **Trained Behavior Classifier Integration (`model/behavior`)**:
+    When behavior classifier columns (`behavior`, `behavior_name`, `prob`) from `behavior_minute.parquet` are present:
+    - **State Grouping**: Resting states (`lying` = 7, `resting` = 5) map to `"resting"`. Active states (`feeding` = 1, `standing` = 2, `walking` = 3, `drinking` = 6) map to `"active"`. Classifier state mapping takes precedence over IMU threshold heuristics.
+    - **Rumination Modulation**: When classified as `ruminating` (4), rumination proxy score is elevated proportionally to confidence: $\text{score} = \max(\text{score}, 70.0 + 30.0 \cdot \text{prob})$. When conflicting active behaviors (`feeding`, `walking`, `drinking`) are predicted, rumination proxy is suppressed ($0.15 \times$).
+    - **Daily Durations (`cow_day_features.parquet`)**: Aggregates daily minutes spent in classifier states: `clf_lying_time_min`, `clf_rumination_time_min`, `clf_feeding_time_min`, `clf_standing_time_min`, and `clf_walking_time_min`. If classifier columns are absent, these fields degrade gracefully to `None` preserving backward compatibility.
+    - **Ground Truth Validation**: Pristine `behavior_mode` in 2023-07-25 ground-truth windows remains unaltered as the validation target, computing `behavior_classifier_ground_truth_concordance` (overall accuracy, lying F1 score).
   - **Rumination Proxy ($0 - 100$)**:
     Quantifies characteristic rhythmic jaw movements during resting windows. Drops during severe heat distress or physiological disruption.
 

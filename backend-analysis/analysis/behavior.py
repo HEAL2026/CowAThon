@@ -97,17 +97,37 @@ def classify_posture_state(
     activity_index: pd.Series | np.ndarray,
     resting_threshold: float = 0.20,
     is_stationary_hardware: pd.Series | np.ndarray | None = None,
+    behavior_col: pd.Series | np.ndarray | None = None,
+    behavior_name_col: pd.Series | np.ndarray | None = None,
 ) -> pd.Series:
     """Classify posture / movement state into 'stationary_hardware', 'resting', or 'active'.
 
     Live cattle kinetic variance distributions:
     - Deep rest / lying: ~0.06 - 0.20 m/s²
     - Active walking / feeding: > 0.20 m/s² (p50 = 0.45 m/s²)
+
+    When trained behavior classifier predictions are available (behavior or behavior_name):
+    - Lying (7) or resting (5) are mapped to 'resting'
+    - Feeding (1), standing (2), walking (3), drinking (6) are mapped to 'active'
     """
     arr = np.asarray(activity_index, dtype=float)
     states = np.empty(arr.shape, dtype=object)
     states[arr < resting_threshold] = "resting"
     states[arr >= resting_threshold] = "active"
+
+    # Trained behavior classifier integration (takes precedence over pure IMU std threshold)
+    if behavior_name_col is not None:
+        b_names = np.asarray(behavior_name_col, dtype=object)
+        mask_rest = np.isin(b_names, ["resting", "lying"])
+        mask_active = np.isin(b_names, ["feeding", "standing", "walking", "drinking"])
+        states[mask_rest] = "resting"
+        states[mask_active] = "active"
+    elif behavior_col is not None:
+        b_nums = np.asarray(behavior_col, dtype=float)
+        mask_rest = np.isin(b_nums, [5, 7])
+        mask_active = np.isin(b_nums, [1, 2, 3, 6])
+        states[mask_rest] = "resting"
+        states[mask_active] = "active"
 
     if is_stationary_hardware is not None:
         hw_mask = np.asarray(is_stationary_hardware, dtype=bool)
@@ -122,10 +142,16 @@ def calculate_rumination_proxy(
     df: pd.DataFrame,
     activity_col: str = "activity_index",
     lying_col: str = "lying",
+    behavior_col: str = "behavior",
+    behavior_name_col: str = "behavior_name",
+    prob_col: str = "prob",
 ) -> pd.Series:
-    """Estimate rumination index (0 - 100) from neck-mounted IMU patterns and lying state.
+    """Estimate rumination index (0 - 100) from neck-mounted IMU patterns and behavior predictions.
 
     Rumination occurs predominantly during resting/lying windows in the 0.08 - 0.22 m/s² band.
+    When trained classifier predictions are available:
+    - Ruminating state (behavior=4 or 'ruminating') elevates rumination score proportionally to prob.
+    - Active conflicting behaviors ('feeding', 'walking', 'drinking') suppress rumination score.
     """
     if activity_col in df.columns:
         act = df[activity_col]
@@ -140,6 +166,21 @@ def calculate_rumination_proxy(
     if lying_col in df.columns:
         is_lying = df[lying_col].fillna(0).astype(int) == 1
         rumination_score = np.where(is_lying, rumination_score * 1.10, rumination_score * 0.90)
+
+    # Trained behavior classifier integration
+    prob = df[prob_col].fillna(0.8).values if prob_col in df.columns else 0.8
+    if behavior_name_col in df.columns:
+        b_name = df[behavior_name_col].fillna("").astype(str).str.lower().values
+        is_rum = (b_name == "ruminating")
+        is_active_conflict = np.isin(b_name, ["feeding", "walking", "drinking"])
+        rumination_score = np.where(is_rum, np.maximum(rumination_score, 70.0 + 30.0 * prob), rumination_score)
+        rumination_score = np.where(is_active_conflict, rumination_score * 0.15, rumination_score)
+    elif behavior_col in df.columns:
+        b_code = df[behavior_col].fillna(0).astype(int).values
+        is_rum = (b_code == 4)
+        is_active_conflict = np.isin(b_code, [1, 3, 6])
+        rumination_score = np.where(is_rum, np.maximum(rumination_score, 70.0 + 30.0 * prob), rumination_score)
+        rumination_score = np.where(is_active_conflict, rumination_score * 0.15, rumination_score)
 
     return pd.Series(
         np.clip(rumination_score, 0.0, 100.0),
@@ -254,5 +295,27 @@ def validate_behavior_against_ground_truth(
             "f1": round(f1, 3),
             "confusion_matrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
         }
+
+    # 3. Direct classifier evaluation against pristine ground-truth labels if present
+    pred_col = "behavior" if "behavior" in labeled_df.columns else None
+    if pred_col and behavior_mode_col in labeled_df.columns:
+        valid_clf = labeled_df[labeled_df[pred_col].notna() & labeled_df[behavior_mode_col].notna()]
+        if len(valid_clf) > 0:
+            gt_clf = valid_clf[behavior_mode_col].astype(int).values
+            pred_clf = valid_clf[pred_col].astype(int).values
+            clf_acc = float(np.mean(gt_clf == pred_clf))
+            gt_lying = (gt_clf == 7).astype(int)
+            pred_lying = (pred_clf == 7).astype(int)
+            tp_l = int(np.sum((gt_lying == 1) & (pred_lying == 1)))
+            fp_l = int(np.sum((gt_lying == 0) & (pred_lying == 1)))
+            fn_l = int(np.sum((gt_lying == 1) & (pred_lying == 0)))
+            prec_l = tp_l / (tp_l + fp_l) if (tp_l + fp_l) > 0 else 0.0
+            rec_l = tp_l / (tp_l + fn_l) if (tp_l + fn_l) > 0 else 0.0
+            f1_l = 2 * prec_l * rec_l / (prec_l + rec_l) if (prec_l + rec_l) > 0 else 0.0
+            results["behavior_classifier_ground_truth_concordance"] = {
+                "overall_accuracy": round(clf_acc, 3),
+                "lying_f1": round(f1_l, 3),
+                "n_compared": len(valid_clf),
+            }
 
     return results
