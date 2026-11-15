@@ -19,7 +19,7 @@ const state = {
 
 const timeLabel = document.querySelector("#time-label");
 const slider = document.querySelector("#time-slider");
-const views = ["barn", "milking", "alerts"];
+const views = ["barn", "milking", "alerts", "messages"];
 const apiBase = (window.HERDWISE_API_BASE || new URLSearchParams(window.location.search).get("api") || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 async function fetchApi(path, options = {}) {
@@ -256,6 +256,19 @@ function showView(view) {
   });
 }
 
+function applyRolePresentation() {
+  document.body.classList.toggle("farmer-mode", state.role === "farmer");
+  document.body.classList.toggle("vet-mode", state.role === "vet");
+  document.querySelector(".welcome-row h1").textContent = state.role === "vet"
+    ? "Herd detail for clinical review"
+    : "Today’s farm priorities";
+  document.querySelector(".section-heading h2").textContent = state.role === "vet"
+    ? "Barn overview and risk context"
+    : "Where should I look first?";
+  const toggle = document.querySelector("#role-details-toggle");
+  if (toggle) toggle.textContent = state.role === "vet" ? "Hide model details ↑" : "View model details →";
+}
+
 document.querySelectorAll("[data-view]").forEach((button) => {
   button.addEventListener("click", () => showView(button.dataset.view));
 });
@@ -339,6 +352,12 @@ document.querySelector("#filter-resting").addEventListener("click", () => {
   state.restingFilter = !state.restingFilter;
   document.querySelector("#filter-resting").textContent = state.restingFilter ? "Clear resting filter" : "Show resting spots";
   renderRestingFilter();
+});
+
+document.querySelector("#role-details-toggle").addEventListener("click", () => {
+  document.body.classList.toggle("role-details-open");
+  const open = document.body.classList.contains("role-details-open");
+  document.querySelector("#role-details-toggle").textContent = open ? "Hide model details ↑" : "View model details →";
 });
 
 document.querySelector("#manual-flag-form").addEventListener("submit", (event) => {
@@ -437,6 +456,44 @@ document.querySelectorAll(".suggestion").forEach((button) => {
   });
 });
 
+document.querySelectorAll(".citation").forEach((button) => {
+  button.addEventListener("click", () => {
+    const target = document.querySelector("#selected-citation");
+    target.textContent = `Selected reference: ${button.dataset.citation}`;
+    target.hidden = false;
+  });
+});
+
+document.querySelectorAll(".message-thread").forEach((thread) => {
+  thread.addEventListener("click", () => {
+    document.querySelectorAll(".message-thread").forEach((item) => item.classList.toggle("active", item === thread));
+    document.querySelector("#conversation-title").textContent = thread.dataset.thread === "herd" ? "Herd report · July 28" : "Fern 221 · follow-up";
+  });
+});
+
+document.querySelector("#message-citation").addEventListener("click", () => {
+  const selected = document.querySelector("#selected-citation");
+  selected.textContent = selected.hidden ? "Select a report, cow alert, or resting area to cite it here." : selected.textContent;
+  selected.hidden = false;
+});
+
+document.querySelector("#message-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = document.querySelector("#message-input");
+  const value = input.value.trim();
+  if (!value) return;
+  const message = document.createElement("article");
+  message.className = "message sent";
+  const author = document.createElement("span");
+  author.className = "message-author";
+  author.textContent = "You";
+  const body = document.createElement("p");
+  body.textContent = value;
+  message.append(author, body);
+  document.querySelector("#message-list").append(message);
+  input.value = "";
+});
+
 document.querySelector("#assistant-form").addEventListener("submit", (event) => {
   event.preventDefault();
   const input = document.querySelector("#assistant-input");
@@ -452,8 +509,10 @@ document.querySelectorAll(".role-button").forEach((button) => {
     state.role = button.dataset.role;
     document.querySelectorAll(".role-button").forEach((item) => item.classList.toggle("active", item === button));
     document.querySelector(".partner-summary .field-label").textContent = state.role === "vet" ? "Partner farms" : "Care team";
+    applyRolePresentation();
   });
 });
 
+applyRolePresentation();
 showView("barn");
 loadS12Data();
