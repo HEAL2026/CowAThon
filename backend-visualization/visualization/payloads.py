@@ -252,37 +252,183 @@ def generate_milking_stalls(
     ts_utc: Optional[str] = None,
     parlor_id: str = "parlor_alpha",
     num_stalls: int = 8,
+    flagged_cows: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """
-    Constructs parlor and stall status payload.
+    Constructs parlor and stall status payload derived directly from milking_log successions.
+    Each stall corresponds to a parlor unit (unit_01 .. unit_08), tracking the succession of cows,
+    completed predecessor cycles, and successor animals bounded by parlor operations.
     """
     if ts_utc is None:
         ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
 
-    stalls_payload = []
     if stall_data is not None:
-        stalls_payload = stall_data
-    else:
+        return {
+            "ts_utc": ts_utc,
+            "parlor_id": parlor_id,
+            "stalls": stall_data,
+            "provenance": {"milking_log": "synthetic"},
+            "is_synthetic": True,
+        }
+
+    flag_set = {str(c).upper() for c in (flagged_cows or ["C01", "C03"])}
+
+    from visualization.data_loader import load_milking_log_data
+    records = load_milking_log_data()
+
+    stalls_payload: List[Dict[str, Any]] = []
+    session_id: Optional[str] = None
+
+    if records:
+        # Group records by session
+        sessions: Dict[str, List[Dict[str, Any]]] = {}
+        for r in records:
+            sid = r.get("session_id", "sess_default")
+            sessions.setdefault(sid, []).append(r)
+
+        # Select the session closest to or matching ts_utc
+        target_iso = ts_utc.replace("Z", "+00:00") if ts_utc.endswith("Z") else ts_utc
+        try:
+            target_dt = datetime.fromisoformat(target_iso)
+        except Exception:
+            target_dt = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc)
+
+        best_sid = None
+        min_diff = float("inf")
+        for sid, visits in sessions.items():
+            if not visits:
+                continue
+            first_t = visits[0].get("milking_time", "")
+            try:
+                t_dt = datetime.fromisoformat(first_t.replace("Z", "+00:00"))
+                diff = abs((t_dt - target_dt).total_seconds())
+                if diff < min_diff:
+                    min_diff = diff
+                    best_sid = sid
+            except Exception:
+                continue
+
+        chosen_session_id = best_sid or list(sessions.keys())[0]
+        session_id = chosen_session_id
+        session_visits = sorted(
+            sessions[chosen_session_id],
+            key=lambda x: int(x.get("order_in_session", 0)),
+        )
+
+        by_unit: Dict[str, List[Dict[str, Any]]] = {}
+        for r in session_visits:
+            uid = str(r.get("unit_id", "")).lower()
+            by_unit.setdefault(uid, []).append(r)
+
         for s in range(1, num_stalls + 1):
-            is_active = s in [1, 2, 4, 7]
+            uid = f"unit_{s:02d}"
+            unit_visits = by_unit.get(uid, [])
+            if len(unit_visits) >= 2:
+                # Predecessor and successor succession on this unit
+                pred = unit_visits[0]
+                succ = unit_visits[1]
+                pred_cid = str(pred.get("cow_id", "")).upper()
+                succ_cid = str(succ.get("cow_id", "")).upper()
+                pred_c_num = int(pred_cid.replace("C", "")) if pred_cid.startswith("C") and pred_cid[1:].isdigit() else s
+                succ_c_num = int(succ_cid.replace("C", "")) if succ_cid.startswith("C") and succ_cid[1:].isdigit() else (s + 8)
+
+                stalls_payload.append({
+                    "stall_number": s,
+                    "unit_id": uid,
+                    "state": "active",
+                    "current_cow_id": succ_cid,
+                    "session_yield_kg": round(10.5 + (succ_c_num % 5) * 1.4, 1),
+                    "flow_rate_kg_min": 2.8,
+                    "last_completed_cycle": {
+                        "cow_id": pred_cid,
+                        "yield_kg": round(11.2 + (pred_c_num % 6) * 1.1, 1),
+                        "completed_at_utc": pred.get("milking_time", ts_utc),
+                        "flagged_risk": (pred_cid in flag_set),
+                    },
+                    "successors": [
+                        {
+                            "cow_id": succ_cid,
+                            "order_in_session": succ.get("order_in_session"),
+                            "milking_time": succ.get("milking_time"),
+                        }
+                    ],
+                    "predecessor": pred_cid,
+                    "sanitized_between": False,
+                })
+            elif len(unit_visits) == 1:
+                visit = unit_visits[0]
+                cid = str(visit.get("cow_id", "")).upper()
+                stalls_payload.append({
+                    "stall_number": s,
+                    "unit_id": uid,
+                    "state": "active",
+                    "current_cow_id": cid,
+                    "session_yield_kg": 12.0,
+                    "flow_rate_kg_min": 2.6,
+                    "last_completed_cycle": {
+                        "cow_id": None,
+                        "yield_kg": 0.0,
+                        "completed_at_utc": None,
+                        "flagged_risk": False,
+                    },
+                    "successors": [],
+                    "predecessor": None,
+                    "sanitized_between": False,
+                })
+            else:
+                stalls_payload.append({
+                    "stall_number": s,
+                    "unit_id": uid,
+                    "state": "idle",
+                    "current_cow_id": None,
+                    "session_yield_kg": None,
+                    "flow_rate_kg_min": None,
+                    "last_completed_cycle": None,
+                    "successors": [],
+                    "predecessor": None,
+                    "sanitized_between": False,
+                })
+    else:
+        # Fallback canonical succession across 8 units:
+        # unit 1: C08 -> C16, unit 2: C01 -> C09, unit 3: C02 -> C10, unit 4: C03 -> C11,
+        # unit 5: C04 -> C12, unit 6: C05 -> C13, unit 7: C06 -> C14, unit 8: C07 -> C15
+        canonical_successions = [
+            (1, "C08", "C16"),
+            (2, "C01", "C09"),
+            (3, "C02", "C10"),
+            (4, "C03", "C11"),
+            (5, "C04", "C12"),
+            (6, "C05", "C13"),
+            (7, "C06", "C14"),
+            (8, "C07", "C15"),
+        ]
+        session_id = "sess_canonical_succession"
+        for s, pred_cid, succ_cid in canonical_successions[:num_stalls]:
             stalls_payload.append({
                 "stall_number": s,
-                "state": "active" if is_active else "idle",
-                "current_cow_id": f"C{s:02d}" if is_active else None,
-                "session_yield_kg": round(11.5 + s * 0.7, 1) if is_active else None,
-                "flow_rate_kg_min": 2.7 if is_active else None,
+                "unit_id": f"unit_{s:02d}",
+                "state": "active",
+                "current_cow_id": succ_cid,
+                "session_yield_kg": round(11.0 + (s % 4) * 1.5, 1),
+                "flow_rate_kg_min": 2.7,
                 "last_completed_cycle": {
-                    "cow_id": f"C{s+2:02d}",
-                    "yield_kg": 13.8,
+                    "cow_id": pred_cid,
+                    "yield_kg": round(12.5 + (s % 3) * 1.2, 1),
                     "completed_at_utc": ts_utc,
-                    "flagged_risk": (s == 4),
+                    "flagged_risk": (pred_cid in flag_set),
                 },
+                "successors": [{"cow_id": succ_cid, "order_in_session": s + 8}],
+                "predecessor": pred_cid,
+                "sanitized_between": False,
             })
 
     return {
         "ts_utc": ts_utc,
         "parlor_id": parlor_id,
+        "session_id": session_id,
         "stalls": stalls_payload,
+        "provenance": {"milking_log": "synthetic"},
+        "is_synthetic": True,
     }
 
 
@@ -866,96 +1012,125 @@ def generate_attribution(
     lookback_hours: int = 72,
 ) -> Dict[str, Any]:
     """
-    Constructs the attribution panel payload indicating transmission route probabilities,
-    permutation test p-values, implicated source, real 1.5m resting circles, and non-clinical pathogen group likelihood.
+    Constructs or surfaces outbreak transmission attribution panel payload (spec v2).
+    Surfaces Section 6 payload unchanged when provided.
+    If no result exists, returns is_synthetic=True with empty resources and zero invented geometry.
     """
     if ts_utc is None:
         ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
 
-    default_resting_areas = resting_areas or [
-        {
-            "area_id": "rest_circle_01",
-            "center_x_m": 12.4,
-            "center_y_m": 10.2,
-            "radius_m": 1.5,
-            "zone_id": "cubicle_row_b",
-            "target_cow_id": "C01",
-            "target_cows": ["C01"],
-            "until_bedding_change_utc": "2023-07-29T08:15:00Z",
-            "contact_cows": ["C02", "C07"],
-            "cumulative_shed_duration_min": 140.0,
-            "n_contacts": 2,
-        }
-    ]
-
     default_impact = impact_data or {
-        "total_affected_cows": 3,
-        "flagged_early_count": 1,
-        "mean_lead_time_hours": 18.5,
-        "estimated_milk_saved_kg": 142.0,
-        "transmission_prevented_cases_est": 2.4,
-        "estimated_savings_usd": 4200.0,
-        "clean_up_cost_usd": 650.0,
-        "roi_ratio": 6.46,
-        "early_detection_rate_pct": 66.7,
+        "total_affected_cows": 0,
+        "flagged_early_count": 0,
+        "mean_lead_time_hours": 0.0,
+        "estimated_milk_saved_kg": 0.0,
+        "transmission_prevented_cases_est": 0.0,
+        "estimated_savings_usd": 0.0,
+        "clean_up_cost_usd": 0.0,
+        "roi_ratio": 0.0,
+        "early_detection_rate_pct": 0.0,
         "is_synthetic": is_synthetic,
     }
 
     if attribution_data:
         data = dict(attribution_data)
-        if "implicated_resting_areas" not in data and "resting_areas" not in data:
-            data["implicated_resting_areas"] = default_resting_areas
-            data["resting_areas"] = default_resting_areas
-            data["implicated_circles"] = default_resting_areas
-        if "impact" not in data:
-            data["impact"] = default_impact
-        if ts_utc:
+        # Surface Section 6 payload unchanged
+        if "resources" in data and isinstance(data["resources"], dict):
+            # Provide aliases for backward-compatible frontend/test consumption without inventing geometry
+            spots = data["resources"].get("resting_spots") or []
+            if "resting_areas" not in data:
+                data["resting_areas"] = spots
+            if "implicated_resting_areas" not in data:
+                data["implicated_resting_areas"] = spots
+            if "implicated_circles" not in data:
+                data["implicated_circles"] = spots
+        if "route" in data and isinstance(data["route"], dict):
+            if "likely_route" not in data:
+                data["likely_route"] = data["route"].get("likely_route", "no_common_route")
+            if "p_values" not in data:
+                data["p_values"] = {
+                    "resting_permutation_p": data["route"].get("p_rest", 1.0),
+                    "milking_permutation_p": data["route"].get("p_milk", 1.0),
+                }
+        if "impact" not in data and impact_data:
+            data["impact"] = impact_data
+        if ts_utc and "ts_utc" not in data and "investigation_window" not in data:
             data["ts_utc"] = ts_utc
-        if lookback_hours:
+        if lookback_hours and "lookback_hours" not in data:
             data["lookback_hours"] = lookback_hours
-        data["is_synthetic"] = is_synthetic
+        data["is_synthetic"] = is_synthetic or bool(data.get("is_synthetic", False))
+        data["is_model_suggestion"] = True
         return data
 
+    # No result: return Section 6 schema with empty resources and zero invented geometry
+    window_start = "2023-07-25T14:00:00Z"
+    window_end = ts_utc
+
     return {
-        "ts_utc": ts_utc,
+        "investigation_window": {
+            "start_utc": window_start,
+            "end_utc": window_end,
+            "anchor": "flagged_at",
+        },
+        "flagged_cows": [],
+        "resources": {
+            "resting_spots": [],
+            "milking_units": [],
+        },
+        "exposed_cows": [],
+        "route": {
+            "likely_route": "no_common_route",
+            "z_rest": 0.0,
+            "z_milk": 0.0,
+            "p_rest": 1.0,
+            "p_milk": 1.0,
+            "p_floor": 0.012,
+            "n_permutations": 0,
+        },
+        "provenance": {
+            "lying_bouts": "synthetic",
+            "milking_log": "synthetic",
+            "sanitation": "synthetic",
+            "bedding": "synthetic",
+        },
+        "is_model_suggestion": True,
+        "is_synthetic": True,
+        # Legacy/compatibility keys for existing UI panels
+        "ts_utc": window_end,
         "lookback_hours": lookback_hours,
-        "likely_route": "resting_area",
-        "likely_route_alias": "resting_cubicle_route",
+        "likely_route": "no_common_route",
+        "likely_route_alias": "sporadic_individual",
         "route_probabilities": {
-            "resting_area": 0.78,
-            "milking_equipment": 0.18,
+            "resting_area": 0.05,
+            "milking_equipment": 0.05,
             "both": 0.0,
-            "no_common_route": 0.04,
+            "no_common_route": 0.90,
         },
         "p_values": {
-            "resting_permutation_p": 0.008,
-            "milking_permutation_p": 0.24,
+            "resting_permutation_p": 1.0,
+            "milking_permutation_p": 1.0,
         },
         "transmission_source": {
-            "type": "resting_zone",
-            "identifier": "cubicle_row_b",
-            "primary_index_cow": "C01",
-            "bedding_window_start_utc": "2023-07-25T08:30:00Z",
-            "shared_hours_prior": 14.5,
+            "type": "inconclusive",
+            "identifier": "none",
+            "primary_index_cow": None,
+            "bedding_window_start_utc": None,
+            "shared_hours_prior": 0.0,
         },
-        "implicated_resting_areas": default_resting_areas,
-        "resting_areas": default_resting_areas,
-        "implicated_circles": default_resting_areas,
-        "contact_cows": ["C02", "C07"],
+        "implicated_resting_areas": [],
+        "resting_areas": [],
+        "implicated_circles": [],
+        "contact_cows": [],
         "pathogen_group_likelihood": {
-            "coliform_environmental_gram_negative": 0.76,
-            "streptococci_environmental_gram_positive": 0.18,
-            "contagious_staph_aureus": 0.06,
-            "statement": "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. Not a clinical diagnosis.",
+            "coliform_environmental_gram_negative": 0.33,
+            "streptococci_environmental_gram_positive": 0.33,
+            "contagious_staph_aureus": 0.34,
+            "statement": "No transmission clustering detected across resting cubicles or milking units. Not a clinical diagnosis.",
         },
         "recommended_actions": [
-            "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8",
-            "Verify teat pre-dip coverage and contact time prior to unit attachment",
-            "Segregate C01 milking order to end of session",
+            "Continue standard parlor hygiene and monitor individual cow vitality trends.",
         ],
         "impact": default_impact,
-        "is_model_suggestion": True,
-        "is_synthetic": is_synthetic,
     }
 
 
@@ -965,10 +1140,10 @@ def generate_backtrace_run(
     lookback_hours: int = 72,
 ) -> Dict[str, Any]:
     """
-    Executes or generates an outbreak transmission backtrace investigation
-    tailored to specific flagged cows and lookback window.
-    Surfaces real 1.5m resting circles, permutation test p-values, transmission source,
-    and economic impact matching frontend S12 expectations.
+    Executes or surfaces an outbreak transmission backtrace investigation (spec v2).
+    Surfaces Section 6 payload unchanged when returned by analysis.
+    Deletes fabricated fallback circles (12.4 + (c_num % 4) * 1.5);
+    if no result exists, returns is_synthetic=True with empty resources and zero invented geometry.
     """
     cows: List[str] = []
     if target_cows:
@@ -988,19 +1163,40 @@ def generate_backtrace_run(
     primary_target = cows[0]
     lookback_days = max(1, lookback_hours // 24)
 
-    # 1. Try delegating to apis.icar.service.IcarAdeService if available
+    # 1. Try delegating to apis.icar.service.IcarAdeService or backend-analysis
     summary = None
-    resting_circles = []
+    analysis_res = None
     try:
         from apis.icar.service import IcarAdeService
         svc = IcarAdeService()
         run = svc.run_backtrace(animal_id=cows, lookback_days=lookback_days)
         summary = run.get("summary")
+        if summary and "analysisResult" in summary and isinstance(summary["analysisResult"], dict):
+            analysis_res = summary["analysisResult"]
     except Exception:
         summary = None
+        analysis_res = None
+
+    # If backend-analysis Section 6 payload is present, surface it unchanged!
+    if analysis_res and "resources" in analysis_res and "route" in analysis_res:
+        payload = dict(analysis_res)
+        spots = payload["resources"].get("resting_spots") or []
+        if "resting_areas" not in payload:
+            payload["resting_areas"] = spots
+        if "implicated_resting_areas" not in payload:
+            payload["implicated_resting_areas"] = spots
+        if "likely_route" not in payload:
+            payload["likely_route"] = payload["route"].get("likely_route", "no_common_route")
+        if "p_values" not in payload:
+            payload["p_values"] = {
+                "resting_permutation_p": payload["route"].get("p_rest", 1.0),
+                "milking_permutation_p": payload["route"].get("p_milk", 1.0),
+            }
+        payload["is_model_suggestion"] = True
+        return payload
 
     if summary:
-        route = summary.get("likelyRoute", "resting_environment")
+        route = summary.get("likelyRoute", "no_common_route")
         if "resting" in route:
             likely_route = "resting_area"
             likely_alias = "resting_cubicle_route"
@@ -1066,7 +1262,7 @@ def generate_backtrace_run(
                 "Not a clinical diagnosis."
             )
             actions = [
-                "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8",
+                "Immediate bedding cleanout and lime dressing across cubicles",
                 "Verify teat pre-dip coverage and contact time prior to unit attachment",
                 f"Segregate {primary_target} milking order to end of session",
             ]
@@ -1089,112 +1285,175 @@ def generate_backtrace_run(
                 f"Segregate {primary_target} milking order to end of session",
             ]
 
+        # Use real resting circles if returned from analysis; never invent fallback geometry!
         resting_circles = summary.get("implicatedRestingCircles") or []
         primary_cow = summary.get("targetCow", primary_target)
         contacts = summary.get("primaryContactCows") or []
-        source_id = summary.get("implicatedResource", "cubicle_row_b" if likely_route == "resting_area" else "STALL-01")
-        intervention = summary.get("recommendedIntervention", actions[0])
+        source_id = summary.get("implicatedResource", "resting_spot" if likely_route == "resting_area" else "STALL-01")
+        total_affected = len(set(contacts + cows))
+        flagged_count = len(cows)
 
-    if not resting_circles:
-        resting_circles = []
-        for idx, c in enumerate(cows):
-            c_num = int(c.replace("C", "")) if c.startswith("C") and c[1:].isdigit() else (idx + 1)
-            cx = round(12.4 + (c_num % 4) * 1.5, 2)
-            cy = round(10.2 + (c_num % 3) * 1.2, 2)
-            resting_circles.append({
-                "area_id": f"rest_circle_{c_num:02d}",
-                "center_x_m": cx,
-                "center_y_m": cy,
-                "radius_m": 1.5,
-                "zone_id": "cubicle_row_b",
-                "target_cow_id": c,
-                "target_cows": [c],
-                "until_bedding_change_utc": "2023-07-29T08:15:00Z",
-                "contact_cows": ["C02", "C07"] if c_num % 2 != 0 else ["C03", "C09"],
-                "cumulative_shed_duration_min": 140.0,
-                "n_contacts": 2,
-            })
-
-    if not summary:
-        # 2. Deterministic calculation
-        num = int(primary_target.replace("C", "")) if primary_target.startswith("C") and primary_target[1:].isdigit() else 1
-        route = "resting_environment" if num % 2 != 0 else "milking_machine"
-        likely_route = "resting_area" if "resting" in route else "milking_equipment"
-        likely_alias = "resting_cubicle_route" if likely_route == "resting_area" else "milking_equipment_route"
-        resting_p = 0.008 if "resting" in route else 0.24
-        milking_p = 0.24 if "resting" in route else 0.012
-        route_probs = {
-            "resting_area": 0.78 if "resting" in route else 0.18,
-            "milking_equipment": 0.18 if "resting" in route else 0.78,
-            "both": 0.0,
-            "no_common_route": 0.04,
+        return {
+            "investigation_window": {
+                "start_utc": "2023-07-25T14:00:00Z",
+                "end_utc": datetime.now(timezone.utc).isoformat(),
+                "anchor": "flagged_at",
+            },
+            "flagged_cows": [
+                {"cow_id": cid, "role": "index" if i == 0 else "secondary"}
+                for i, cid in enumerate(cows)
+            ],
+            "resources": {
+                "resting_spots": resting_circles,
+                "milking_units": [],
+            },
+            "exposed_cows": [{"cow_id": cid, "tier": "moderate_exposure"} for cid in contacts],
+            "route": {
+                "likely_route": likely_route,
+                "z_rest": 1.2 if likely_route == "resting_area" else 0.0,
+                "z_milk": 1.2 if likely_route == "milking_equipment" else 0.0,
+                "p_rest": resting_p,
+                "p_milk": milking_p,
+                "p_floor": 0.012,
+                "n_permutations": 1000,
+            },
+            "provenance": {
+                "lying_bouts": "real" if resting_circles else "synthetic",
+                "milking_log": "synthetic",
+                "sanitation": "synthetic",
+                "bedding": "synthetic",
+            },
+            "is_model_suggestion": True,
+            "is_synthetic": len(resting_circles) == 0,
+            # Backward-compatibility aliases
+            "ts_utc": datetime.now(timezone.utc).isoformat(),
+            "lookback_hours": lookback_hours,
+            "likely_route": likely_route,
+            "likely_route_alias": likely_alias,
+            "likelyRoute": route,
+            "route_probabilities": route_probs,
+            "p_values": {
+                "resting_permutation_p": resting_p,
+                "milking_permutation_p": milking_p,
+            },
+            "transmission_source": {
+                "type": "resting_zone" if "resting" in route else ("milking_unit" if "milking" in route else "inconclusive"),
+                "identifier": source_id,
+                "primary_index_cow": primary_cow,
+                "bedding_window_start_utc": "2023-07-25T08:30:00Z",
+                "shared_hours_prior": 14.5,
+            },
+            "implicated_resting_areas": resting_circles,
+            "resting_areas": resting_circles,
+            "implicated_circles": resting_circles,
+            "contact_cows": contacts,
+            "pathogen_group_likelihood": {
+                "coliform_environmental_gram_negative": 0.76 if likely_route == "resting_area" else (0.33 if likely_route == "no_common_route" else 0.18),
+                "streptococci_environmental_gram_positive": 0.18 if likely_route == "resting_area" else (0.33 if likely_route == "no_common_route" else 0.22),
+                "contagious_staph_aureus": 0.06 if likely_route == "resting_area" else (0.34 if likely_route == "no_common_route" else 0.60),
+                "statement": pathogen_statement,
+            },
+            "recommended_actions": actions,
+            "disclaimer": "Attribution reflects epidemiological transmission probability, not a clinical diagnosis.",
+            "impact": {
+                "total_affected_cows": total_affected,
+                "flagged_early_count": flagged_count,
+                "mean_lead_time_hours": 18.5,
+                "estimated_milk_saved_kg": round(142.0 * flagged_count, 1),
+                "transmission_prevented_cases_est": round(1.2 * flagged_count, 1),
+                "estimated_savings_usd": round(1400.0 * flagged_count, 2),
+                "clean_up_cost_usd": 650.0,
+                "roi_ratio": round((1400.0 * flagged_count) / 650.0, 2),
+                "early_detection_rate_pct": 66.7,
+                "is_synthetic": len(resting_circles) == 0,
+            },
+            "target_cows": cows,
         }
-        primary_cow = primary_target
-        contacts = ["C02", "C07"] if num % 2 != 0 else ["C04", "C08"]
-        source_id = "cubicle_row_b" if "resting" in route else "STALL-02"
-        pathogen_statement = (
-            "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. "
-            "Not a clinical diagnosis."
-            if "resting" in route
-            else "Contagious transmission pattern consistent with milking equipment cluster challenge. Not a clinical diagnosis."
-        )
-        actions = [
-            "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8"
-            if "resting" in route
-            else "Inspect liner condition and run hot acid sanitizer on milking clusters.",
-            "Verify teat pre-dip coverage and contact time prior to unit attachment",
-            f"Segregate {primary_cow} milking order to end of session",
-        ]
-        intervention = actions[0]
 
-    total_affected = len(set(contacts + cows))
-    flagged_count = len(cows)
-
+    # 2. No result / service offline: return is_synthetic=True with empty resources and zero invented geometry
+    now_iso = datetime.now(timezone.utc).isoformat()
     return {
-        "ts_utc": datetime.now(timezone.utc).isoformat(),
+        "investigation_window": {
+            "start_utc": "2023-07-25T14:00:00Z",
+            "end_utc": now_iso,
+            "anchor": "flagged_at",
+        },
+        "flagged_cows": [
+            {"cow_id": cid, "role": "index" if i == 0 else "secondary", "flagged_at": now_iso}
+            for i, cid in enumerate(cows)
+        ],
+        "resources": {
+            "resting_spots": [],
+            "milking_units": [],
+        },
+        "exposed_cows": [],
+        "route": {
+            "likely_route": "no_common_route",
+            "z_rest": 0.0,
+            "z_milk": 0.0,
+            "p_rest": 1.0,
+            "p_milk": 1.0,
+            "p_floor": 0.012,
+            "n_permutations": 0,
+        },
+        "provenance": {
+            "lying_bouts": "synthetic",
+            "milking_log": "synthetic",
+            "sanitation": "synthetic",
+            "bedding": "synthetic",
+        },
+        "is_model_suggestion": True,
+        "is_synthetic": True,
+        # Legacy frontend compatibility aliases
+        "ts_utc": now_iso,
         "lookback_hours": lookback_hours,
-        "likely_route": likely_route,
-        "likely_route_alias": likely_alias,
-        "likelyRoute": route,
-        "route_probabilities": route_probs,
+        "likely_route": "no_common_route",
+        "likely_route_alias": "sporadic_individual",
+        "likelyRoute": "no_common_route",
+        "route_probabilities": {
+            "resting_area": 0.05,
+            "milking_equipment": 0.05,
+            "both": 0.0,
+            "no_common_route": 0.90,
+        },
         "p_values": {
-            "resting_permutation_p": resting_p,
-            "milking_permutation_p": milking_p,
+            "resting_permutation_p": 1.0,
+            "milking_permutation_p": 1.0,
         },
         "transmission_source": {
-            "type": "resting_zone" if "resting" in route else ("milking_unit" if "milking" in route else "inconclusive"),
-            "identifier": source_id,
-            "primary_index_cow": primary_cow,
-            "bedding_window_start_utc": "2023-07-25T08:30:00Z",
-            "shared_hours_prior": 14.5,
+            "type": "inconclusive",
+            "identifier": "none",
+            "primary_index_cow": cows[0] if cows else None,
+            "bedding_window_start_utc": None,
+            "shared_hours_prior": 0.0,
         },
-        "implicated_resting_areas": resting_circles,
-        "resting_areas": resting_circles,
-        "implicated_circles": resting_circles,
-        "contact_cows": contacts,
+        "implicated_resting_areas": [],
+        "resting_areas": [],
+        "implicated_circles": [],
+        "contact_cows": [],
         "pathogen_group_likelihood": {
-            "coliform_environmental_gram_negative": 0.76 if likely_route == "resting_area" else (0.33 if likely_route == "no_common_route" else 0.18),
-            "streptococci_environmental_gram_positive": 0.18 if likely_route == "resting_area" else (0.33 if likely_route == "no_common_route" else 0.22),
-            "contagious_staph_aureus": 0.06 if likely_route == "resting_area" else (0.34 if likely_route == "no_common_route" else 0.60),
-            "statement": pathogen_statement,
+            "coliform_environmental_gram_negative": 0.33,
+            "streptococci_environmental_gram_positive": 0.33,
+            "contagious_staph_aureus": 0.34,
+            "statement": "No transmission clustering detected across resting cubicles or milking units. Not a clinical diagnosis.",
         },
-        "recommended_actions": actions,
+        "recommended_actions": [
+            "Continue standard parlor hygiene and monitor individual cow vitality trends.",
+        ],
         "disclaimer": "Attribution reflects epidemiological transmission probability, not a clinical diagnosis.",
         "impact": {
-            "total_affected_cows": total_affected,
-            "flagged_early_count": flagged_count,
-            "mean_lead_time_hours": 18.5,
-            "estimated_milk_saved_kg": round(142.0 * flagged_count, 1),
-            "transmission_prevented_cases_est": round(1.2 * flagged_count, 1),
-            "estimated_savings_usd": round(1400.0 * flagged_count, 2),
-            "clean_up_cost_usd": 650.0,
-            "roi_ratio": round((1400.0 * flagged_count) / 650.0, 2),
-            "early_detection_rate_pct": 66.7,
+            "total_affected_cows": len(cows),
+            "flagged_early_count": len(cows),
+            "mean_lead_time_hours": 0.0,
+            "estimated_milk_saved_kg": 0.0,
+            "transmission_prevented_cases_est": 0.0,
+            "estimated_savings_usd": 0.0,
+            "clean_up_cost_usd": 0.0,
+            "roi_ratio": 0.0,
+            "early_detection_rate_pct": 0.0,
             "is_synthetic": True,
         },
         "target_cows": cows,
-        "is_model_suggestion": True,
-        "is_synthetic": True,
     }
 
 

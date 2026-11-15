@@ -175,7 +175,7 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
             )
 
         if path == "/api/milking-stalls":
-            return 200, generate_milking_stalls()
+            return 200, generate_milking_stalls(ts_utc=ts_utc)
 
         if path == "/api/watch-list":
             flagged, is_synth = get_watch_list_data()

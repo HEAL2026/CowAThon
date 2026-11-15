@@ -396,6 +396,59 @@ def load_milk_visits_data() -> List[Dict[str, Any]]:
     return []
 
 
+def load_milking_log_data() -> List[Dict[str, Any]]:
+    """
+    Loads milking log records from synthetic or placeholder data paths.
+    Returns list of dicts: cow_id, milking_time, unit_id, session_id, order_in_session, is_synthetic.
+    """
+    candidates = [
+        REPO_ROOT / "backend-cleaning" / "data" / "synthetic" / "milking_log.parquet",
+        Path("backend-cleaning/data/synthetic/milking_log.parquet"),
+        REPO_ROOT / "data" / "synthetic" / "milking_log.parquet",
+        REPO_ROOT / "data" / "placeholder" / "milking_log.json",
+        Path("data/placeholder/milking_log.json"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                if p.suffix == ".parquet":
+                    import pandas as pd
+                    df = pd.read_parquet(str(p))
+                    return df.to_dict(orient="records")
+                elif p.suffix == ".json":
+                    with open(p, "r", encoding="utf-8") as f:
+                        return json.load(f)
+            except Exception:
+                pass
+    return []
+
+
+def load_sanitation_data() -> List[Dict[str, Any]]:
+    """
+    Loads parlor sanitation records from synthetic or placeholder data paths.
+    """
+    candidates = [
+        REPO_ROOT / "backend-cleaning" / "data" / "synthetic" / "sanitation.parquet",
+        Path("backend-cleaning/data/synthetic/sanitation.parquet"),
+        REPO_ROOT / "data" / "synthetic" / "sanitation.parquet",
+        REPO_ROOT / "data" / "placeholder" / "sanitation.json",
+        Path("data/placeholder/sanitation.json"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                if p.suffix == ".parquet":
+                    import pandas as pd
+                    df = pd.read_parquet(str(p))
+                    return df.to_dict(orient="records")
+                elif p.suffix == ".json":
+                    with open(p, "r", encoding="utf-8") as f:
+                        return json.load(f)
+            except Exception:
+                pass
+    return []
+
+
 def get_pen_map_data(
     ts_utc: Optional[str] = None,
     pen_id: Optional[str] = None,

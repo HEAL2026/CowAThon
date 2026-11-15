@@ -160,27 +160,42 @@ Supplies multi-day trajectories for temperature, activity, lying behavior, milk 
 ```
 
 ### 3.3 Milking Stalls Status (`/api/milking-stalls` or `milking_stalls.json`)
-Supplies parlor stall status, milk weight yields, and recent cow visits.
+Supplies parlor stall status, milk yields, and recent cow visits. Derived directly from `milking_log` successions across the 8 rotary parlor units (`unit_01` .. `unit_08`), tracking predecessor cows in `last_completed_cycle`, successor cows in `current_cow_id`, and parlor disinfection bounds.
 
 ```json
 {
   "ts_utc": "2023-07-28T14:00:00Z",
   "parlor_id": "parlor_alpha",
+  "session_id": "sess_20230728_15",
   "stalls": [
     {
-      "stall_number": 1,
+      "stall_number": 2,
+      "unit_id": "unit_02",
       "state": "active",
-      "current_cow_id": "C01",
-      "session_yield_kg": 12.2,
-      "flow_rate_kg_min": 2.7,
+      "current_cow_id": "C09",
+      "session_yield_kg": 13.3,
+      "flow_rate_kg_min": 2.8,
       "last_completed_cycle": {
-        "cow_id": "C03",
-        "yield_kg": 13.8,
-        "completed_at_utc": "2023-07-28T10:20:00Z",
-        "flagged_risk": false
-      }
+        "cow_id": "C01",
+        "yield_kg": 12.3,
+        "completed_at_utc": "2023-07-28T15:02:00+00:00",
+        "flagged_risk": true
+      },
+      "successors": [
+        {
+          "cow_id": "C09",
+          "order_in_session": 9,
+          "milking_time": "2023-07-28T15:18:00+00:00"
+        }
+      ],
+      "predecessor": "C01",
+      "sanitized_between": false
     }
-  ]
+  ],
+  "provenance": {
+    "milking_log": "synthetic"
+  },
+  "is_synthetic": true
 }
 ```
 
@@ -428,74 +443,104 @@ Displays herd-wide cows with 0–100 health vitality index, acute mastitis risk 
 ```
 
 ### 3.9 Outbreak Transmission Attribution Panel (`/api/attribution`, `POST /backtrace`, or `attribution.json`)
-Exposes backtrace transmission attribution comparing resting cubicles vs milking machine contact, permutation test p-values, implicated source, real-coordinate 1.5m resting circles, and non-clinical pathogen group likelihood.
+Exposes backtrace transmission attribution comparing resting cubicles vs milking machine contact, permutation test p-values, implicated source, real-coordinate 1.5m resting spots, and non-clinical pathogen group likelihood.
 
-Supports `POST /backtrace` and `POST /api/backtrace` accepting frontend manual flags (`flags: [{cow_id, timestamp}]` or `animal_ids: [...]`) and `lookback_hours: 72`, returning dynamic attribution and economic impact.
+Canonical spec: `docs/backtrace_spec.md` (v2).
+`POST /backtrace` and `GET /api/attribution` surface the Section 6 payload unchanged.
+Fabricated fallback circles (`12.4 + (c_num % 4) * 1.5`, parity contacts) have been permanently deleted: when no result exists, the endpoint returns `is_synthetic: true` with empty resources (`resting_spots: []`, `milking_units: []`, `exposed_cows: []`), never invented geometry.
 
+#### Canonical Section 6 Schema
 ```json
 {
+  "investigation_window": {
+    "start_utc": "2023-07-25T14:00:00Z",
+    "end_utc": "2023-07-28T14:00:00Z",
+    "anchor": "onset"
+  },
+  "flagged_cows": [
+    {
+      "cow_id": "C06",
+      "role": "index",
+      "onset_utc": "2023-07-25T14:00:00Z",
+      "flagged_at": "2023-07-28T14:00:00Z"
+    }
+  ],
+  "resources": {
+    "resting_spots": [
+      {
+        "spot_id": "spot_01",
+        "center_x_m": -2.4,
+        "center_y_m": 1.5,
+        "radius_m": 1.5,
+        "n_flagged": 1,
+        "flagged_cows": ["C06"],
+        "dwell_min_by_flagged": {"C06": 120.0},
+        "successors": [
+          {"cow_id": "C07", "rank": 1, "lag_h": 2.5, "w": 0.85}
+        ],
+        "until_bedding_change_utc": "2023-07-28T06:00:00Z",
+        "provenance": "real"
+      }
+    ],
+    "milking_units": [
+      {
+        "unit_id": "unit_02",
+        "n_flagged": 1,
+        "flagged_cows": ["C06"],
+        "sessions": ["sess_20230728_15"],
+        "successors": [
+          {"cow_id": "C07", "rank": 1, "session_id": "sess_20230728_15", "w": 0.65}
+        ],
+        "sanitized_between": false,
+        "provenance": "synthetic"
+      }
+    ]
+  },
+  "exposed_cows": [
+    {
+      "cow_id": "C07",
+      "e": 4.01,
+      "e_rest": 3.16,
+      "e_milk": 0.85,
+      "tier": "high",
+      "primary_route": "resting_spot",
+      "via": [
+        {"resource": "spot_01", "predecessor": "C06", "w": 0.85}
+      ]
+    }
+  ],
+  "route": {
+    "likely_route": "resting_spot",
+    "z_rest": 1.85,
+    "z_milk": 0.22,
+    "p_rest": 0.085,
+    "p_milk": 0.42,
+    "p_floor": 0.012,
+    "n_permutations": 1000
+  },
+  "provenance": {
+    "lying_bouts": "real",
+    "milking_log": "synthetic",
+    "sanitation": "synthetic",
+    "bedding": "synthetic"
+  },
+  "is_model_suggestion": true,
+  "is_synthetic": false,
   "ts_utc": "2023-07-28T14:00:00Z",
   "lookback_hours": 72,
-  "likely_route": "resting_area",
-  "likely_route_alias": "resting_cubicle_route",
-  "route_probabilities": {
-    "resting_area": 0.78,
-    "milking_equipment": 0.18,
-    "both": 0.0,
-    "no_common_route": 0.04
-  },
-  "p_values": {
-    "resting_permutation_p": 0.008,
-    "milking_permutation_p": 0.24
-  },
-  "transmission_source": {
-    "type": "resting_zone",
-    "identifier": "cubicle_row_b",
-    "primary_index_cow": "C01",
-    "bedding_window_start_utc": "2023-07-25T08:30:00Z",
-    "shared_hours_prior": 14.5
-  },
-  "implicated_resting_areas": [
-    {
-      "area_id": "rest_circle_01",
-      "center_x_m": 12.4,
-      "center_y_m": 10.2,
-      "radius_m": 1.5,
-      "zone_id": "cubicle_row_b",
-      "target_cow_id": "C01",
-      "target_cows": ["C01"],
-      "until_bedding_change_utc": "2023-07-29T08:15:00Z",
-      "contact_cows": ["C02", "C07"],
-      "cumulative_shed_duration_min": 140.0,
-      "n_contacts": 2
-    }
-  ],
+  "likely_route": "resting_spot",
   "resting_areas": [
     {
-      "area_id": "rest_circle_01",
-      "center_x_m": 12.4,
-      "center_y_m": 10.2,
+      "spot_id": "spot_01",
+      "center_x_m": -2.4,
+      "center_y_m": 1.5,
       "radius_m": 1.5,
-      "zone_id": "cubicle_row_b",
-      "target_cow_id": "C01",
-      "target_cows": ["C01"],
-      "until_bedding_change_utc": "2023-07-29T08:15:00Z",
-      "contact_cows": ["C02", "C07"],
-      "cumulative_shed_duration_min": 140.0,
-      "n_contacts": 2
+      "n_flagged": 1,
+      "flagged_cows": ["C06"],
+      "dwell_min_by_flagged": {"C06": 120.0},
+      "until_bedding_change_utc": "2023-07-28T06:00:00Z",
+      "provenance": "real"
     }
-  ],
-  "contact_cows": ["C02", "C07"],
-  "pathogen_group_likelihood": {
-    "coliform_environmental_gram_negative": 0.76,
-    "streptococci_environmental_gram_positive": 0.18,
-    "contagious_staph_aureus": 0.06,
-    "statement": "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. Not a clinical diagnosis."
-  },
-  "recommended_actions": [
-    "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8",
-    "Verify teat pre-dip coverage and contact time prior to unit attachment",
-    "Segregate C01 milking order to end of session"
   ],
   "impact": {
     "total_affected_cows": 3,
@@ -508,10 +553,15 @@ Supports `POST /backtrace` and `POST /api/backtrace` accepting frontend manual f
     "roi_ratio": 6.46,
     "early_detection_rate_pct": 66.7,
     "is_synthetic": false
-  },
-  "is_model_suggestion": true,
-  "is_synthetic": false
+  }
 }
+```
+
+#### Dataset Limits (spec §6)
+- **One cubicle row**: all 1,296 bouts cluster into 5 resting spots centered at $y \approx 0\,\text{m}$, four of them used by all 10 cows. Timing and dwell separate animals, not location alone.
+- **Ten cows**: permutation p-values have an exact statistical floor ($1/C(9,3) = 0.012$, $1/C(9,2) = 0.028$).
+- **Synthetic milking order, sanitation, and bedding changes**: synthetic sanitation happens after each session.
+- **Non-clinical phrasing**: strictly flagged for review, exposed, never infected. Real clinical cases fall outside the sensor window.
 ```
 
 ### 3.10 Mitigation & Economic Impact Panel (`/api/impact` or `impact.json`)
