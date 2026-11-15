@@ -222,6 +222,71 @@ class TestS12Payloads(unittest.TestCase):
         for payload in endpoints_to_test:
             recurse(payload)
 
+    def test_pen_map_timestamp_sensitivity(self):
+        """Verifies pen map cow coordinates change dynamically across timestamps and stay in bounds."""
+        p1 = generate_pen_map(ts_utc="2023-07-26T09:00:00Z")
+        p2 = generate_pen_map(ts_utc="2023-07-28T14:00:00Z")
+        p3 = generate_pen_map(ts_utc="2023-07-30T20:00:00Z")
+
+        c1_c01 = next(c for c in p1["cows"] if c["cow_id"] == "C01")
+        c2_c01 = next(c for c in p2["cows"] if c["cow_id"] == "C01")
+        c3_c01 = next(c for c in p3["cows"] if c["cow_id"] == "C01")
+
+        # Coordinates must not be byte-identical across 4-day time spread
+        self.assertNotEqual((c1_c01["uwb_x_m"], c1_c01["uwb_y_m"]), (c2_c01["uwb_x_m"], c2_c01["uwb_y_m"]))
+        self.assertNotEqual((c2_c01["uwb_x_m"], c2_c01["uwb_y_m"]), (c3_c01["uwb_x_m"], c3_c01["uwb_y_m"]))
+
+        # Bounds check across all 16 cows
+        for payload in [p1, p2, p3]:
+            for cow in payload["cows"]:
+                self.assertGreaterEqual(cow["uwb_x_m"], 0.0)
+                self.assertLessEqual(cow["uwb_x_m"], 30.0)
+                self.assertGreaterEqual(cow["uwb_y_m"], 0.0)
+                self.assertLessEqual(cow["uwb_y_m"], 15.0)
+
+    def test_pen_map_with_cows_data_and_synthetic_gating(self):
+        """Verifies is_synthetic is False when real cow positions are supplied."""
+        custom_cows = [
+            {
+                "cow_id": "C01",
+                "display_name": "Cow C01",
+                "uwb_x_m": 14.2,
+                "uwb_y_m": 6.8,
+                "zone": "cubicle_row_a",
+                "activity_state": "resting",
+                "out_of_pen": False,
+                "flag_status": "flagged",
+                "exposure_score": 0.92,
+                "exposure_tier": "priority_watch",
+                "is_source_candidate": True,
+            }
+        ]
+        p = generate_pen_map(cows_data=custom_cows, is_synthetic=False)
+        self.assertFalse(p["is_synthetic"])
+        self.assertEqual(p["cows"][0]["uwb_x_m"], 14.2)
+        self.assertEqual(p["cows"][0]["uwb_y_m"], 6.8)
+
+    def test_generate_impact_ts_utc_guarantee(self):
+        """Verifies impact payload always carries ts_utc even if impact_data omitted it."""
+        raw_impact = {
+            "cohort_size": 16,
+            "total_affected_cows": 3,
+            "flagged_early_count": 2,
+        }
+        res = generate_impact(impact_data=raw_impact, ts_utc="2023-07-29T10:00:00Z")
+        self.assertEqual(res["ts_utc"], "2023-07-29T10:00:00Z")
+        self.assertEqual(res["cohort_size"], 16)
+
+    def test_backtrace_run_no_unbound_local_error(self):
+        """Verifies generate_backtrace_run handles service exceptions without UnboundLocalError."""
+        from unittest.mock import patch
+        with patch("apis.icar.service.IcarAdeService.run_backtrace", side_effect=RuntimeError("Simulated failure")):
+            run = generate_backtrace_run(flags=[{"cow_id": "C01"}], lookback_hours=72)
+            self.assertIn("likely_route", run)
+            self.assertIn("resting_areas", run)
+            self.assertIn("impact", run)
+            self.assertEqual(len(run["resting_areas"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

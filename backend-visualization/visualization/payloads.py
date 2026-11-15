@@ -476,21 +476,58 @@ def generate_pen_map(
     if cows_data:
         cows_payload = cows_data
     else:
+        try:
+            if isinstance(ts_utc, str):
+                clean_ts = ts_utc.replace("Z", "+00:00")
+                dt = datetime.fromisoformat(clean_ts)
+            elif isinstance(ts_utc, datetime):
+                dt = ts_utc
+            else:
+                dt = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc)
+        except Exception:
+            dt = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc)
+
+        epoch_min = int(dt.timestamp() // 60)
+        hour = dt.hour + dt.minute / 60.0
+        is_milking_hour = (4.0 <= hour <= 5.5) or (15.0 <= hour <= 16.5)
+
         for i in range(1, 17):
             cid = f"C{i:02d}"
             is_c01 = (cid == "C01")
             is_c02 = (cid == "C02")
             is_flagged = is_c01
+
+            # Base coordinates in cubicles
+            base_x = 6.0 + ((i - 1) % 8) * 2.2
+            base_y = 4.0 if i <= 8 else 10.5
+
+            # Timestamp-sensitive displacement ensuring different slider times return distinct coordinates
+            phase = (epoch_min * 0.05) + (i * 1.618)
+            dx = math.sin(phase) * 1.8 + math.cos(phase * 0.5) * 0.6
+            dy = math.cos(phase) * 0.9 + math.sin(phase * 0.3) * 0.4
+
+            out_of_pen = is_milking_hour and (i % 2 == 0)
+            if out_of_pen:
+                uwb_x = round(25.0 + (i % 4) * 0.8, 2)
+                uwb_y = round(4.5 + (i % 2) * 1.0, 2)
+                zone = "milking_lane"
+                activity_state = "milking"
+            else:
+                uwb_x = round(max(2.0, min(28.0, base_x + dx)), 2)
+                uwb_y = round(max(1.5, min(13.5, base_y + dy)), 2)
+                zone = "cubicle_row_a" if uwb_y <= 7.0 else ("cubicle_row_b" if uwb_y >= 9.0 else "feed_alley")
+                activity_state = "resting" if (zone.startswith("cubicle") and math.sin(phase) > -0.2) else "active"
+
             exposure = 0.92 if is_c01 else (0.76 if is_c02 else 0.12)
             tier = "priority_watch" if is_c01 else ("moderate_watch" if is_c02 else "baseline")
             cows_payload.append({
                 "cow_id": cid,
                 "display_name": f"Cow {cid}",
-                "uwb_x_m": 12.0 + (i % 8) * 1.5,
-                "uwb_y_m": 4.0 if i <= 8 else 10.5,
-                "zone": "cubicle_row_a" if i <= 8 else "cubicle_row_b",
-                "activity_state": "resting" if i % 2 == 0 else "active",
-                "out_of_pen": False,
+                "uwb_x_m": uwb_x,
+                "uwb_y_m": uwb_y,
+                "zone": zone,
+                "activity_state": activity_state,
+                "out_of_pen": out_of_pen,
                 "flag_status": "flagged" if is_flagged else "unflagged",
                 "exposure_score": exposure,
                 "exposure_tier": tier,
@@ -818,6 +855,7 @@ def generate_backtrace_run(
 
     # 1. Try delegating to apis.icar.service.IcarAdeService if available
     summary = None
+    resting_circles = []
     try:
         from apis.icar.service import IcarAdeService
         svc = IcarAdeService()
@@ -1037,7 +1075,12 @@ def generate_impact(
         ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
 
     if impact_data:
-        return impact_data
+        impact = dict(impact_data)
+        if "ts_utc" not in impact or not impact["ts_utc"]:
+            impact["ts_utc"] = ts_utc
+        if "is_synthetic" not in impact:
+            impact["is_synthetic"] = is_synthetic
+        return impact
 
     return {
         "ts_utc": ts_utc,
