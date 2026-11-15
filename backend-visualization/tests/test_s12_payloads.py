@@ -19,6 +19,7 @@ from visualization.payloads import (
     generate_herd_health,
     generate_attribution,
     generate_impact,
+    generate_backtrace_run,
 )
 from visualization.data_loader import (
     load_bedding_data,
@@ -107,12 +108,31 @@ class TestS12Payloads(unittest.TestCase):
         p_vals = payload["p_values"]
         self.assertIn("resting_permutation_p", p_vals)
         self.assertIn("milking_permutation_p", p_vals)
+        self.assertIn("resting_areas", payload)
+        self.assertIn("implicated_resting_areas", payload)
+        self.assertIn("impact", payload)
 
         pathogens = payload["pathogen_group_likelihood"]
         self.assertIn("coliform_environmental_gram_negative", pathogens)
         self.assertIn("streptococci_environmental_gram_positive", pathogens)
         self.assertIn("statement", pathogens)
         self.assertTrue(payload["is_model_suggestion"])
+
+    def test_backtrace_run_payload(self):
+        payload = generate_backtrace_run(flags=[{"cow_id": "C01"}], lookback_hours=72)
+        self.assertIn(payload["likely_route"], ["resting_area", "milking_equipment"])
+        self.assertIn("p_values", payload)
+        self.assertIn("resting_areas", payload)
+        self.assertIn("implicated_resting_areas", payload)
+        self.assertIn("impact", payload)
+        self.assertIn("transmission_source", payload)
+        self.assertEqual(payload["impact"]["flagged_early_count"], 1)
+
+        circle = payload["resting_areas"][0]
+        self.assertEqual(circle["radius_m"], 1.5)
+        self.assertIn("center_x_m", circle)
+        self.assertIn("center_y_m", circle)
+        self.assertIn("until_bedding_change_utc", circle)
 
     def test_impact_panel(self):
         payload = generate_impact()
@@ -159,6 +179,7 @@ class TestS12Payloads(unittest.TestCase):
             generate_herd_health(),
             generate_attribution(),
             generate_impact(),
+            generate_backtrace_run(),
         ]
 
         def check_text(val: str, path: str):
@@ -167,7 +188,7 @@ class TestS12Payloads(unittest.TestCase):
                 matches = re.finditer(pat, val, re.IGNORECASE)
                 for m in matches:
                     snippet = val[max(0, m.start() - 25):min(len(val), m.end() + 25)].lower()
-                    if "not a clinical diagnosis" in snippet or "never diagnosis" in snippet:
+                    if "not a clinical diagnosis" in snippet or "not clinical diagnosis" in snippet or "never diagnosis" in snippet:
                         continue
                     self.fail(f"Forbidden clinical diagnosis term '{m.group(0)}' at {path}: ...{snippet}...")
 

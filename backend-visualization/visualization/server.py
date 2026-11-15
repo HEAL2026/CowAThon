@@ -49,8 +49,8 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
 
     def _set_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -70,6 +70,67 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/")
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > 0:
+                raw_data = self.rfile.read(content_length)
+                payload = json.loads(raw_data.decode("utf-8"))
+            else:
+                payload = {}
+        except Exception as exc:
+            status_code, response_data = 400, {"error": f"Invalid JSON payload: {exc}", "status": 400}
+        else:
+            status_code, response_data = self.route_post_request(path, payload)
+
+        body = json.dumps(response_data, indent=2).encode("utf-8")
+        self.send_response(status_code)
+        self._set_cors_headers()
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    @classmethod
+    def route_post_request(cls, path: str, payload: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
+        if path in ("/backtrace", "/api/backtrace", "/api/attribution"):
+            from visualization.payloads import generate_backtrace_run
+
+            flags = payload.get("flags")
+            target_ids: List[str] = []
+            if flags and isinstance(flags, list):
+                for f in flags:
+                    if isinstance(f, dict):
+                        cid = f.get("cow_id") or f.get("animal_id")
+                        if cid:
+                            target_ids.append(str(cid).upper())
+                    elif isinstance(f, str):
+                        target_ids.append(f.upper())
+            elif "animal_ids" in payload and isinstance(payload["animal_ids"], list):
+                target_ids = [str(a).upper() for a in payload["animal_ids"]]
+            elif "animal_id" in payload:
+                target_ids = [str(payload["animal_id"]).upper()]
+            elif "target_animal_id" in payload:
+                target_ids = [str(payload["target_animal_id"]).upper()]
+
+            if not target_ids:
+                target_ids = ["C01"]
+
+            lookback_hours = int(payload.get("lookback_hours", 72))
+            if "lookback_days" in payload and "lookback_hours" not in payload:
+                lookback_hours = int(payload["lookback_days"]) * 24
+
+            result = generate_backtrace_run(
+                flags=flags,
+                target_cows=target_ids,
+                lookback_hours=lookback_hours,
+            )
+            return 200, result
+
+        return 404, {"error": f"POST endpoint '{path}' not found", "status": 404}
+
     @classmethod
     def route_request(cls, path: str) -> Tuple[int, Dict[str, Any]]:
         if path in ("", "/api/health"):
@@ -87,6 +148,7 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
                     "/api/herd-health",
                     "/api/attribution",
                     "/api/impact",
+                    "/backtrace (POST)",
                 ],
             }
 
@@ -127,7 +189,7 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
             payload["is_synthetic"] = is_synth
             return 200, payload
 
-        if path == "/api/attribution":
+        if path in ("/api/attribution", "/backtrace", "/api/backtrace"):
             payload, is_synth = get_attribution_data()
             payload["is_synthetic"] = is_synth
             return 200, payload
