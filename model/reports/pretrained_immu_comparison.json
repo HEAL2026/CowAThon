@@ -1,149 +1,148 @@
 {
-  "protocol": "official IMMU checkpoint, cow-disjoint test cows C05/C07",
+  "protocol": "all-cow chronological holdout; final 20% reserved for test",
   "checkpoint": "model/external/sensor_weights/immu/fold_0.h5",
-  "test_cows": [
-    "C05",
-    "C07"
-  ],
+  "test_cows": "all 10 cows represented in the reserved period",
+  "train_period_end_utc": "2023-07-26 00:59:54.900000+00:00",
+  "test_period_start_utc": "2023-07-26 00:59:54.900000+00:00",
   "preprocessing": "10 Hz, 100 samples, 50% overlap, Haar DWT, magnetometer horizontal angle proxy, global StandardScaler",
   "proxy_warning": "Official relative_angle head-direction stream was unavailable; magnetometer angle is a controlled proxy.",
   "deep_learning": {
-    "n_windows": 28470,
-    "macro_f1": 0.1170806453216461,
-    "accuracy": 0.20772743238496663,
+    "n_windows": 14250,
+    "macro_f1": 0.11955384468567834,
+    "accuracy": 0.21578947368421053,
     "per_class": {
       "walking": {
-        "precision": 0.015257969798657718,
-        "recall": 0.6510067114093959,
-        "f1-score": 0.029817101285926535,
-        "support": 447.0
+        "precision": 0.013168896321070234,
+        "recall": 0.6331658291457286,
+        "f1-score": 0.02580116719565885,
+        "support": 199.0
       },
       "standing": {
-        "precision": 0.33664068036853295,
-        "recall": 0.07225433526011561,
-        "f1-score": 0.11897307451471509,
-        "support": 6574.0
+        "precision": 0.5565819861431871,
+        "recall": 0.0653470715835141,
+        "f1-score": 0.11696190245086144,
+        "support": 3688.0
       },
       "feed_up": {
-        "precision": 0.027312775330396475,
-        "recall": 0.011863758132414848,
-        "f1-score": 0.016542155816435433,
-        "support": 2613.0
+        "precision": 0.004338394793926247,
+        "recall": 0.0035650623885918,
+        "f1-score": 0.003913894324853229,
+        "support": 561.0
       },
       "feed_down": {
-        "precision": 0.7204081632653061,
-        "recall": 0.11829758713136729,
-        "f1-score": 0.20322394933793897,
-        "support": 2984.0
+        "precision": 0.7088607594936709,
+        "recall": 0.15526802218114602,
+        "f1-score": 0.25473843821076575,
+        "support": 1082.0
       },
       "licking": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1-score": 0.0,
-        "support": 326.0
+        "precision": 0.00625,
+        "recall": 0.005649717514124294,
+        "f1-score": 0.005934718100890208,
+        "support": 177.0
       },
       "drinking": {
         "precision": 0.0,
         "recall": 0.0,
         "f1-score": 0.0,
-        "support": 279.0
+        "support": 120.0
       },
       "lying": {
-        "precision": 0.8103418948800817,
-        "recall": 0.31245490916245816,
-        "f1-score": 0.45100823629650666,
-        "support": 15247.0
+        "precision": 0.748377581120944,
+        "recall": 0.3011990977086549,
+        "f1-score": 0.4295267925167189,
+        "support": 8423.0
       },
-      "accuracy": 0.20772743238496663,
+      "accuracy": 0.21578947368421053,
       "macro avg": {
-        "precision": 0.272851640520425,
-        "recall": 0.16655390015653596,
-        "f1-score": 0.1170806453216461,
-        "support": 28470.0
+        "precision": 0.2910825168389712,
+        "recall": 0.16631354293167996,
+        "f1-score": 0.11955384468567834,
+        "support": 14250.0
       },
       "weighted avg": {
-        "precision": 0.5899629524974128,
-        "recall": 0.20772743238496663,
-        "f1-score": 0.2922945111668472,
-        "support": 28470.0
+        "precision": 0.6406601243717349,
+        "recall": 0.21578947368421053,
+        "f1-score": 0.30408892855039893,
+        "support": 14250.0
       }
     },
     "confusion": [
       [
-        291,
-        66,
-        49,
-        16,
-        19,
+        126,
+        28,
+        15,
+        7,
+        6,
         0,
-        6
+        17
       ],
       [
-        4414,
-        475,
-        790,
-        95,
-        145,
-        3,
-        652
-      ],
-      [
-        1764,
-        371,
-        31,
-        23,
-        25,
-        2,
-        397
-      ],
-      [
-        1982,
-        364,
-        9,
-        353,
-        244,
-        0,
-        32
-      ],
-      [
-        219,
-        83,
-        0,
+        2489,
+        241,
+        240,
+        42,
+        47,
         1,
-        0,
-        0,
-        23
+        628
       ],
       [
-        191,
-        8,
+        373,
         43,
         2,
-        30,
+        7,
+        3,
         0,
-        5
+        133
       ],
       [
-        10211,
-        44,
-        213,
+        731,
+        66,
         0,
-        15,
+        168,
+        60,
         0,
-        4764
+        57
+      ],
+      [
+        119,
+        31,
+        0,
+        12,
+        1,
+        0,
+        14
+      ],
+      [
+        80,
+        4,
+        25,
+        1,
+        6,
+        0,
+        4
+      ],
+      [
+        5650,
+        20,
+        179,
+        0,
+        37,
+        0,
+        2537
       ]
     ]
   },
-  "random_forest_same_timestamps": {
-    "n_windows": 7894,
-    "macro_f1": 0.5625442163499964,
-    "accuracy": 0.7501900177349886,
-    "lying_f1": 0.8960926907432516
+  "random_forest_temporal_holdout": {
+    "n_windows": 14189,
+    "macro_f1": 0.6630358510154012,
+    "accuracy": 0.8571428571428571,
+    "lying_f1": 0.9322013341419042
   },
-  "deep_learning_same_timestamps": {
-    "n_windows": 7894,
-    "macro_f1": 0.11915242853490245,
-    "accuracy": 0.20559918925766404,
-    "lying_f1": 0.4456206248932901
+  "deep_learning_temporal_holdout": {
+    "n_windows": 14250,
+    "macro_f1": 0.11955384468567834,
+    "accuracy": 0.21578947368421053,
+    "lying_f1": 0.4295267925167189
   }
 }

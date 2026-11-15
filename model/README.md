@@ -185,3 +185,7 @@ checkpoint with the grouped RandomForest on the same held-out cows and
 matching timestamps. Because the separate official head-direction stream is
 not present locally, the comparison explicitly uses a magnetometer horizontal
 angle proxy and must not be treated as the final transfer-learning result.
+The current labeled release contains one farm collection day spanning a UTC
+date boundary, so this benchmark reserves the final chronological 20% across
+all ten cows rather than pretending that an unlabelled second day is a valid
+test set. Both models use non-overlapping 10-second evaluation windows.

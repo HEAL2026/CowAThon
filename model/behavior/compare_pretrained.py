@@ -18,6 +18,7 @@ import pandas as pd
 import pywt
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
 import tensorflow as tf
 
 REPO = Path(__file__).resolve().parents[2]
@@ -47,7 +48,9 @@ def cow_windows(cow: str) -> tuple[np.ndarray, np.ndarray, pd.DataFrame]:
     mag = sensor[["mag_x_uT", "mag_y_uT"]].to_numpy(float)
     angle = np.arctan2(mag[:, 1], mag[:, 0])
     xs, ys, rows = [], [], []
-    for start in range(0, len(sensor) - 100, 50):
+    # Use the repository's non-overlapping evaluation windows so both models
+    # are scored on the same temporal samples.
+    for start in range(0, len(sensor) - 100, 100):
         center = float(sensor.iloc[start + 50]["timestamp"])
         nearest = labels.iloc[(labels["timestamp"] - center).abs().argsort()[:1]]
         label = int(nearest["behavior"].iloc[0])
@@ -65,26 +68,39 @@ def main() -> int:
     x = np.concatenate([a[0] for a in arrays])
     y = np.concatenate([a[1] for a in arrays])
     rows = pd.concat([a[2] for a in arrays], ignore_index=True)
+    cutoff = rows["ts_utc"].quantile(0.8)
+    train_rows = rows["ts_utc"] < cutoff
     scaler = StandardScaler()
-    x = scaler.fit_transform(x.reshape(-1, 4)).reshape(x.shape).astype(np.float32)
+    x_train_flat = x[train_rows].reshape(-1, 4)
+    scaler.fit(x_train_flat)
+    x = scaler.transform(x.reshape(-1, 4)).reshape(x.shape).astype(np.float32)
     model = tf.keras.models.load_model(WEIGHTS, compile=False)
-    test = rows["cow_id"].isin(["C05", "C07"]).to_numpy()
+    test = rows["ts_utc"] >= cutoff
     pred = np.argmax(model.predict(x[test], verbose=0), axis=1) + 1
     y_test = y[test]
     report = classification_report(y_test, pred, labels=CLASSES, target_names=NAMES, output_dict=True, zero_division=0)
 
-    rf = pd.read_parquet(GROUPED)
-    rf["ts_utc"] = pd.to_datetime(rf["ts_utc"], utc=True)
-    common = rows.loc[test, ["cow_id", "ts_utc", "label"]].copy()
-    common["dl_pred"] = pred
-    common = common.merge(rf[["cow_id", "ts_utc", "pred"]], on=["cow_id", "ts_utc"], how="inner")
-    rf_pred = common["pred"].to_numpy()
-    dl_common = common["dl_pred"].to_numpy()
-    y_common = common["label"].to_numpy()
+    windows = pd.read_parquet(REPO / "model" / "data" / "windows_0725.parquet")
+    windows = windows[windows["label"].notna()].copy()
+    windows["ts_utc"] = pd.to_datetime(windows["ts_utc"], utc=True)
+    rf_test = windows["ts_utc"] >= cutoff
+    features = [c for c in windows.columns if c not in {"cow_id", "ts_utc", "label", "label_known_frac", "label_name"}]
+    rf = RandomForestClassifier(
+        n_estimators=300, min_samples_leaf=3, class_weight="balanced_subsample",
+        n_jobs=-1, random_state=0,
+    )
+    rf.fit(
+        np.nan_to_num(windows.loc[~rf_test, features].to_numpy(float)),
+        windows.loc[~rf_test, "label"].to_numpy(int),
+    )
+    rf_pred = rf.predict(np.nan_to_num(windows.loc[rf_test, features].to_numpy(float)))
+    y_rf = windows.loc[rf_test, "label"].to_numpy(int)
     result = {
-        "protocol": "official IMMU checkpoint, cow-disjoint test cows C05/C07",
+        "protocol": "all-cow chronological holdout; final 20% reserved for test",
         "checkpoint": str(WEIGHTS.relative_to(REPO)),
-        "test_cows": ["C05", "C07"],
+        "test_cows": "all 10 cows represented in the reserved period",
+        "train_period_end_utc": str(cutoff),
+        "test_period_start_utc": str(cutoff),
         "preprocessing": "10 Hz, 100 samples, 50% overlap, Haar DWT, magnetometer horizontal angle proxy, global StandardScaler",
         "proxy_warning": "Official relative_angle head-direction stream was unavailable; magnetometer angle is a controlled proxy.",
         "deep_learning": {
@@ -94,17 +110,17 @@ def main() -> int:
             "per_class": report,
             "confusion": confusion_matrix(y_test, pred, labels=CLASSES).tolist(),
         },
-        "random_forest_same_timestamps": {
-            "n_windows": int(len(y_common)),
-            "macro_f1": float(f1_score(y_common, rf_pred, average="macro", labels=CLASSES, zero_division=0)),
-            "accuracy": float(accuracy_score(y_common, rf_pred)),
-            "lying_f1": float(f1_score(y_common == 7, rf_pred == 7)),
+        "random_forest_temporal_holdout": {
+            "n_windows": int(len(y_rf)),
+            "macro_f1": float(f1_score(y_rf, rf_pred, average="macro", labels=CLASSES, zero_division=0)),
+            "accuracy": float(accuracy_score(y_rf, rf_pred)),
+            "lying_f1": float(f1_score(y_rf == 7, rf_pred == 7)),
         },
-        "deep_learning_same_timestamps": {
-            "n_windows": int(len(y_common)),
-            "macro_f1": float(f1_score(y_common, dl_common, average="macro", labels=CLASSES, zero_division=0)),
-            "accuracy": float(accuracy_score(y_common, dl_common)),
-            "lying_f1": float(f1_score(y_common == 7, dl_common == 7)),
+        "deep_learning_temporal_holdout": {
+            "n_windows": int(len(y_test)),
+            "macro_f1": float(f1_score(y_test, pred, average="macro", labels=CLASSES, zero_division=0)),
+            "accuracy": float(accuracy_score(y_test, pred)),
+            "lying_f1": float(f1_score(y_test == 7, pred == 7)),
         },
     }
     OUT.write_text(json.dumps(result, indent=2))
