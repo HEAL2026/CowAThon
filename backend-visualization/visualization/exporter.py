@@ -1,13 +1,22 @@
 """
-Exporter utility to generate static visualization payload files or serve them.
-Alignd with MMCows raw schema and backend-analysis CONTRACT.md.
+Exporter utility to generate static visualization payload files.
+Consumes data_loader functions to export real analysis/cleaning data when available,
+falling back gracefully to deterministic synthetic fixtures.
 """
 
 import json
 import os
+import sys
 import argparse
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Any
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for sub in ["backend-cleaning", "apis", "backend-analysis", "backend-visualization"]:
+    p = str(REPO_ROOT / sub)
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from visualization.payloads import (
     generate_barn_overview,
@@ -16,12 +25,23 @@ from visualization.payloads import (
     generate_watch_list,
     generate_benchmarks_summary,
     generate_integrations_feasibility,
+    generate_pen_map,
+    generate_herd_health,
+    generate_attribution,
+    generate_impact,
 )
 from visualization.fixtures import (
-    generate_mock_cows_overview,
-    generate_mock_timeseries,
     COW_IDS,
-    INSTRUMENTED_COWS,
+)
+from visualization.data_loader import (
+    get_barn_overview_data,
+    get_cow_timeseries_data,
+    get_watch_list_data,
+    get_benchmarks_data,
+    get_pen_map_data,
+    get_herd_health_data,
+    get_attribution_data,
+    get_impact_data,
 )
 
 
@@ -35,14 +55,14 @@ def export_all_payloads(output_dir: str = "backend-visualization/data/exported")
     now_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
 
     # 1. Barn overview
-    cows_overview = generate_mock_cows_overview()
+    cows_overview, env, is_synth = get_barn_overview_data()
     barn_payload = generate_barn_overview(
         cows_data=cows_overview,
-        indoor_thi=74.2,
-        indoor_temp_c=26.8,
-        indoor_humidity_pct=66.0,
+        indoor_thi=env.get("indoor_thi", 74.2),
+        indoor_temp_c=env.get("indoor_temp_c", 26.8),
+        indoor_humidity_pct=env.get("indoor_humidity_pct", 66.0),
         ts_utc=now_utc,
-        is_synthetic=True,
+        is_synthetic=is_synth,
     )
     barn_path = os.path.join(output_dir, "barn_overview.json")
     with open(barn_path, "w", encoding="utf-8") as f:
@@ -57,40 +77,17 @@ def export_all_payloads(output_dir: str = "backend-visualization/data/exported")
     results["milking_stalls"] = stalls_path
 
     # 3. Watch list
-    flagged = [
-        {
-            "cow_id": "C01",
-            "flag_type": "model_suggestion",
-            "risk_category": "priority_watch",
-            "watch_risk_score": 84.5,
-            "watch_reason": "Sustained high CBT (39.85C) under elevated THI accompanied by 18% yield decrease",
-            "confidence": 0.88,
-            "modalities_present": ["cbt", "neck_imu", "indoor_env", "milk_yield", "ankle"],
-            "modalities_missing": ["uwb"],
-            "missing_modality_impact": "Location confidence lower; utilizing last-seen stall beacon",
-            "recommended_action": "Check for heat abatement and udder inflammation prior to next cycle",
-        },
-        {
-            "cow_id": "C02",
-            "flag_type": "vet_flagged",
-            "risk_category": "moderate_watch",
-            "watch_risk_score": 68.0,
-            "watch_reason": "Co-resting in cubicle_row_b alongside C01 with 22% activity drop",
-            "confidence": 0.74,
-            "modalities_present": ["neck_imu", "indoor_env", "milk_yield", "cbt"],
-            "modalities_missing": ["uwb"],
-            "missing_modality_impact": "Spatial tracking degraded; relying on rumination variance",
-            "recommended_action": "Monitor evening milking yield and observe gait",
-        },
-    ]
+    flagged, is_synth = get_watch_list_data()
     watch_payload = generate_watch_list(flagged, ts_utc=now_utc)
+    watch_payload["is_synthetic"] = is_synth
     watch_path = os.path.join(output_dir, "watch_list.json")
     with open(watch_path, "w", encoding="utf-8") as f:
         json.dump(watch_payload, f, indent=2)
     results["watch_list"] = watch_path
 
     # 4. Cross-validation benchmarks summary
-    benchmarks_payload = generate_benchmarks_summary()
+    benchmarks_payload, is_synth = get_benchmarks_data()
+    benchmarks_payload["is_synthetic"] = is_synth
     benchmarks_path = os.path.join(output_dir, "benchmarks_summary.json")
     with open(benchmarks_path, "w", encoding="utf-8") as f:
         json.dump(benchmarks_payload, f, indent=2)
@@ -103,11 +100,43 @@ def export_all_payloads(output_dir: str = "backend-visualization/data/exported")
         json.dump(feasibility_payload, f, indent=2)
     results["integrations_feasibility"] = feasibility_path
 
-    # 6. Cow timeseries (for all 16 animals)
+    # 6. 2D Pen map (S12)
+    pen_map_payload, is_synth = get_pen_map_data()
+    pen_map_payload["is_synthetic"] = is_synth
+    pen_map_path = os.path.join(output_dir, "pen_map.json")
+    with open(pen_map_path, "w", encoding="utf-8") as f:
+        json.dump(pen_map_payload, f, indent=2)
+    results["pen_map"] = pen_map_path
+
+    # 7. Herd health table (S12)
+    herd_health_payload, is_synth = get_herd_health_data()
+    herd_health_payload["is_synthetic"] = is_synth
+    herd_health_path = os.path.join(output_dir, "herd_health.json")
+    with open(herd_health_path, "w", encoding="utf-8") as f:
+        json.dump(herd_health_payload, f, indent=2)
+    results["herd_health"] = herd_health_path
+
+    # 8. Outbreak transmission attribution (S12)
+    attribution_payload, is_synth = get_attribution_data()
+    attribution_payload["is_synthetic"] = is_synth
+    attribution_path = os.path.join(output_dir, "attribution.json")
+    with open(attribution_path, "w", encoding="utf-8") as f:
+        json.dump(attribution_payload, f, indent=2)
+    results["attribution"] = attribution_path
+
+    # 9. Outbreak mitigation & economic impact (S12)
+    impact_payload, is_synth = get_impact_data()
+    impact_payload["is_synthetic"] = is_synth
+    impact_path = os.path.join(output_dir, "impact.json")
+    with open(impact_path, "w", encoding="utf-8") as f:
+        json.dump(impact_payload, f, indent=2)
+    results["impact"] = impact_path
+
+    # 10. Cow timeseries (for all 16 animals)
     cows_dir = os.path.join(output_dir, "cows")
     os.makedirs(cows_dir, exist_ok=True)
     for cid in COW_IDS:
-        ts_points = generate_mock_timeseries(cid, days=7)
+        ts_points, is_synth = get_cow_timeseries_data(cid, days=7)
         resting_hist = [
             {
                 "session_id": f"rest_{cid}_01",
@@ -133,6 +162,7 @@ def export_all_payloads(output_dir: str = "backend-visualization/data/exported")
             co_resting_cows=co_resters,
             baseline_yield_kg=26.5 if cid == "C01" else 31.0,
         )
+        cow_payload["is_synthetic"] = is_synth
         c_path = os.path.join(cows_dir, f"{cid}.json")
         with open(c_path, "w", encoding="utf-8") as f:
             json.dump(cow_payload, f, indent=2)
@@ -150,4 +180,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     outputs = export_all_payloads(args.output_dir)
-    print(f"Exported {len(outputs)} payload sets to {args.output_dir}")
+    print(f"Exported {len(outputs)} payload categories to {args.output_dir}")
