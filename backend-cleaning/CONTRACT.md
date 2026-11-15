@@ -123,9 +123,19 @@ carry units; conversions are listed.
 | `thi` | 1 min | barn | `sensor_id` (S01–S06, `avg`), `indoor_temp_c`, `indoor_rh_pct`, `indoor_thi` | `temperature_C`, `humidity_per`, `THI`. `average.csv` is headed `temperature_F` but holds °C — cleaning verifies the unit against the file's own THI column instead of trusting the header |
 | `ankle` | 1 min | C01–C10 | `lying` (0/1) | `lying`; `datetime` string dropped |
 | `uwb` | 15 s | C01–C10 | `uwb_x_m`, `uwb_y_m`, `uwb_z_m`, `out_of_pen`, `uwb_suspect` | `coord_*_cm` / 100; null coords → `out_of_pen=True`, row kept. Frame is pen-centred (x ±10 m, y −8.7…5.7 m, z neck height); a reading outside x ±12, y [−9, 8], z [−0.5, 3] m is a ranging error → `uwb_suspect=True`, row kept (~0.4 %) |
-| `uwb_unmapped` | 15 s | T13, T14 | as `uwb` plus `tag_id` | quarantine |
+| `uwb_unmapped` | 15 s | T13, T14 | as `uwb` plus `tag_id` | **data-scarce fixture** (see below) |
+| `collar_unmapped` | 1 min | T13, T14 | as `collar_1min` plus `tag_id` | **data-scarce fixture** (see below) |
 | `collar_1min` | 1 min | C01–C10 | `neck_imu_magnitude_mean`, `neck_imu_magnitude_std`, `neck_imu_n`, `collar_pressure_hpa`, `collar_pressure_n` | per-minute aggregate of the 10 Hz `immu` (|accel| in m/s²) and `pressure` (`pressure_Pa` / 100). The 10 Hz rows (7 + 4 GB) are **not** re-materialised; `data/raw/.../immu` and `pressure` are the native-rate source |
 | `weather` | 5 min | outdoor | `outdoor_temp_c`, `outdoor_dewpoint_c`, `outdoor_rh_pct`, `outdoor_wind_dir`, `outdoor_wind_mps`, `outdoor_gust_mps`, `outdoor_pressure_hpa`, `outdoor_precip_rate_mm_h`, `outdoor_precip_mm`, `outdoor_uv`, `outdoor_solar_wm2` | `.xlsx` cells are strings with imperial units (`"60.7 °F"`, `"29.65 in"`, `"2.3 mph"`); date comes from the filename |
+
+**T13/T14 as the data-scarce test fixture.** The two stationary reference
+tags carry location and collar streams only — no CBT, no ankle, no milk, no
+behaviour labels, and no motion. They are kept on purpose, apart from the
+herd, so `backend-analysis/` and `model/` can test how a subject with most
+modalities missing is handled: the confidence score should drop, missing
+modalities should be reported rather than imputed, and a motion or behaviour
+inference on a tag that never moves should read as "no activity", not as a
+lying cow. Never join them onto the cow grid; they are not animals.
 
 `out_of_pen` is a **state**, not missingness: the cows leave the pen for
 milking twice a day (~04–05h and ~15–16h local) and UWB has nothing to

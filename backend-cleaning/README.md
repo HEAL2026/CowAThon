@@ -14,6 +14,9 @@ board before they land.
 
 Column-level schema for Challenge 1 (MMCows) is in CONTRACT.md §5.
 
+How the three stages work and why, written for the presentation:
+[`PIPELINE.md`](PIPELINE.md).
+
 ## Running it
 
 ```bash
