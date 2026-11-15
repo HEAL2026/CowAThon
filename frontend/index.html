@@ -93,21 +93,20 @@
                 <div class="rest-zone zone-a">Rest zone A</div>
                 <div class="rest-zone zone-b">Rest zone B</div>
                 <div class="water-zone">Water</div>
-                <div class="cow-dot cow-a" data-cow="Bessie 142" title="Bessie 142 · Healthy"></div>
-                <div class="cow-dot cow-b" data-cow="Daisy 108" title="Daisy 108 · Pregnant"></div>
-                <div class="cow-dot cow-c" data-cow="Fern 221" title="Fern 221 · Elevated health risk"></div>
-                <div class="cow-dot cow-d" data-cow="Luna 095" title="Luna 095 · Estrus"></div>
-                <div class="cow-dot cow-e" data-cow="Mabel 187" title="Mabel 187 · Resting anomaly"></div>
-                <div class="cow-dot cow-f" data-cow="Poppy 164" title="Poppy 164 · Healthy"></div>
-                <div class="cow-dot cow-g" data-cow="Rose 204" title="Rose 204 · Recently calved"></div>
-                <div class="cow-dot cow-h" data-cow="Willow 131" title="Willow 131 · Healthy"></div>
+                <div class="cow-dot cow-a" data-cow="Bessie 142" data-rest-zone="zone-a" title="Bessie 142 · Healthy"></div>
+                <div class="cow-dot cow-b" data-cow="Daisy 108" data-rest-zone="zone-a" title="Daisy 108 · Pregnant"></div>
+                <div class="cow-dot cow-c auto-flagged" data-cow="Fern 221" data-rest-zone="zone-b" title="Fern 221 · Automatically flagged"></div>
+                <div class="cow-dot cow-d" data-cow="Luna 095" data-rest-zone="zone-b" title="Luna 095 · Estrus"></div>
+                <div class="cow-dot cow-e" data-cow="Mabel 187" data-rest-zone="zone-a" title="Mabel 187 · Resting anomaly"></div>
+                <div class="cow-dot cow-f" data-cow="Poppy 164" data-rest-zone="zone-b" title="Poppy 164 · Healthy"></div>
+                <div class="cow-dot cow-g" data-cow="Rose 204" data-rest-zone="zone-b" title="Rose 204 · Recently calved"></div>
+                <div class="cow-dot cow-h" data-cow="Willow 131" data-rest-zone="zone-a" title="Willow 131 · Healthy"></div>
               </div>
               <div id="cow-detail" class="cow-detail" hidden></div>
             </div>
             <aside class="card legend-card">
               <div class="card-title-row"><h3>Color by</h3><span class="info-icon">i</span></div>
               <label class="radio-row"><input type="radio" name="color-by" value="status" checked /> Lactation status <span class="legend-swatch status-swatch"></span></label>
-              <label class="radio-row"><input type="radio" name="color-by" value="breed" /> Breed <span class="legend-swatch breed-swatch"></span></label>
               <label class="radio-row"><input type="radio" name="color-by" value="health" /> Health index <span class="gradient-swatch health-gradient"></span></label>
               <label class="radio-row"><input type="radio" name="color-by" value="behavior" /> Behavior anomaly <span class="gradient-swatch behavior-gradient"></span></label>
               <hr />
@@ -115,6 +114,21 @@
               <div class="metric-row"><span><i class="legend-dot watch"></i> Worth a look</span><strong>5</strong></div>
               <div class="metric-row"><span><i class="legend-dot urgent"></i> Needs attention</span><strong>2</strong></div>
             </aside>
+          </div>
+          <div class="resting-filter-card card">
+            <div class="card-title-row">
+              <div><p class="eyebrow">Illness & exposure tracking</p><h3 id="selected-cow-title">Select a cow to inspect resting history</h3></div>
+              <span class="flag-count" id="flag-count">1 flagged</span>
+            </div>
+            <div id="resting-filter-empty" class="resting-filter-empty">Tap any cow dot to manually flag illness or filter every resting spot for that cow.</div>
+            <div id="resting-filter-content" hidden>
+              <div class="resting-actions">
+                <button id="flag-illness" class="primary-button small">Flag as ill</button>
+                <button id="filter-resting" class="secondary-button small">Show resting spots</button>
+              </div>
+              <div id="resting-spots" class="resting-spots"></div>
+              <div id="co-resters" class="co-resters"></div>
+            </div>
           </div>
           <div class="insight-strip">
             <span class="insight-icon">✦</span>

@@ -3,6 +3,9 @@ const state = {
   mode: "location",
   role: "farmer",
   overlay: false,
+  selectedCow: null,
+  restingFilter: false,
+  flaggedCows: new Set(["Fern 221"]),
 };
 
 const timeLabel = document.querySelector("#time-label");
@@ -47,9 +50,12 @@ document.querySelector("#problem-overlay").addEventListener("click", (event) => 
 
 document.querySelectorAll(".cow-dot").forEach((cow) => {
   cow.addEventListener("click", () => {
+    state.selectedCow = cow.dataset.cow;
     const detail = document.querySelector("#cow-detail");
-    detail.textContent = `${cow.dataset.cow} · Select for full record`;
+    document.querySelectorAll(".cow-dot").forEach((dot) => dot.classList.toggle("selected", dot === cow));
+    detail.innerHTML = `${cow.dataset.cow} · ${state.flaggedCows.has(cow.dataset.cow) ? "Flagged for review" : "Within baseline"}`;
     detail.hidden = false;
+    renderRestingFilter();
   });
 });
 
@@ -58,13 +64,52 @@ document.querySelectorAll('input[name="color-by"]').forEach((input) => {
     const mode = input.value;
     const colors = {
       status: ["#4fbe89", "#6f96e8", "#d75f51", "#a971cc", "#e6a23c"],
-      breed: ["#e6a23c", "#d75f51", "#6f96e8", "#4fbe89", "#a971cc"],
       health: ["#4fbe89", "#4fbe89", "#d75f51", "#e6a23c", "#4fbe89"],
       behavior: ["#4fbe89", "#e6a23c", "#d75f51", "#d75f51", "#4fbe89"],
     }[mode];
     document.querySelectorAll(".cow-dot").forEach((dot, index) => {
       dot.style.background = colors[index % colors.length];
     });
+  });
+
+  function renderRestingFilter() {
+    const content = document.querySelector("#resting-filter-content");
+    const empty = document.querySelector("#resting-filter-empty");
+    const title = document.querySelector("#selected-cow-title");
+    const cow = document.querySelector(`[data-cow="${state.selectedCow}"]`);
+    if (!cow) return;
+    const zone = cow.dataset.restZone;
+    const zoneLabel = zone === "zone-a" ? "Rest zone A" : "Rest zone B";
+    const coResters = [...document.querySelectorAll(`.cow-dot[data-rest-zone="${zone}"]`)]
+      .map((dot) => dot.dataset.cow)
+      .filter((name) => name !== state.selectedCow);
+    title.textContent = state.selectedCow;
+    empty.hidden = true;
+    content.hidden = false;
+    document.querySelector("#flag-illness").textContent = state.flaggedCows.has(state.selectedCow) ? "Remove illness flag" : "Flag as ill";
+    document.querySelector("#resting-spots").innerHTML = state.restingFilter
+      ? `<span class="resting-spot">${zoneLabel} · 10:42 AM</span><span class="resting-spot">${zoneLabel} · 7:18 AM</span><span class="resting-spot">Rest zone A · yesterday</span>`
+      : `<span class="resting-spot">Last seen: ${zoneLabel}</span><span class="resting-spot">3 recorded spots</span>`;
+    document.querySelector("#co-resters").innerHTML = `<strong>${coResters.length} other cows rested here</strong><ul>${coResters.map((name) => `<li>${name} <span class="flagged-label">flagged for exposure</span></li>`).join("")}</ul>`;
+    document.querySelectorAll(".cow-dot").forEach((dot) => {
+      dot.classList.toggle("co-resting", state.restingFilter && dot.dataset.restZone === zone && dot.dataset.cow !== state.selectedCow);
+    });
+    document.querySelector("#flag-count").textContent = `${state.flaggedCows.size + (state.restingFilter ? coResters.length : 0)} flagged`;
+  }
+
+  document.querySelector("#flag-illness").addEventListener("click", () => {
+    if (!state.selectedCow) return;
+    if (state.flaggedCows.has(state.selectedCow)) state.flaggedCows.delete(state.selectedCow);
+    else state.flaggedCows.add(state.selectedCow);
+    const selected = document.querySelector(`[data-cow="${state.selectedCow}"]`);
+    selected.classList.toggle("manual-flagged", state.flaggedCows.has(state.selectedCow) && !selected.classList.contains("auto-flagged"));
+    renderRestingFilter();
+  });
+
+  document.querySelector("#filter-resting").addEventListener("click", () => {
+    state.restingFilter = !state.restingFilter;
+    document.querySelector("#filter-resting").textContent = state.restingFilter ? "Clear resting filter" : "Show resting spots";
+    renderRestingFilter();
   });
 });
 
