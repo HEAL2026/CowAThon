@@ -14,6 +14,7 @@ from visualization.payloads import (
     generate_cow_timeseries,
     generate_milking_stalls,
     generate_watch_list,
+    generate_benchmarks_summary,
     generate_integrations_feasibility,
 )
 from visualization.fixtures import (
@@ -32,7 +33,7 @@ class TestVisualizationPayloads(unittest.TestCase):
             indoor_thi=73.2,
             indoor_temp_c=25.4,
             indoor_humidity_pct=62.0,
-            ts_utc="2026-07-25T14:00:00Z",
+            ts_utc="2023-07-28T14:00:00Z",
             is_synthetic=True,
         )
 
@@ -43,14 +44,15 @@ class TestVisualizationPayloads(unittest.TestCase):
 
         first_cow = payload["cows"][0]
         required_cow_fields = [
-            "cow_id", "x_coord", "y_coord", "zone", "activity_state",
-            "risk_status", "risk_score", "factors", "on_watch_list",
-            "vet_flagged", "missing_modalities"
+            "cow_id", "display_name", "uwb_x_m", "uwb_y_m", "zone", "activity_state",
+            "out_of_pen", "risk_status", "risk_score", "factors", "on_watch_list",
+            "vet_flagged", "missing_modalities", "is_instrumented"
         ]
         for field in required_cow_fields:
             self.assertIn(field, first_cow, f"Missing field {field} in cow record")
 
         self.assertIsInstance(first_cow["missing_modalities"], list)
+        self.assertIsInstance(first_cow["out_of_pen"], bool)
 
         # Validate heatmap grid
         grid_meta = payload["heatmap_grid"]
@@ -64,35 +66,37 @@ class TestVisualizationPayloads(unittest.TestCase):
                 self.assertTrue(0.0 <= val <= 1.0)
 
     def test_cow_timeseries_contract_and_imputation(self):
-        points = generate_mock_timeseries("Fern_221", days=3, cadence_hours=2, seed=12)
+        points = generate_mock_timeseries("C01", days=3, cadence_hours=2, seed=12)
         payload = generate_cow_timeseries(
-            cow_id="Fern_221",
+            cow_id="C01",
             timeseries_points=points,
-            baseline_yield_l=28.0,
+            baseline_yield_kg=26.5,
         )
 
-        self.assertEqual(payload["cow_id"], "Fern_221")
+        self.assertEqual(payload["cow_id"], "C01")
         self.assertIn("start_utc", payload["data_range"])
         self.assertIn("end_utc", payload["data_range"])
 
         summary = payload["summary"]
         self.assertIn("mean_cbt_c", summary)
         self.assertIn("cbt_anomaly_detected", summary)
-        self.assertIn(summary["status"], ["within_baseline", "elevated_risk"])
+        self.assertIn(summary["risk_category"], ["baseline", "moderate_watch", "priority_watch"])
 
-        # Test imputation transparency
+        # Test imputation transparency & SI unit compliance
         ts_list = payload["timeseries"]
         self.assertGreater(len(ts_list), 0)
         for pt in ts_list:
             self.assertIn("cbt_c_is_imputed", pt)
             self.assertIn("neck_imu_magnitude_mean_is_imputed", pt)
-            self.assertIn("daily_milk_yield_l_is_imputed", pt)
+            self.assertIn("daily_milk_yield_kg_is_imputed", pt)
             self.assertIn("indoor_thi_is_imputed", pt)
+            self.assertIn("out_of_pen", pt)
             self.assertIsInstance(pt["cbt_c_is_imputed"], bool)
-            self.assertIsInstance(pt["daily_milk_yield_l_is_imputed"], bool)
+            self.assertIsInstance(pt["daily_milk_yield_kg_is_imputed"], bool)
+            self.assertIsInstance(pt["out_of_pen"], bool)
 
     def test_milking_stalls_contract(self):
-        payload = generate_milking_stalls(num_stalls=8, ts_utc="2026-07-25T14:00:00Z")
+        payload = generate_milking_stalls(num_stalls=8, ts_utc="2023-07-28T14:00:00Z")
         self.assertEqual(payload["parlor_id"], "parlor_alpha")
         self.assertEqual(len(payload["stalls"]), 8)
 
@@ -100,32 +104,46 @@ class TestVisualizationPayloads(unittest.TestCase):
         self.assertIn("stall_number", stall)
         self.assertIn(stall["state"], ["active", "idle", "cleaning"])
         self.assertIn("last_completed_cycle", stall)
+        self.assertIn("yield_kg", stall["last_completed_cycle"])
 
     def test_watch_list_uncertainty_and_missing_modalities(self):
         flagged = [
             {
-                "cow_id": "Fern_221",
+                "cow_id": "C01",
                 "flag_type": "model_suggestion",
+                "risk_category": "priority_watch",
+                "watch_risk_score": 84.5,
                 "watch_reason": "Sustained high CBT under elevated THI accompanied by 18% yield decrease",
-                "confidence": 0.84,
+                "confidence": 0.88,
                 "modalities_present": ["cbt", "neck_imu", "indoor_env", "milk_yield"],
                 "modalities_missing": ["uwb"],
                 "missing_modality_impact": "Location confidence lower; utilizing last-seen stall beacon",
                 "recommended_action": "Check for heat abatement and udder inflammation prior to next cycle",
             }
         ]
-        payload = generate_watch_list(flagged, ts_utc="2026-07-25T14:00:00Z")
+        payload = generate_watch_list(flagged, ts_utc="2023-07-28T14:00:00Z")
         self.assertEqual(len(payload["items"]), 1)
         item = payload["items"][0]
-        self.assertEqual(item["confidence"], 0.84)
+        self.assertEqual(item["confidence"], 0.88)
+        self.assertEqual(item["risk_category"], "priority_watch")
         self.assertIn("uwb", item["modalities_missing"])
         self.assertEqual(len(item["modalities_present"]), 4)
         self.assertGreater(len(item["missing_modality_impact"]), 0)
+        self.assertTrue(item["is_model_suggestion"])
+
+    def test_benchmarks_summary_contract(self):
+        payload = generate_benchmarks_summary()
+        self.assertEqual(payload["dataset"], "MMCows Challenge 1")
+        self.assertIn("thi_threshold_baseline", payload["baselines"])
+        self.assertIn("cbt_threshold_baseline", payload["baselines"])
+        self.assertIn("multimodal_model", payload)
+        self.assertGreater(payload["multimodal_lift_over_env_baseline_auc"], 0.20)
+        self.assertGreater(payload["multimodal_lift_over_cbt_baseline_auc"], 0.10)
 
     def test_integrations_feasibility_contract(self):
         payload = generate_integrations_feasibility()
         systems = payload["systems"]
-        self.assertGreaterEqual(len(systems), 4)
+        self.assertGreaterEqual(len(systems), 5)
         for sys in systems:
             self.assertIn("adapter_id", sys)
             self.assertIn("attached", sys)
@@ -150,19 +168,22 @@ class TestVisualizationPayloads(unittest.TestCase):
 
         cows = generate_mock_cows_overview()
         barn = generate_barn_overview(cows_data=cows)
-        cow_ts = generate_cow_timeseries("Fern_221", generate_mock_timeseries("Fern_221"))
+        cow_ts = generate_cow_timeseries("C01", generate_mock_timeseries("C01"))
         stalls = generate_milking_stalls()
+        benchmarks = generate_benchmarks_summary()
         watch = generate_watch_list([
             {
-                "cow_id": "Fern_221",
+                "cow_id": "C01",
                 "flag_type": "model_suggestion",
+                "risk_category": "priority_watch",
+                "watch_risk_score": 82.0,
                 "watch_reason": "Sustained high CBT under elevated THI",
                 "confidence": 0.85,
                 "recommended_action": "Visual check",
             }
         ])
 
-        all_payloads = [barn, cow_ts, stalls, watch]
+        all_payloads = [barn, cow_ts, stalls, benchmarks, watch]
 
         def scan_obj(obj, path=""):
             if isinstance(obj, str):
@@ -184,12 +205,20 @@ class TestVisualizationPayloads(unittest.TestCase):
             self.assertTrue(os.path.exists(exported["barn_overview"]))
             self.assertTrue(os.path.exists(exported["milking_stalls"]))
             self.assertTrue(os.path.exists(exported["watch_list"]))
+            self.assertTrue(os.path.exists(exported["benchmarks_summary"]))
             self.assertTrue(os.path.exists(exported["integrations_feasibility"]))
             self.assertTrue(os.path.isdir(exported["cows_dir"]))
+
+            # Validate that C01 through C16 JSON files are all generated
+            for i in range(1, 17):
+                cid = f"C{i:02d}"
+                cow_file = os.path.join(exported["cows_dir"], f"{cid}.json")
+                self.assertTrue(os.path.exists(cow_file), f"Missing timeseries payload for {cid}")
 
             with open(exported["barn_overview"], "r", encoding="utf-8") as f:
                 data = json.load(f)
                 self.assertEqual(data["barn_id"], "main_barn_01")
+                self.assertEqual(len(data["cows"]), 16)
 
 
 if __name__ == "__main__":
