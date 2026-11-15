@@ -177,6 +177,20 @@ never the reverse — and nothing is filled across an `out_of_pen` gap.
 the missing run the row sits in when it exceeds 5 min (config), else 0.
 Marked, never filled.
 
+### 5.2b Synthetic layer — `data/synthetic/` (never mixed with the real tables)
+
+Written by `python3 -m cleaning synth`; every row `is_synthetic=True`; keys as
+everywhere. Shapes follow [docs/data_contracts.md](../docs/data_contracts.md):
+`milking_log` (cow_id, milking_time, unit_id, session_id, order_in_session,
+milking_time_source=`uwb_out_of_pen`, unit_source=`synthetic`), `sanitation`
+(unit_id, sanitized_at, session_id), `bedding_synthetic`, `milk_visits_synthetic`
+(yield_kg, cond_lf/lr/rf/rr, cond_max, scc_kcells_ml, cbt_delta_c_synthetic),
+`daily_perturbations` (cow_id, local_date, lying_rel, feeding_rel, yield_rel,
+cbt_delta_c), `synthetic_labels` (scenario, cow_id, role, onset_utc, dx_utc,
+true_route ∈ {resting_area, milking_equipment, no_common_route}, true_source,
+sig_*). Consumers apply `daily_perturbations` to their own daily features for
+case cows; the real daily tables are never edited.
+
 **Finding this table.** `cleaning.locate.find_joined()` is the one resolver:
 it honours `$MMCOWS_JOINED` (a parquet path, or a directory holding one) and
 otherwise returns the default processed path, or `None` when the table has not
