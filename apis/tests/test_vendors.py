@@ -111,6 +111,41 @@ class TestVendorAdapters(unittest.TestCase):
                 self.assertIn("dim", r)
                 self.assertIn("pregnant_confirmed", r)
 
+    def test_reprocessor_optional_physiology_columns(self):
+        from apis.base import ObservationRecord
+
+        reprocessor = VendorReprocessor()
+        rec = ObservationRecord(
+            cow_id="C01",
+            ts_utc="2023-07-25T10:00:00Z",
+            values={
+                "source_adapter": "mendeley_optional_source",
+                "milk_yield_kg": 24.5,
+                "milk_fat_pct": 3.85,
+                "milk_protein_pct": 3.25,
+                "milk_lactose_pct": 4.75,
+                "scc": 140,
+                "respiration_rate_bpm": 38.0,
+                "pulse_rate_bpm": 68.0,
+                "rectal_temp_c": 38.8,
+                "dmi_kg": 22.4,
+                "thi_category": "mild",
+            },
+            is_synthetic=False,
+        )
+        rows = reprocessor.reprocess_records([rec])
+        self.assertEqual(len(rows), 1)
+        r = rows[0]
+        self.assertEqual(r["milk_fat_pct"], 3.85)
+        self.assertEqual(r["milk_protein_pct"], 3.25)
+        self.assertEqual(r["milk_lactose_pct"], 4.75)
+        self.assertEqual(r["scc"], 140)
+        self.assertEqual(r["respiration_rate_bpm"], 38.0)
+        self.assertEqual(r["pulse_rate_bpm"], 68.0)
+        self.assertEqual(r["rectal_temp_c"], 38.8)
+        self.assertEqual(r["dmi_kg"], 22.4)
+        self.assertEqual(r["thi_category"], "mild")
+
     def test_compatibility_audit_report(self):
         reprocessor = VendorReprocessor()
         audit = reprocessor.generate_compatibility_audit()

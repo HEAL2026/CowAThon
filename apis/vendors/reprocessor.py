@@ -141,6 +141,21 @@ class VendorReprocessor:
             if "cond_max_ms_cm" in vals:
                 row["cond_max"] = vals["cond_max_ms_cm"]
 
+            # Optional external physiology and milk composition pass-through (PR #76, #78)
+            for opt_col in [
+                "respiration_rate_bpm",
+                "pulse_rate_bpm",
+                "rectal_temp_c",
+                "dmi_kg",
+                "milk_fat_pct",
+                "milk_protein_pct",
+                "milk_lactose_pct",
+                "scc",
+                "thi_category",
+            ]:
+                if opt_col in vals:
+                    row[opt_col] = vals[opt_col]
+
             # Supply dummy manual entries if animal record
             if cow and fill_manual_defaults:
                 manual = self._default_manual_state.get(cow, {})
