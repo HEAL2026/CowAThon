@@ -2,68 +2,96 @@
 
 Owner: @pauraque (Aster).
 
-Owns server-side preparation for charts and dashboards, including query
-shaping, summaries, and visualization-ready payloads.
+Owns server-side preparation for dashboard views, including data loading, query shaping, summaries, non-clinical risk projections, outbreak backtrace presentation, and visualization-ready JSON payloads.
 
-Keep rendering components in `frontend`; this folder provides data contracts
-and shaped JSON payloads for them.
+All UI rendering components live in `frontend/`; this folder provides strict contract adherence, data loaders with deterministic fallback, and a zero-dependency HTTP server with CORS.
+
+---
 
 ## Directory Structure
 
 ```
 backend-visualization/
-  CONTRACT.md             # Schema specifications for all view payloads
-  README.md               # Folder guide and execution instructions
+  CONTRACT.md                       # Comprehensive schema specifications for all payloads
+  README.md                         # Folder documentation and execution instructions
+  data/
+    benchmarks/
+      farm_housing_mastitis_risk.json   # Cleaned 88-herd Quebec mastitis housing risk benchmark
+      farm_housing_mastitis_risk.csv    # Tabular benchmark format
   visualization/
-    __init__.py           # Package interface
-    schemas.py            # Dataclasses and payload models
-    payloads.py           # Core payload shaping functions
-    fixtures.py           # Reproducible MMCows synthetic data generator
-    exporter.py           # CLI tool to export static JSON payloads
-    server.py             # Lightweight HTTP server with CORS for frontend
+    __init__.py                     # Package interface exporting generators
+    schemas.py                      # Strongly-typed Dataclasses for all payloads
+    payloads.py                     # Core payload shaping and non-clinical guardrails
+    data_loader.py                  # CWD-independent data loader with synthetic gating
+    fixtures.py                     # Deterministic MMCows synthetic data generator
+    exporter.py                     # CLI tool to export static JSON payloads
+    server.py                       # Zero-dependency HTTP server with CORS for frontend
+    clean_uploaded_dataset.py       # Pipeline for commercial housing mastitis benchmarks
   tests/
-    test_payloads.py      # Contract validation and guardrail unit tests
-    test_server.py        # HTTP endpoint routing and CORS tests
+    test_payloads.py                # Schema validation, contract adherence, non-clinical tests
+    test_server.py                  # Live HTTP server, routing, and CORS header tests
+    test_data_loader.py             # CWD independence, sidecar parsing, and fallback tests
+    test_s12_payloads.py            # S12 outbreak backtrace, pen map, herd health, impact tests
 ```
 
-## Contracts & Guardrails
+---
+
+## Core Contracts & Guardrails
 
 See [CONTRACT.md](CONTRACT.md) for full schema definitions:
-1. **Keys & Timestamps:** `cow_id` (`C01`–`C16`) + `ts_utc` (ISO 8601 UTC).
-2. **Standard SI Units:** `milk_yield_kg`, `cbt_c`, `uwb_x_m`, `uwb_y_m`.
-3. **Imputation Transparency:** Every imputed metric carries `*_is_imputed: true/false`.
-4. **No Clinical Diagnoses:** Output adheres strictly to risk/monitoring framing (`baseline`, `moderate_watch`, `priority_watch`). Clinical diagnostic terms (`diagnosed`, `illness`, `disease`) are forbidden.
-5. **Synthetic Labeling:** All offline/mock fixtures carry `is_synthetic: true`.
+1. **Keys & Timestamps:** `cow_id` (`C01`–`C16`) + `ts_utc` (ISO-8601 UTC string).
+2. **Standard SI Units:** `milk_yield_kg` (kg), `cbt_c` and `indoor_temp_c` (°C), `uwb_x_m` and `uwb_y_m` (m), `neck_imu_magnitude_mean` (m/s²).
+3. **Imputation Transparency:** Every metric carries `<col>_is_imputed: true/false` and `<col>_age_s`.
+4. **Strictly Non-Clinical Framing:** Wording is limited to monitoring, risk observation, and likelihoods (`baseline`, `moderate_watch`, `priority_watch`). Unsupported clinical diagnoses (`diagnosed`, `illness`, `disease`, `sick`, `cured`) are forbidden.
+5. **Real Data Ingestion & Synthetic Labeling:**
+   - Consumes `backend-cleaning` via `cleaning.locate.find_joined()` and `sidecar_for()`.
+   - `is_synthetic` is gated strictly on path resolution: `False` when real data is resolved, `True` when falling back to fixtures.
+   - Resolves robustly regardless of current working directory (`cwd`).
 
-## Running the API Server
+---
 
-Start the zero-dependency HTTP server with CORS enabled:
+## HTTP API Endpoints
+
+Start the HTTP server on port 8000:
 
 ```bash
-python -m visualization.server --port 8000
+python backend-visualization/visualization/server.py --port 8000
 ```
 
-Available endpoints:
-- `GET /api/health`
-- `GET /api/barn-overview`
-- `GET /api/cows/{cow_id}`
-- `GET /api/milking-stalls`
-- `GET /api/watch-list`
-- `GET /api/benchmarks`
-- `GET /api/integrations`
+All endpoints support CORS (`Access-Control-Allow-Origin: *`):
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/health` | GET | Service health check and endpoint directory |
+| `/api/barn-overview` | GET | Spatial cow locations, UWB coords, thermal zones, and heat density |
+| `/api/cows/{cow_id}` | GET | 7-day cow physiological timeseries, CBT, lying, milk yield, co-resters |
+| `/api/milking-stalls` | GET | Milking parlor stalls status, flow rates, and last completed cycles |
+| `/api/watch-list` | GET | Suspected high-risk cows, missing-modality impacts, suggested actions |
+| `/api/benchmarks` | GET | Animal-disjoint group CV baselines vs. multimodal model lift |
+| `/api/integrations` | GET | Commercial dairy systems (Nedap, Allflex, Munters, Tomorrow.io, VAS) |
+| `/api/pen-map` | GET | S12 2D pen map with resting heatmap from lying bouts and exposed cows |
+| `/api/herd-health` | GET | S12 Herd table with 0–100 health index and acute mastitis risk split |
+| `/api/attribution` | GET | S12 Outbreak backtrace route attribution and permutation p-values |
+| `/api/impact` | GET | S12 Mitigation lead time, milk saved, and prevented cases impact |
+
+---
 
 ## Running Tests
 
-Run the test suite with standard library `unittest` or `pytest`:
+The test suite requires zero external pip dependencies and runs with standard library `unittest`:
 
 ```bash
 python -m unittest discover -s backend-visualization/tests
 ```
 
+All 26 tests validate payload schemas, non-clinical guardrails, CWD independence, and server wire behavior.
+
+---
+
 ## Exporting Payloads
 
-To generate static payload files:
+To dump static payload files for frontend offline development or static deployment:
 
 ```bash
-python -m visualization.exporter --output-dir backend-visualization/data/exported
+python backend-visualization/visualization/exporter.py --output-dir backend-visualization/data/exported
 ```
