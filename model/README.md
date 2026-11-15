@@ -152,3 +152,24 @@ invalidates the result:
 
 No unsupported clinical diagnosis in any output — monitoring and prediction
 framing only.
+
+## MMCows pretrained sensor weights
+
+The official MMCows `sensor_model_weights.zip` was downloaded locally for
+compatibility investigation at `model/external/` (ignored and never committed).
+Its IMMU behavior checkpoint is a TensorFlow/Keras 2.13 HDF5 model with input
+shape `(100, 4)` and seven output classes. Official preprocessing uses
+10-second, 50%-overlap windows at 10 Hz, Haar DWT features for the three
+accelerometer axes, and a fourth `relative_angle` head-direction feature,
+standardized per feature. The network is Flatten -> Dense(300) -> Dense(256) ->
+Dense(128) -> seven-class softmax.
+
+This checkpoint is not directly compatible with the current neck pipeline:
+local IMMU files contain accelerometer plus magnetometer columns, while the
+checkpoint expects the separately derived `relative_angle` head-direction
+stream. The archive also contains UWB and UWB-HD pickle models with different
+input schemas. Use the archive for a controlled baseline or fine-tuning
+experiment only after reproducing the official preprocessing and verifying
+the required head-direction input. Do not commit or publicly upload the
+archive; MMCows data and derived weights are CC BY-NC-SA 4.0 and subject to
+the project restricted-data policy.
