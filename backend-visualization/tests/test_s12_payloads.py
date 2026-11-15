@@ -315,6 +315,8 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p["grid"]["x_max_m"], 12.45)
         self.assertEqual(p["grid"]["y_min_m"], -9.31)
         self.assertEqual(p["grid"]["y_max_m"], 8.39)
+        self.assertEqual(p["resting_areas"][0]["center_x_m"], -2.4)
+        self.assertEqual(p["resting_areas"][0]["center_y_m"], 1.5)
 
     def test_pen_map_positive_coordinate_system(self):
         """Verifies pen map defaults to positive coordinates for synthetic fixtures."""
@@ -323,6 +325,8 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p["grid"]["origin"], "bottom_left")
         self.assertEqual(p["grid"]["x_min_m"], 0.0)
         self.assertEqual(p["grid"]["x_max_m"], 30.0)
+        self.assertEqual(p["resting_areas"][0]["center_x_m"], 12.4)
+        self.assertEqual(p["resting_areas"][0]["center_y_m"], 10.2)
 
     def test_heatmap_c11_c16_exclusion(self):
         """Verifies uninstrumented cows C11-C16 and rows with is_instrumented=False do not contribute heatmap cells."""

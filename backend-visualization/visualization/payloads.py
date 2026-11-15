@@ -633,11 +633,29 @@ def generate_pen_map(
                 "missing_modalities": missing_modalities,
             })
 
+    # Determine coordinate frame metadata for unambiguous client positioning
+    has_centered_coords = any(
+        (c.get("uwb_x_m") is not None and c["uwb_x_m"] < 0) or
+        (c.get("uwb_y_m") is not None and c["uwb_y_m"] < 0)
+        for c in cows_payload
+    ) or any(
+        (b.get("x_m") is not None and float(b.get("x_m", 0)) < 0) or
+        (b.get("center_x_m") is not None and float(b.get("center_x_m", 0)) < 0) or
+        (b.get("y_m") is not None and float(b.get("y_m", 0)) < 0) or
+        (b.get("center_y_m") is not None and float(b.get("center_y_m", 0)) < 0)
+        for b in (lying_bouts or [])
+        if b.get("x_m") is not None or b.get("center_x_m") is not None or b.get("y_m") is not None or b.get("center_y_m") is not None
+    ) or any(
+        (a.get("center_x_m") is not None and a["center_x_m"] < 0) or
+        (a.get("center_y_m") is not None and a["center_y_m"] < 0)
+        for a in (resting_areas or [])
+    )
+
     if implicated_elements is None:
         implicated_elements = {
             "grid_cells": [
-                {"x": 12, "y": 10, "risk_density": 0.88},
-                {"x": 13, "y": 10, "risk_density": 0.92},
+                {"x": 12, "y": 9 if has_centered_coords else 10, "risk_density": 0.88},
+                {"x": 13, "y": 9 if has_centered_coords else 10, "risk_density": 0.92},
             ],
             "milking_units": ["unit_04"],
             "resting_zones": ["cubicle_row_b"],
@@ -645,11 +663,13 @@ def generate_pen_map(
 
     # Real-coordinate 1.5m resting circles bounded by bedding change
     if resting_areas is None:
+        def_cx = -2.4 if has_centered_coords else 12.4
+        def_cy = 1.5 if has_centered_coords else 10.2
         resting_areas = [
             {
                 "area_id": "rest_circle_01",
-                "center_x_m": 12.4,
-                "center_y_m": 10.2,
+                "center_x_m": def_cx,
+                "center_y_m": def_cy,
                 "radius_m": 1.5,
                 "zone_id": "cubicle_row_b",
                 "target_cow_id": "C01",
@@ -663,13 +683,15 @@ def generate_pen_map(
 
     # Contact events overlay
     if contact_events is None:
+        def_cx = -2.4 if has_centered_coords else 12.4
+        def_cy = 1.5 if has_centered_coords else 10.2
         contact_events = [
             {
                 "event_id": "contact_event_01",
                 "shedding_cow": "C01",
                 "exposed_cow": "C02",
-                "center_x_m": 12.4,
-                "center_y_m": 10.2,
+                "center_x_m": def_cx,
+                "center_y_m": def_cy,
                 "radius_m": 1.5,
                 "source_time": "2023-07-26T10:15:00Z",
                 "exposed_time": "2023-07-26T14:30:00Z",
@@ -677,24 +699,6 @@ def generate_pen_map(
                 "exposure_score": 0.78,
             }
         ]
-
-    # Determine coordinate frame metadata for unambiguous client positioning
-    has_centered_coords = any(
-        (c.get("uwb_x_m") is not None and c["uwb_x_m"] < 0) or
-        (c.get("uwb_y_m") is not None and c["uwb_y_m"] < 0)
-        for c in cows_payload
-    ) or any(
-        (a.get("center_x_m") is not None and a["center_x_m"] < 0) or
-        (a.get("center_y_m") is not None and a["center_y_m"] < 0)
-        for a in (resting_areas or [])
-    ) or any(
-        (b.get("x_m") is not None and float(b.get("x_m", 0)) < 0) or
-        (b.get("center_x_m") is not None and float(b.get("center_x_m", 0)) < 0) or
-        (b.get("y_m") is not None and float(b.get("y_m", 0)) < 0) or
-        (b.get("center_y_m") is not None and float(b.get("center_y_m", 0)) < 0)
-        for b in (lying_bouts or [])
-        if b.get("x_m") is not None or b.get("center_x_m") is not None or b.get("y_m") is not None or b.get("center_y_m") is not None
-    )
 
     grid_origin = "center" if has_centered_coords else "bottom_left"
     x_min_m = -12.45 if has_centered_coords else 0.0
