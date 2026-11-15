@@ -23,6 +23,10 @@ from visualization.fixtures import (
     generate_mock_timeseries,
     COW_IDS,
 )
+from visualization.data_loader import (
+    get_barn_overview_data,
+    get_cow_timeseries_data,
+)
 
 
 class VisualizationAPIHandler(BaseHTTPRequestHandler):
@@ -67,8 +71,14 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
             }
 
         if path == "/api/barn-overview":
-            cows = generate_mock_cows_overview()
-            return 200, generate_barn_overview(cows_data=cows, is_synthetic=True)
+            cows, env, is_synthetic = get_barn_overview_data()
+            return 200, generate_barn_overview(
+                cows_data=cows,
+                indoor_thi=env.get("indoor_thi", 74.2),
+                indoor_temp_c=env.get("indoor_temp_c", 26.8),
+                indoor_humidity_pct=env.get("indoor_humidity_pct", 66.0),
+                is_synthetic=is_synthetic,
+            )
 
         if path == "/api/milking-stalls":
             return 200, generate_milking_stalls()
@@ -112,7 +122,7 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
         if cow_match:
             cid = cow_match.group(1).upper()
             if cid in COW_IDS:
-                pts = generate_mock_timeseries(cid, days=7)
+                pts, is_synth = get_cow_timeseries_data(cid, days=7)
                 co_resters = [
                     {
                         "cow_id": "C02" if cid == "C01" else "C01",
@@ -121,11 +131,13 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
                         "last_shared_utc": "2023-07-28T12:00:00Z",
                     }
                 ] if cid in ["C01", "C02"] else []
-                return 200, generate_cow_timeseries(
+                payload = generate_cow_timeseries(
                     cow_id=cid,
                     timeseries_points=pts,
                     co_resting_cows=co_resters,
                 )
+                payload["is_synthetic"] = is_synth
+                return 200, payload
             return 404, {"error": f"Cow '{cid}' not found in registry", "available_ids": COW_IDS}
 
         return 404, {"error": f"Path '{path}' not found", "status": 404}
