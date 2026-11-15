@@ -145,13 +145,18 @@ def run_analysis_pipeline(
     is_hardware = detect_stationary_hardware_candidate(df_proc)
     df_proc["is_stationary_hardware"] = is_hardware
 
-    if "posture_state" not in df_proc.columns or is_hardware.any():
+    b_col = df_proc["behavior"] if "behavior" in df_proc.columns else None
+    b_name_col = df_proc["behavior_name"] if "behavior_name" in df_proc.columns else None
+
+    if "posture_state" not in df_proc.columns or is_hardware.any() or b_col is not None:
         df_proc["posture_state"] = classify_posture_state(
             df_proc["activity_index"],
             is_stationary_hardware=is_hardware,
+            behavior_col=b_col,
+            behavior_name_col=b_name_col,
         )
 
-    if "rumination_proxy" not in df_proc.columns:
+    if "rumination_proxy" not in df_proc.columns or b_col is not None:
         df_proc["rumination_proxy"] = calculate_rumination_proxy(df_proc)
 
     # 4. Multimodal Risk Scoring

@@ -354,8 +354,9 @@ def evaluate_backtrace_against_synthetic(
     if output_dir:
         out_path = Path(output_dir)
         out_path.mkdir(parents=True, exist_ok=True)
-        dest_file = out_path / "backtrace_benchmark.json"
-        with open(dest_file, "w", encoding="utf-8") as f:
-            json.dump(benchmark_summary, f, indent=2)
+        for fname in ["backtrace_benchmark.json", "backtrace_eval.json"]:
+            dest_file = out_path / fname
+            with open(dest_file, "w", encoding="utf-8") as f:
+                json.dump(benchmark_summary, f, indent=2)
 
     return benchmark_summary

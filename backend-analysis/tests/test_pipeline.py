@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 import pandas as pd
 
-from tests.fixtures import generate_synthetic_mmcows_data
+from analysis.fixtures import generate_synthetic_mmcows_data
 from analysis.pipeline import run_analysis_pipeline
 
 

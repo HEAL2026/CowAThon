@@ -31,6 +31,20 @@ class TestBehavior(unittest.TestCase):
         states = classify_posture_state(act, resting_threshold=0.20, is_stationary_hardware=is_hw)
         self.assertEqual(list(states), ["resting", "active", "stationary_hardware"])
 
+    def test_classify_posture_state_with_classifier(self):
+        # Classifier state mapping takes precedence over IMU threshold
+        act = pd.Series([0.45, 0.10, 0.30])
+        # By threshold: active, resting, active.
+        # But classifier says: lying (7 -> resting), feeding (1 -> active), resting (5 -> resting)
+        b_names = pd.Series(["lying", "feeding", "resting"])
+        states = classify_posture_state(act, behavior_name_col=b_names)
+        self.assertEqual(list(states), ["resting", "active", "resting"])
+
+        # Also supports integer codes: 7 (lying) -> resting, 3 (walking) -> active
+        b_codes = pd.Series([7, 3, 5])
+        states_code = classify_posture_state(act, behavior_col=b_codes)
+        self.assertEqual(list(states_code), ["resting", "active", "resting"])
+
     def test_detect_stationary_hardware_candidate(self):
         # T13 tag on post: no CBT, no milk, no lying, static UWB, low median IMU (0.095)
         df_t13 = pd.DataFrame({
@@ -78,6 +92,25 @@ class TestBehavior(unittest.TestCase):
         self.assertAlmostEqual(rum.iloc[0], 100.0, delta=2.0)
         self.assertAlmostEqual(rum.iloc[1], 0.0, delta=0.1)
 
+    def test_rumination_proxy_with_classifier(self):
+        # Conflicting active behavior (e.g. feeding, walking) suppresses rumination proxy
+        df_active = pd.DataFrame({
+            "activity_index": [0.12],  # In resting band, but behavior classifier identifies feeding
+            "behavior_name": ["feeding"],
+            "prob": [0.95],
+        })
+        rum_suppressed = calculate_rumination_proxy(df_active)
+        self.assertLess(rum_suppressed.iloc[0], 25.0)
+
+        # Classified ruminating state elevates score proportionally to prob
+        df_rum = pd.DataFrame({
+            "activity_index": [0.30],  # Slightly outside resting band, but classified as ruminating
+            "behavior_name": ["ruminating"],
+            "prob": [0.90],
+        })
+        rum_boosted = calculate_rumination_proxy(df_rum)
+        self.assertGreaterEqual(rum_boosted.iloc[0], 90.0)
+
     def test_behavior_anomaly_score(self):
         df = pd.DataFrame({
             "rumination_proxy": [10.0, 80.0],
@@ -97,6 +130,7 @@ class TestBehavior(unittest.TestCase):
             "behavior_mode_name": ["lying", "lying", "walking", "standing"],
             "posture_state": ["resting", "resting", "active", "active"],
             "lying": [1, 1, 0, 0],
+            "behavior": [7, 7, 1, 3],  # Classifier prediction
         })
         res_labeled = validate_behavior_against_ground_truth(df_labeled)
         self.assertTrue(res_labeled["has_ground_truth_labels"])
@@ -104,6 +138,11 @@ class TestBehavior(unittest.TestCase):
         self.assertEqual(res_labeled["ankle_sensor_ground_truth_concordance"], 1.0)
         self.assertEqual(res_labeled["imu_posture_model"]["accuracy"], 1.0)
         self.assertEqual(res_labeled["imu_posture_model"]["f1"], 1.0)
+        self.assertIn("behavior_classifier_ground_truth_concordance", res_labeled)
+        clf_eval = res_labeled["behavior_classifier_ground_truth_concordance"]
+        self.assertEqual(clf_eval["overall_accuracy"], 0.75)  # 3 of 4 correct
+        self.assertEqual(clf_eval["lying_f1"], 1.0)
+        self.assertEqual(clf_eval["n_compared"], 4)
 
 
 if __name__ == "__main__":

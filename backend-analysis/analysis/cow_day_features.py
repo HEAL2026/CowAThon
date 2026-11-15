@@ -77,6 +77,8 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
     lact_col = "milk_lactose_pct" if "milk_lactose_pct" in df_proc.columns else (
         "lactose_pct" if "lactose_pct" in df_proc.columns else None
     )
+    b_name_col = "behavior_name" if "behavior_name" in df_proc.columns else None
+    b_code_col = "behavior" if "behavior" in df_proc.columns else None
 
     # Group by cow_id and date
     records = []
@@ -170,6 +172,32 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
             rec["rumination_proxy_mean"] = round(float(rum_s.mean()), 1)
         else:
             rec["rumination_proxy_mean"] = None
+
+        # 4b. Trained Behavior Classifier Durations
+        if b_name_col and group[b_name_col].notna().any():
+            b_names = group[b_name_col].astype(str).str.lower()
+            rec["clf_lying_time_min"] = int((b_names == "lying").sum())
+            rec["clf_rumination_time_min"] = int((b_names == "ruminating").sum())
+            rec["clf_feeding_time_min"] = int((b_names == "feeding").sum())
+            rec["clf_standing_time_min"] = int((b_names == "standing").sum())
+            rec["clf_walking_time_min"] = int((b_names == "walking").sum())
+            if rec.get("lying_time_min") is None:
+                rec["lying_time_min"] = rec["clf_lying_time_min"]
+        elif b_code_col and group[b_code_col].notna().any():
+            b_codes = group[b_code_col].fillna(0).astype(int)
+            rec["clf_lying_time_min"] = int((b_codes == 7).sum())
+            rec["clf_rumination_time_min"] = int((b_codes == 4).sum())
+            rec["clf_feeding_time_min"] = int((b_codes == 1).sum())
+            rec["clf_standing_time_min"] = int((b_codes == 2).sum())
+            rec["clf_walking_time_min"] = int((b_codes == 3).sum())
+            if rec.get("lying_time_min") is None:
+                rec["lying_time_min"] = rec["clf_lying_time_min"]
+        else:
+            rec["clf_lying_time_min"] = None
+            rec["clf_rumination_time_min"] = None
+            rec["clf_feeding_time_min"] = None
+            rec["clf_standing_time_min"] = None
+            rec["clf_walking_time_min"] = None
 
         # 5. Cohort metadata (DIM and parity)
         if dim_col and group[dim_col].notna().any():
