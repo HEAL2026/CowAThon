@@ -429,10 +429,19 @@ class IcarAdeService:
         try:
             from analysis.backtrace import backtrace as analysis_backtrace
 
-            flags_input = [{"cow_id": animal_id, "animal_id": animal_id}]
-            for f in self.store.get_flags(status="active"):
+            active_flags = self.store.get_flags(status="active")
+            target_flag = next((f for f in active_flags if f.animal_id == animal_id), None)
+            target_ts = target_flag.flagged_at_utc if target_flag else datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            flags_input = [{"cow_id": animal_id, "animal_id": animal_id, "dx_utc": target_ts, "timestamp": target_ts}]
+            for f in active_flags:
                 if f.animal_id != animal_id:
-                    flags_input.append({"cow_id": f.animal_id, "animal_id": f.animal_id})
+                    flags_input.append({
+                        "cow_id": f.animal_id,
+                        "animal_id": f.animal_id,
+                        "dx_utc": f.flagged_at_utc,
+                        "timestamp": f.flagged_at_utc,
+                    })
 
             res = analysis_backtrace(flags=flags_input, lookback_hours=lookback_days * 24)
             route = res.get("likely_route", "resting_environment")
