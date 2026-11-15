@@ -12,9 +12,15 @@ import argparse
 import json
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from apis.icar.service import IcarAdeService
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+VISUALIZATION_PATH = REPO_ROOT / "backend-visualization"
+if str(VISUALIZATION_PATH) not in sys.path:
+    sys.path.insert(0, str(VISUALIZATION_PATH))
 
 DEFAULT_PORT = 8001
 
@@ -90,7 +96,8 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 else:
                     try:
                         from visualization.server import VisualizationAPIHandler
-                        status_code, payload = VisualizationAPIHandler.route_request(path)
+                        params = {k: v[0] if len(v) == 1 else v for k, v in query.items()}
+                        status_code, payload = VisualizationAPIHandler.route_request(path, params)
                         self._set_headers(status_code)
                         self.wfile.write(json.dumps(payload, indent=2).encode("utf-8"))
                     except Exception:

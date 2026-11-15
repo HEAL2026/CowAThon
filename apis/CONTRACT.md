@@ -269,10 +269,11 @@ This section formalizes the integration contract between the `apis/` layer, `bac
 ### 7.2 Refresh Cadence & Query Parameter Handling
 
 1. **Cadence**: Single as-of snapshot on initial page load (`Promise.all([fetchApi('/api/pen-map'), ...])`). Avoids continuous client-side polling overhead during static reviews.
-2. **Date / Pen Filtering (Target Contract — Pending `backend-visualization` implementation)**: When the user interacts with the time slider or pen filter, requests are targeted to include query parameters:
+2. **Date / Pen Filtering**: When the user interacts with the time slider or pen filter, requests forward query parameters:
    - `ts_utc`: ISO 8601 UTC timestamp (e.g. `?ts_utc=2023-07-28T14:00:00Z`).
    - `pen_id`: String identifier (e.g. `&pen_id=pen_01`).
-3. **Current Status & Blocker**: In `backend-visualization/visualization/server.py`, `do_GET` currently discards `parsed.query` and serves a pinned snapshot (`2023-07-28T14:00:00+00:00`). Query-string threading to `route_request()` and `payloads.py:generate_pen_map(ts_utc, pen_id)` is pending implementation by `@pauraque`. Until that change lands, the frontend must treat date selection as static snapshot mode.
+   - `lookback_hours`: Integer lookback window (e.g. `&lookback_hours=72`).
+3. **Server Implementation (Active)**: Both `backend-visualization/visualization/server.py` (port 8000) and `apis/icar/server.py` (port 8001) parse `parsed.query` and thread parameters through `route_request(path, params)` into `payloads.py` generators.
 
 ### 7.3 Coordinate System & Spatial Layout
 

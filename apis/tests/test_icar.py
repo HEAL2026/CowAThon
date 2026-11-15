@@ -268,6 +268,17 @@ class TestIcarServerIntegration(unittest.TestCase):
             data = json.loads(resp.read().decode())
             self.assertIn("systems", data)
 
+    def test_get_s12_endpoint_with_query_params(self):
+        import json
+        from urllib.request import urlopen
+
+        url = f"http://127.0.0.1:{self.port}/api/pen-map?ts_utc=2023-07-28T10:00:00Z&pen_id=pen_02"
+        with urlopen(url) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode())
+            self.assertEqual(data.get("ts_utc"), "2023-07-28T10:00:00Z")
+            self.assertEqual(data.get("pen_id"), "pen_02")
+
     def test_post_backtrace_frontend_payload(self):
         import json
         from urllib.request import Request, urlopen
