@@ -16,6 +16,7 @@
           <span>Bovial</span>
         </div>
         <div class="header-actions">
+          <button id="open-import-system-btn" class="secondary-button header-action-btn" type="button" aria-haspopup="dialog" aria-expanded="false">Import management system <span>↗</span></button>
           <span class="demo-badge">Demo data</span>
           <span id="connection-status" class="status-pill"><span class="status-dot"></span> Live data</span>
           <button id="profile-button" class="avatar-button" aria-label="Open profile">LM</button>
@@ -25,7 +26,6 @@
       <main class="app-shell">
         <section class="welcome-row">
           <div>
-            <p class="eyebrow">Good morning, Leah</p>
             <h1>Farm intelligence at a glance</h1>
           </div>
           <div class="role-switcher" aria-label="User role">
@@ -64,18 +64,6 @@
               </select>
             </div>
           </div>
-        </section>
-
-        <section class="time-controls card">
-          <div class="time-heading">
-            <div>
-              <span class="field-label">Viewing data from</span>
-              <strong id="time-label">Aug 4, 11:59 AM UTC</strong>
-            </div>
-            <button id="date-button" class="secondary-button" title="Cycle time presets">Presets</button>
-          </div>
-          <input id="time-slider" type="range" min="0" max="19830" value="19829" step="1" aria-label="1-minute time navigation" />
-          <div class="time-scale"><span>Jul 21</span><span>Jul 25</span><span>Jul 28</span><span>Aug 1</span><span>Aug 4 (Now)</span></div>
         </section>
 
         <nav class="view-tabs" aria-label="Primary views">
@@ -174,10 +162,23 @@
               </div>
               <hr />
               <div class="metric-row"><span><i class="legend-dot healthy"></i> Within baseline</span><strong id="legend-count-baseline">14</strong></div>
-              <div class="metric-row"><span><i class="legend-dot watch"></i> Worth a look</span><strong id="legend-count-watch">1</strong></div>
+              <div class="metric-row"><span><i class="legend-dot watch"></i> Under observation</span><strong id="legend-count-watch">1</strong></div>
               <div class="metric-row"><span><i class="legend-dot urgent"></i> Needs attention</span><strong id="legend-count-urgent">1</strong></div>
             </aside>
           </div>
+
+          <!-- Time Controls below map / view area -->
+          <section class="time-controls card">
+            <div class="time-heading">
+              <div>
+                <span class="field-label">Viewing data from</span>
+                <strong id="time-label">Aug 4, 11:59 AM UTC</strong>
+              </div>
+              <button id="date-button" class="secondary-button" title="Cycle time presets">Presets</button>
+            </div>
+            <input id="time-slider" type="range" min="0" max="19830" value="19829" step="1" aria-label="1-minute time navigation" />
+            <div class="time-scale"><span>Jul 21</span><span>Jul 25</span><span>Jul 28</span><span>Aug 1</span><span>Aug 4 (Now)</span></div>
+          </section>
 
           <!-- Farmer View: Front-Facing Actionable AI Advisor & Decision Support -->
           <div class="farmer-action-banner card" id="farmer-action-banner">
@@ -190,7 +191,7 @@
                 <span class="action-num">1</span>
                 <div>
                   <strong>Check Cow C03's udder before milking</strong>
-                  <p>Cow C03 rested in Rest Zone B for 42 minutes (longer than usual) and rumination slowed down. Feel her rear udder for heat or swelling, and milk her last.</p>
+                  <p>Cow C03 rested in Rest Zone B for 42 minutes (longer than usual) with elevated idling duration. Feel her rear udder for heat or swelling, and milk her last.</p>
                 </div>
                 <button class="primary-button small" id="farmer-action-btn-1" type="button">Locate on map</button>
               </div>
@@ -349,7 +350,7 @@
               <p class="eyebrow">North Barn · Parlor 1</p>
               <h2>Milking flow</h2>
             </div>
-            <button class="secondary-button">Import setup <span>↗</span></button>
+            <button class="secondary-button" id="milking-import-btn" type="button">Import setup <span>↗</span></button>
           </div>
           <div class="milking-layout">
             <div class="milking-diagram card">
@@ -431,6 +432,87 @@
         <button class="mobile-nav-item" data-view="messages"><span>✉</span>Messages <b>6</b></button>
         <button class="mobile-nav-item" id="mobile-profile"><span>◎</span>Profile</button>
       </nav>
+
+      <!-- Import Management System Modal -->
+      <div id="import-system-modal" class="modal-backdrop" hidden role="dialog" aria-labelledby="import-modal-title" aria-modal="true">
+        <div class="modal-dialog card">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Hardware Telemetry &amp; APIs</p>
+              <h2 id="import-modal-title">Import management system</h2>
+            </div>
+            <button id="close-import-modal-btn" class="modal-close-btn" type="button" aria-label="Close dialog">&times;</button>
+          </div>
+          <form id="import-system-form" class="modal-form">
+            <div class="form-row">
+              <label for="import-provider-select">System Provider / Vendor</label>
+              <select id="import-provider-select" required>
+                <option value="sensehub" selected>SenseHub Dairy (Merck / Allflex) — cSense collars &amp; eSense tags</option>
+                <option value="lely">Lely Horizon (Astronaut AMS &amp; Qwes collars)</option>
+                <option value="cowmanager">CowManager (Dual-temp ear sensor &amp; motion accelerometer)</option>
+                <option value="nedap">Nedap Livestock Management (Smarttag Neck/Leg)</option>
+                <option value="delaval">DeLaval DelPro (VMS / Rotary flow &amp; DelPro Activity)</option>
+                <option value="afimilk">Afimilk (AfiCollar &amp; AfiLab milk analysis)</option>
+              </select>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label for="import-protocol-select">Integration Protocol</label>
+                <select id="import-protocol-select">
+                  <option value="rest" selected>Cloud REST API (Webhooks / Polling)</option>
+                  <option value="icar">ICAR ADE (ISO 11787 Data Exchange)</option>
+                  <option value="gateway">On-Premises Local Gateway (LAN / OPC-UA)</option>
+                  <option value="mqtt">MQTT IoT Telemetry Stream</option>
+                </select>
+              </div>
+              <div class="form-row">
+                <label for="import-sync-rate">Sync Frequency</label>
+                <select id="import-sync-rate">
+                  <option value="realtime">Real-time streaming (WebSocket)</option>
+                  <option value="1min" selected>Every 1 minute (joined_1min parquet sync)</option>
+                  <option value="15min">Every 15 minutes (Standard batch)</option>
+                  <option value="hourly">Hourly batch sync</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-row">
+                <label for="import-farm-id">Farm / Client ID</label>
+                <input id="import-farm-id" type="text" value="GV-DAIRY-NORTH-01" required />
+              </div>
+              <div class="form-row">
+                <label for="import-api-key">API Token / Secret Key</label>
+                <input id="import-api-key" type="password" value="sh_live_894f27a810c9e6" placeholder="Enter API key" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <label for="import-endpoint-url">API Gateway URL</label>
+              <input id="import-endpoint-url" type="url" value="https://api.merck-animal-health.com/sensehub/v2" required />
+            </div>
+            <div class="form-row">
+              <label>Telemetry Streams to Ingest</label>
+              <div class="checkbox-group">
+                <label class="checkbox-item"><input type="checkbox" name="stream-milking" checked /> Milking yields, flow rates &amp; stall conductivity</label>
+                <label class="checkbox-item"><input type="checkbox" name="stream-activity" checked /> Activity bouts, lying duration &amp; rest accumulation</label>
+                <label class="checkbox-item"><input type="checkbox" name="stream-temp" checked /> Ear / bolus core temperature proxy</label>
+                <label class="checkbox-item"><input type="checkbox" name="stream-climate" checked /> Barn microclimate &amp; THI weather stations</label>
+              </div>
+            </div>
+            <div class="config-notice-badge">
+              <span>ℹ</span>
+              <div>
+                <strong>Configuration-only integration:</strong> Hardware telemetry streams are mapped through the <code>apis.vendors</code> normalization layer into standard Bovial observation schemas without overriding raw sensor stores.
+              </div>
+            </div>
+            <div id="import-status-banner" class="modal-status-banner" role="status" aria-live="polite"></div>
+            <div class="modal-footer">
+              <button id="close-import-modal-cancel" class="secondary-button" type="button">Cancel</button>
+              <button id="import-test-btn" class="secondary-button" type="button">Test connection</button>
+              <button id="import-submit-btn" class="primary-button" type="submit">Save &amp; Connect</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
     <script src="./app.js"></script>
   </body>
