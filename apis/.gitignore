@@ -2,3 +2,13 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+
+# Challenge datasets, local output artifacts, and archives
+data/
+output/
+*.parquet
+*.csv
+*.tsv
+*.tar.gz
+*.gz
+*.zip
