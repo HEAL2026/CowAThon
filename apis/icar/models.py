@@ -248,15 +248,81 @@ class ManualEntry:
     event_datetime: str
     details: Dict[str, Any]
     recorded_by: str = "operator"
+    kind: Optional[str] = None          # For sanitation: "end_of_session" or "between_cows"
 
     def to_dict(self) -> Dict[str, Any]:
+        d = dict(self.details)
+        k = self.kind or d.get("kind")
+        if k and "kind" not in d:
+            d["kind"] = k
         return {
             "entryId": self.entry_id,
             "entryType": self.entry_type,
             "animalId": self.animal_id,
             "eventDateTime": self.event_datetime,
-            "details": self.details,
+            "details": d,
             "recordedBy": self.recorded_by,
+            "kind": k,
+        }
+
+
+@dataclass
+class SanitationRecord:
+    """ICAR ADE Milking Unit Sanitation observation with kind (docs/backtrace_spec.md §2, §3.3)."""
+    unit_id: str                       # e.g. "U1", "STALL-01"
+    sanitized_at: str                  # ISO-8601 UTC timestamp
+    session_id: str                    # e.g. "2023-07-21_PM"
+    kind: str = "end_of_session"       # "end_of_session" or "between_cows"
+    is_synthetic: bool = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "unitId": self.unit_id,
+            "unit_id": self.unit_id,
+            "sanitizedAt": self.sanitized_at,
+            "sanitized_at": self.sanitized_at,
+            "sessionId": self.session_id,
+            "session_id": self.session_id,
+            "kind": self.kind,
+            "is_synthetic": self.is_synthetic,
+        }
+
+
+@dataclass
+class RestingSpot:
+    """ICAR backtrace resting spot resource (docs/backtrace_spec.md §3.2, §6)."""
+    spot_id: str
+    center_x_m: float
+    center_y_m: float
+    radius_m: float = 1.5
+    n_flagged: int = 0
+    flagged_cows: List[str] = field(default_factory=list)
+    dwell_min_by_flagged: Dict[str, float] = field(default_factory=dict)
+    successors: List[Dict[str, Any]] = field(default_factory=list)
+    until_bedding_change_utc: Optional[str] = None
+    provenance: str = "real"
+    n_bouts: int = 0
+    n_cows: int = 0
+    dwell_min: float = 0.0
+    is_synthetic: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "spot_id": self.spot_id,
+            "spotId": self.spot_id,
+            "center_x_m": self.center_x_m,
+            "center_y_m": self.center_y_m,
+            "radius_m": self.radius_m,
+            "n_flagged": self.n_flagged,
+            "flagged_cows": self.flagged_cows,
+            "dwell_min_by_flagged": self.dwell_min_by_flagged,
+            "successors": self.successors,
+            "until_bedding_change_utc": self.until_bedding_change_utc,
+            "provenance": self.provenance,
+            "n_bouts": self.n_bouts,
+            "n_cows": self.n_cows,
+            "dwell_min": self.dwell_min,
+            "is_synthetic": self.is_synthetic,
         }
 
 
@@ -296,7 +362,7 @@ class BacktraceRun:
 
     def to_dict(self) -> Dict[str, Any]:
         targets = self.target_animal_ids or ([self.target_animal_id] if self.target_animal_id else [])
-        return {
+        d: Dict[str, Any] = {
             "runId": self.run_id,
             "targetAnimalId": self.target_animal_id,
             "targetAnimalIds": targets,
@@ -305,3 +371,16 @@ class BacktraceRun:
             "lookbackDays": self.lookback_days,
             "summary": self.summary,
         }
+        for key in (
+            "investigation_window",
+            "flagged_cows",
+            "resources",
+            "exposed_cows",
+            "route",
+            "provenance",
+            "is_model_suggestion",
+            "is_synthetic",
+        ):
+            if key in self.summary:
+                d[key] = self.summary[key]
+        return d

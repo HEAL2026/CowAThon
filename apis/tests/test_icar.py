@@ -13,6 +13,8 @@ from apis.icar.models import (
     LocationObservation,
     ManualEntry,
     MilkVisit,
+    RestingSpot,
+    SanitationRecord,
 )
 from apis.icar.service import IcarAdeService
 from apis.icar.store import StateStore
@@ -306,6 +308,159 @@ class TestIcarServerIntegration(unittest.TestCase):
             self.assertIn("transmission_source", data)
             self.assertIn("impact", data)
             self.assertEqual(data["transmission_source"]["primary_index_cow"], "C02")
+            # Verify Section 6 root keys in wire response
+            self.assertIn("investigation_window", data)
+            self.assertIn("flagged_cows", data)
+            self.assertIn("resources", data)
+            self.assertIn("resting_spots", data["resources"])
+            self.assertIn("milking_units", data["resources"])
+            self.assertIn("route", data)
+            self.assertIn("provenance", data)
+            self.assertTrue(data["is_model_suggestion"])
+            for s in data["resources"]["resting_spots"]:
+                self.assertIn("spot_id", s)
+                self.assertEqual(s["radius_m"], 1.5)
+
+    def test_http_sanitation_endpoints(self):
+        import json
+        from urllib.request import Request, urlopen
+
+        # POST /sanitation with kind
+        url = f"http://127.0.0.1:{self.port}/sanitation"
+        payload = {
+            "unit_id": "U3",
+            "session_id": "2023-07-29_PM",
+            "kind": "between_cows",
+            "sanitized_at": "2023-07-29T19:30:00Z",
+        }
+        req = Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(req) as resp:
+            self.assertEqual(resp.status, 201)
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertEqual(data["unit_id"], "U3")
+            self.assertEqual(data["kind"], "between_cows")
+
+        # GET /sanitation query
+        get_url = f"http://127.0.0.1:{self.port}/sanitation?unit_id=U3"
+        with urlopen(get_url) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertIn("sanitationRecords", data)
+            records = data["sanitationRecords"]
+            self.assertTrue(any(r["kind"] == "between_cows" for r in records))
+
+
+class TestIcarSpecV2AndSanitation(unittest.TestCase):
+    def test_sanitation_record_model(self):
+        rec = SanitationRecord(
+            unit_id="U2",
+            sanitized_at="2023-07-29T21:00:00Z",
+            session_id="2023-07-29_PM",
+            kind="end_of_session",
+            is_synthetic=True,
+        )
+        d = rec.to_dict()
+        self.assertEqual(d["unitId"], "U2")
+        self.assertEqual(d["kind"], "end_of_session")
+        self.assertEqual(d["sessionId"], "2023-07-29_PM")
+        self.assertTrue(d["is_synthetic"])
+
+    def test_resting_spot_model(self):
+        spot = RestingSpot(
+            spot_id="spot_01",
+            center_x_m=0.06,
+            center_y_m=-0.00,
+            radius_m=1.5,
+            n_flagged=2,
+            flagged_cows=["C06", "C07"],
+            dwell_min_by_flagged={"C06": 413.0, "C07": 2077.0},
+            successors=[{"cow_id": "C01", "rank": 1, "lag_h": 1.2, "w": 1.0}],
+            until_bedding_change_utc="2023-07-28T14:00:00Z",
+            provenance="real",
+            n_bouts=231,
+            n_cows=10,
+            dwell_min=41206.0,
+            is_synthetic=False,
+        )
+        d = spot.to_dict()
+        self.assertEqual(d["spot_id"], "spot_01")
+        self.assertEqual(d["radius_m"], 1.5)
+        self.assertEqual(d["n_flagged"], 2)
+        self.assertEqual(d["provenance"], "real")
+        self.assertFalse(d["is_synthetic"])
+
+    def test_store_sanitation_kind_validation(self):
+        store = StateStore()
+        # Valid kind
+        rec = store.add_sanitation_record(
+            unit_id="U1",
+            sanitized_at="2023-07-25T11:00:00Z",
+            session_id="2023-07-25_AM",
+            kind="between_cows",
+        )
+        self.assertEqual(rec.kind, "between_cows")
+
+        # Invalid kind raises ValueError
+        with self.assertRaises(ValueError):
+            store.add_sanitation_record(
+                unit_id="U1",
+                sanitized_at="2023-07-25T11:00:00Z",
+                session_id="2023-07-25_AM",
+                kind="invalid_kind",
+            )
+
+        # Invalid manual sanitation kind raises ValueError
+        with self.assertRaises(ValueError):
+            store.add_manual_entry(
+                entry_type="sanitation",
+                details={"unit_id": "U1"},
+                kind="invalid_clean_kind",
+            )
+
+    def test_service_run_backtrace_spec_v2_and_real_tables(self):
+        svc = IcarAdeService()
+        run = svc.run_backtrace(animal_id=["C06", "C07"], lookback_days=7)
+
+        # Check BacktraceRun root fields
+        self.assertIn("investigation_window", run)
+        self.assertIn("flagged_cows", run)
+        self.assertIn("resources", run)
+        self.assertIn("route", run)
+        self.assertIn("provenance", run)
+        self.assertTrue(run["is_model_suggestion"])
+
+        # Check resources.resting_spots
+        spots = run["resources"]["resting_spots"]
+        self.assertEqual(len(spots), 5)
+        spot_ids = [s["spot_id"] for s in spots]
+        self.assertEqual(sorted(spot_ids), ["spot_01", "spot_02", "spot_03", "spot_04", "spot_05"])
+        for s in spots:
+            self.assertEqual(s["radius_m"], 1.5)
+            self.assertEqual(s["provenance"], "real")
+            self.assertFalse(s["is_synthetic"])
+            self.assertIn("dwell_min_by_flagged", s)
+
+        # Check resources.milking_units
+        units = run["resources"]["milking_units"]
+        self.assertGreaterEqual(len(units), 4)
+        for u in units:
+            self.assertIn("unit_id", u)
+            self.assertIn("sanitized_between", u)
+            self.assertEqual(u["provenance"], "synthetic")
+            self.assertTrue(u["is_synthetic"])
+
+        # Check legacy keys in summary
+        summary = run["summary"]
+        self.assertIn("likelyRoute", summary)
+        self.assertIn("likely_route", summary)
+        self.assertIn("routeConfidencePValue", summary)
+        self.assertIn("implicatedRestingCircles", summary)
+        self.assertEqual(len(summary["implicatedRestingCircles"]), 5)
 
 
 if __name__ == "__main__":
