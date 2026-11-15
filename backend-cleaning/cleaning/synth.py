@@ -8,8 +8,10 @@ real days with three episodes:
                               cow's cells (real lying_bouts) inside one
                               bedding window
   days 6-10   milking_route   cases follow the index cow on the same unit in
-                              the same session, before that unit's next
-                              sanitation (which is skipped that day)
+                              the same session, with no cluster cleaning in
+                              between (every cleaning on that unit is skipped
+                              that session; elsewhere clusters are cleaned
+                              between cows about half the time)
   days 11-14  sporadic        cases share no route
 
 Real inputs used only for *timing and geometry*: UWB out_of_pen gives each
@@ -31,6 +33,7 @@ N_UNITS = 4
 CELL_M = 1.0
 RESTING_MIN = 20          # brief S8: resting occupancy = bouts >= 20 min
 BEDDING_EVERY_DAYS = 7    # synthetic bedding windows; Aster's real table replaces this
+P_CLEAN_BETWEEN = 0.5     # share of cow-to-cow handovers on a unit that get a cluster clean (backflush)
 
 # Literature-style acute signatures, applied over the 1-3 days before dx
 # (sources: Kitchen 1981 conductivity; Harmon 1994 SCC; Rajala-Schultz 1999 yield;
@@ -91,15 +94,24 @@ def synth_milking_log(sessions: pd.DataFrame, rng: np.random.Generator, n_units:
     return pd.DataFrame(rows).sort_values(["session_id", "unit_id", "order_in_session"]).reset_index(drop=True)
 
 
-def synth_sanitation(log: pd.DataFrame, rng: np.random.Generator, skip: set[tuple[str, str]] = frozenset()) -> pd.DataFrame:
-    """One sanitation per unit after each session's last milking, except the
-    (session_id, unit_id) pairs in `skip` (those create the exposure window)."""
+def synth_sanitation(log: pd.DataFrame, rng: np.random.Generator, skip: set[tuple[str, str]] = frozenset(),
+                     p_between: float = P_CLEAN_BETWEEN) -> pd.DataFrame:
+    """Cluster cleanings per unit: one after each session's last milking, plus a
+    between-cow clean (backflush) on a share `p_between` of handovers, 1-3 min
+    after the earlier cow. The (session_id, unit_id) pairs in `skip` get no
+    cleaning at all that session -- that is the exposure chain. `kind` says
+    which; backtrace treats both as a sanitation boundary."""
     rows = []
     for (sess, unit), g in log.groupby(["session_id", "unit_id"]):
         if (sess, unit) in skip:
             continue
-        rows.append({"unit_id": unit, "sanitized_at": g["milking_time"].max() + pd.Timedelta(minutes=int(rng.integers(20, 50))),
-                     "session_id": sess, "is_synthetic": True})
+        times = g.sort_values("milking_time")["milking_time"].tolist()
+        for t in times[:-1]:
+            if rng.random() < p_between:
+                rows.append({"unit_id": unit, "sanitized_at": t + pd.Timedelta(minutes=int(rng.integers(1, 4))),
+                             "session_id": sess, "kind": "between_cows", "is_synthetic": True})
+        rows.append({"unit_id": unit, "sanitized_at": times[-1] + pd.Timedelta(minutes=int(rng.integers(20, 50))),
+                     "session_id": sess, "kind": "end_of_session", "is_synthetic": True})
     return pd.DataFrame(rows).sort_values(["sanitized_at", "unit_id"]).reset_index(drop=True)
 
 
@@ -155,14 +167,16 @@ def resting_route_episode(bouts: pd.DataFrame, bedding: pd.DataFrame, day_range:
 def milking_route_episode(log: pd.DataFrame, day_range: tuple[int, int], rng: np.random.Generator, n_secondary: int = 3,
                           exclude: set[str] = frozenset()) -> dict:
     """Index cow milked at order k on unit u; the next cows on that unit in the
-    same session are the cases; sanitation of (session, unit) is skipped."""
+    same session are the cases; every cleaning of (session, unit) is skipped so
+    nothing separates the index cow from its successors. Prefers a session where
+    the index cow is not first on the unit, so order alone does not give it away."""
     days = sorted(log["session_id"].str[:10].unique())
     cand = [s for s in sorted(log["session_id"].unique()) if days[day_range[0] - 1] <= s[:10] <= days[day_range[1] - 1]]
     for sess in rng.permutation(cand):
         for unit, g in log[log["session_id"] == sess].groupby("unit_id"):
             g = g.sort_values("order_in_session")
             if len(g) >= n_secondary + 1:
-                k = int(rng.integers(0, len(g) - n_secondary))
+                k = int(rng.integers(1, len(g) - n_secondary)) if len(g) >= n_secondary + 2 else 0
                 idx = g.iloc[k]
                 sec = g.iloc[k + 1:k + 1 + n_secondary]
                 if idx["cow_id"] in exclude or sec["cow_id"].isin(exclude).any():
@@ -205,11 +219,19 @@ def make_cases(episodes: list[dict], rng: np.random.Generator) -> pd.DataFrame:
         cows = ([ep["index_cow"]] if ep["index_cow"] else []) + ep["secondary_cows"]
         for i, cow in enumerate(cows):
             role = "index" if (ep["index_cow"] and i == 0) else "secondary"
+            # Causal timing: the index cow is already shedding at the exposure event
+            # (onset before it); a secondary's onset follows the exposure by an
+            # incubation lag, and its diagnosis follows its onset. Sporadic cases
+            # (no index) keep a free spread inside their window.
             if role == "index":
+                onset = ep["exposure_start_utc"] - pd.Timedelta(hours=int(rng.integers(18, 42)))
                 dx = ep["exposure_start_utc"] + pd.Timedelta(hours=int(rng.integers(6, 30)))
+            elif ep["index_cow"]:
+                onset = ep["exposure_start_utc"] + pd.Timedelta(hours=int(rng.integers(12, 48)))
+                dx = onset + pd.Timedelta(hours=int(rng.integers(24, 72)))
             else:
                 dx = ep["exposure_start_utc"] + pd.Timedelta(hours=int(rng.integers(36, 96)))
-            onset = dx - pd.Timedelta(hours=int(rng.integers(24, 72)))
+                onset = dx - pd.Timedelta(hours=int(rng.integers(24, 72)))
             sig = {k: float(rng.uniform(*v)) for k, v in SIGNATURE.items()}
             rows.append({"scenario": ep["scenario"], "cow_id": cow, "role": role, "onset_utc": onset, "dx_utc": dx,
                          "true_route": {"resting_route": "resting_area", "milking_route": "milking_equipment", "sporadic": "no_common_route"}[ep["scenario"]],
@@ -303,6 +325,7 @@ def run(processed: Path, interim: Path, out: Path, seed: int = 0) -> dict:
             {"scenario": ep_milk["scenario"], "index_cow": ep_milk["index_cow"], "secondary": ep_milk["secondary_cows"], **ep_milk["source"]},
             {"scenario": ep_spor["scenario"], "cows": ep_spor["secondary_cows"], "shared_route_score": ep_spor["source"]["shared_cells"]},
         ],
+        "sanitation": {"p_clean_between_cows": P_CLEAN_BETWEEN, "skipped_session_unit": list(ep_milk["skip_sanitation"])},
         "note": "all tables is_synthetic=true; timing/geometry from real UWB + lying_bouts, everything else seeded synthetic",
     }
     (out / "synthetic_world.json").write_text(json.dumps(summary, indent=2, default=str) + "\n")

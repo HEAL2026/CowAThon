@@ -61,6 +61,8 @@ the same pen. Resting-route exposure (S8) is only counted **within** a window.
 |---|---|---|
 | `unit_id` | string | |
 | `sanitized_at` | timestamp UTC | milking‑route exposure (S9) stops at the unit's next sanitation |
+| `session_id` | string | |
+| `kind` | `end_of_session` \| `between_cows` | synthetic: one end‑of‑session clean per unit, between‑cow cluster cleans on ~50 % of handovers (`synth.P_CLEAN_BETWEEN`) |
 | `is_synthetic` | bool | |
 
 ## flags — manual or auto
@@ -142,8 +144,9 @@ Set in `docs/backtrace_spec.md`. The investigation window is anchored at the
 flagged cows' `onset_utc` (fallback `flagged_at`), never at `max(flagged_at) − 72 h`.
 Resting successions stop at the next `bedding.changed_at`; milking successions
 stop at the unit's next `sanitation.sanitized_at` and at the session boundary.
-The synthetic sanitation table fires once per unit **after** each session, so it
-never separates two cows milked in the same session.
+The synthetic sanitation table (world v2) carries end‑of‑session cleans and
+between‑cow cluster cleans; the planted milking episode's (session, unit) has
+none, so its successors are the only un‑cleaned chain on that unit that session.
 
 ## Answers from Aster (board, 2026‑11‑15)
 

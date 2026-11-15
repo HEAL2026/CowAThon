@@ -98,6 +98,67 @@ def resting_areas(
     return out[columns].sort_values(["cow_id", "start_utc"]).reset_index(drop=True)
 
 
+def resting_spots(
+    bouts: pd.DataFrame,
+    min_duration_min: int = 20,
+    link_m: float = 1.5,
+) -> pd.DataFrame:
+    """Cubicle-level resting spots: clusters of qualifying bout centres with
+    single-linkage <= `link_m`, dwell-weighted centroids (docs/backtrace_spec.md
+    section 3.2). Bouts are visited longest first so the big cubicles seed the
+    clusters. Returns one row per spot ordered by total dwell, plus a
+    `spot_id` per input bout is NOT stored here -- assign at use time by
+    nearest centre within `link_m` (see `assign_spots`)."""
+    required = {"cow_id", "duration_min", "x_m", "y_m"}
+    missing = required - set(bouts.columns)
+    if missing:
+        raise KeyError(f"lying bouts lacks {sorted(missing)}")
+    if link_m <= 0:
+        raise ValueError(f"link_m must be positive, got {link_m}")
+    b = bouts.loc[(bouts["duration_min"] >= min_duration_min) & bouts["x_m"].notna() & bouts["y_m"].notna()]
+    if "in_pen_frac" in b.columns:
+        b = b[b["in_pen_frac"].fillna(1.0) >= 0.5]
+    b = b.sort_values("duration_min", ascending=False)
+    spots: list[dict] = []
+    for x, y, dur, cow in zip(b["x_m"].to_numpy(float), b["y_m"].to_numpy(float), b["duration_min"].to_numpy(float), b["cow_id"]):
+        for sp in spots:
+            if np.hypot(sp["x"] - x, sp["y"] - y) <= link_m:
+                w = sp["dwell"]
+                sp["x"] = (sp["x"] * w + x * dur) / (w + dur)
+                sp["y"] = (sp["y"] * w + y * dur) / (w + dur)
+                sp["dwell"] += dur
+                sp["n_bouts"] += 1
+                sp["cows"].add(cow)
+                break
+        else:
+            spots.append({"x": x, "y": y, "dwell": dur, "n_bouts": 1, "cows": {cow}})
+    spots.sort(key=lambda sp: -sp["dwell"])
+    return pd.DataFrame({
+        "spot_id": [f"spot_{i + 1:02d}" for i in range(len(spots))],
+        "center_x_m": [round(sp["x"], 3) for sp in spots],
+        "center_y_m": [round(sp["y"], 3) for sp in spots],
+        "radius_m": float(link_m),
+        "n_bouts": [sp["n_bouts"] for sp in spots],
+        "n_cows": [len(sp["cows"]) for sp in spots],
+        "dwell_min": [round(sp["dwell"], 1) for sp in spots],
+        "is_synthetic": False,
+    })
+
+
+def assign_spots(bouts: pd.DataFrame, spots: pd.DataFrame) -> pd.Series:
+    """`spot_id` for each bout: nearest spot centre within its radius, else NA."""
+    if len(spots) == 0 or len(bouts) == 0:
+        return pd.Series(pd.NA, index=bouts.index, dtype="string")
+    sx = spots["center_x_m"].to_numpy(float)[None, :]
+    sy = spots["center_y_m"].to_numpy(float)[None, :]
+    d = np.hypot(bouts["x_m"].to_numpy(float)[:, None] - sx, bouts["y_m"].to_numpy(float)[:, None] - sy)
+    j = d.argmin(axis=1)
+    ok = d[np.arange(len(bouts)), j] <= spots["radius_m"].to_numpy(float)[j]
+    out = pd.Series(spots["spot_id"].to_numpy()[j], index=bouts.index, dtype="string")
+    out[~ok | bouts["x_m"].isna().to_numpy()] = pd.NA
+    return out
+
+
 def mark_gaps(joined: pd.DataFrame, channels: dict[str, int], mark_after_min: int = 5) -> pd.DataFrame:
     """For each native per-cow channel, add `<col>_gap_min`: length of the
     run of missing minutes the row sits in, when that run exceeds the

@@ -90,6 +90,15 @@ def _derived(interim: Path, processed: Path) -> None:
     )
     print(f"-> {processed / 'resting_areas.parquet'}  ({len(resting)} areas)")
 
+    spots = bouts.resting_spots(lb, min_duration_min=cfg["lying_bouts"]["resting_min_duration_min"], link_m=1.5)
+    for c, u in (("center_x_m", "m"), ("center_y_m", "m"), ("radius_m", "m"), ("n_bouts", "bouts"), ("n_cows", "cows"),
+                 ("dwell_min", "min"), ("spot_id", "id")):
+        ingest.UNITS.setdefault(c, u)
+    write_table(spots, processed, "resting_spots", "spot", ["spot_id"],
+                {"min_duration_min": cfg["lying_bouts"]["resting_min_duration_min"], "link_m": 1.5,
+                 "note": "cubicle-level spots: single-linkage clusters of bout centres, dwell-weighted centroids (docs/backtrace_spec.md 3.2); not synthetic"})
+    print(f"-> {processed / 'resting_spots.parquet'}  ({len(spots)} spots)")
+
     uwb = pd.read_parquet(interim / "uwb.parquet")
     loc = bouts.location_1min_median(uwb)
     for c in ("x_med_m", "y_med_m", "z_med_m"):
