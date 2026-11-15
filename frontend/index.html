@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0d3b35" />
+    <title>Herdwise | Farm intelligence</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">H</span>
+          <span>Herdwise</span>
+        </div>
+        <div class="header-actions">
+          <span id="connection-status" class="status-pill"><span class="status-dot"></span> Live data</span>
+          <button id="profile-button" class="avatar-button" aria-label="Open profile">LM</button>
+        </div>
+      </header>
+
+      <main class="app-shell">
+        <section class="welcome-row">
+          <div>
+            <p class="eyebrow">Good morning, Leah</p>
+            <h1>Farm intelligence at a glance</h1>
+          </div>
+          <div class="role-switcher" aria-label="User role">
+            <button class="role-button active" data-role="farmer">Farmer</button>
+            <button class="role-button" data-role="vet">Vet</button>
+          </div>
+        </section>
+
+        <section class="farm-toolbar card">
+          <label>
+            <span class="field-label">Farm</span>
+            <select id="farm-select">
+              <option value="green-valley">Green Valley Dairy</option>
+              <option value="sunrise">Sunrise Cooperative</option>
+            </select>
+          </label>
+          <label>
+            <span class="field-label">Barn</span>
+            <select id="barn-select">
+              <option value="north-barn">North Barn</option>
+              <option value="south-barn">South Barn</option>
+            </select>
+          </label>
+          <div class="partner-summary">
+            <span class="field-label">Care team</span>
+            <span><span class="online-dot"></span> Dr. Maya Patel <button class="text-button">Manage</button></span>
+          </div>
+        </section>
+
+        <section class="time-controls card">
+          <div class="time-heading">
+            <div>
+              <span class="field-label">Viewing data from</span>
+              <strong id="time-label">Today, 10:42 AM</strong>
+            </div>
+            <button id="date-button" class="secondary-button">Choose date</button>
+          </div>
+          <input id="time-slider" type="range" min="0" max="24" value="10" aria-label="Time in the day" />
+          <div class="time-scale"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>Now</span></div>
+        </section>
+
+        <nav class="view-tabs" aria-label="Primary views">
+          <button class="view-tab active" data-view="barn"><span>⌂</span> Barn</button>
+          <button class="view-tab" data-view="milking"><span>◫</span> Milking</button>
+          <button class="view-tab alert-tab" data-view="alerts"><span>!</span> Alerts <b>4</b></button>
+        </nav>
+
+        <section id="barn-view" class="view-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">North Barn · 42 cows</p>
+              <h2>Where are the cows spending time?</h2>
+            </div>
+            <div class="segmented-control">
+              <button class="mode-button active" data-mode="location">Live location</button>
+              <button class="mode-button" data-mode="heatmap">Activity heatmap</button>
+            </div>
+          </div>
+          <div class="barn-grid">
+            <div class="barn-map card" id="barn-map">
+              <div class="map-toolbar">
+                <span class="map-legend"><i class="legend-dot healthy"></i> Cow location</span>
+                <button id="problem-overlay" class="overlay-button"><span class="toggle"></span> Mastitis risk areas</button>
+              </div>
+              <div class="barn-polygon">
+                <div class="feed-lane">Feed lane</div>
+                <div class="rest-zone zone-a">Rest zone A</div>
+                <div class="rest-zone zone-b">Rest zone B</div>
+                <div class="water-zone">Water</div>
+                <div class="cow-dot cow-a" data-cow="Bessie 142" title="Bessie 142 · Healthy"></div>
+                <div class="cow-dot cow-b" data-cow="Daisy 108" title="Daisy 108 · Pregnant"></div>
+                <div class="cow-dot cow-c" data-cow="Fern 221" title="Fern 221 · Elevated health risk"></div>
+                <div class="cow-dot cow-d" data-cow="Luna 095" title="Luna 095 · Estrus"></div>
+                <div class="cow-dot cow-e" data-cow="Mabel 187" title="Mabel 187 · Resting anomaly"></div>
+                <div class="cow-dot cow-f" data-cow="Poppy 164" title="Poppy 164 · Healthy"></div>
+                <div class="cow-dot cow-g" data-cow="Rose 204" title="Rose 204 · Recently calved"></div>
+                <div class="cow-dot cow-h" data-cow="Willow 131" title="Willow 131 · Healthy"></div>
+              </div>
+              <div id="cow-detail" class="cow-detail" hidden></div>
+            </div>
+            <aside class="card legend-card">
+              <div class="card-title-row"><h3>Color by</h3><span class="info-icon">i</span></div>
+              <label class="radio-row"><input type="radio" name="color-by" value="status" checked /> Lactation status <span class="legend-swatch status-swatch"></span></label>
+              <label class="radio-row"><input type="radio" name="color-by" value="breed" /> Breed <span class="legend-swatch breed-swatch"></span></label>
+              <label class="radio-row"><input type="radio" name="color-by" value="health" /> Health index <span class="gradient-swatch health-gradient"></span></label>
+              <label class="radio-row"><input type="radio" name="color-by" value="behavior" /> Behavior anomaly <span class="gradient-swatch behavior-gradient"></span></label>
+              <hr />
+              <div class="metric-row"><span><i class="legend-dot healthy"></i> Within baseline</span><strong>35</strong></div>
+              <div class="metric-row"><span><i class="legend-dot watch"></i> Worth a look</span><strong>5</strong></div>
+              <div class="metric-row"><span><i class="legend-dot urgent"></i> Needs attention</span><strong>2</strong></div>
+            </aside>
+          </div>
+          <div class="insight-strip">
+            <span class="insight-icon">✦</span>
+            <p><strong>One thing to know:</strong> 3 cows are resting outside their usual zone. This can be an early behavior change—check the alerts before the next milking.</p>
+            <button class="text-button" data-view-target="alerts">View alerts →</button>
+          </div>
+        </section>
+
+        <section id="milking-view" class="view-panel" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">North Barn · Parlor 1</p>
+              <h2>Milking flow</h2>
+            </div>
+            <button class="secondary-button">Import setup <span>↗</span></button>
+          </div>
+          <div class="milking-layout">
+            <div class="milking-diagram card">
+              <div class="diagram-header"><span>Rotary parlor · 12 stalls</span><span class="last-sync">Synced 2 min ago</span></div>
+              <div class="stall-ring">
+                <div class="ring-center"><strong>8 / 12</strong><span>in progress</span></div>
+                <button class="stall stall-1 risk-high" data-stall="1">1</button>
+                <button class="stall stall-2 risk-low" data-stall="2">2</button>
+                <button class="stall stall-3 risk-low" data-stall="3">3</button>
+                <button class="stall stall-4 risk-watch" data-stall="4">4</button>
+                <button class="stall stall-5 risk-low" data-stall="5">5</button>
+                <button class="stall stall-6 risk-high" data-stall="6">6</button>
+                <button class="stall stall-7 risk-low" data-stall="7">7</button>
+                <button class="stall stall-8 risk-low" data-stall="8">8</button>
+                <button class="stall stall-9 risk-watch" data-stall="9">9</button>
+                <button class="stall stall-10 risk-low" data-stall="10">10</button>
+                <button class="stall stall-11 risk-low" data-stall="11">11</button>
+                <button class="stall stall-12 risk-high" data-stall="12">12</button>
+              </div>
+              <div class="stall-legend"><span><i class="legend-dot healthy"></i> Low risk</span><span><i class="legend-dot watch"></i> Watch</span><span><i class="legend-dot urgent"></i> High risk</span></div>
+              <div id="stall-detail" class="stall-detail">Select a stall to see recent cows and alerts.</div>
+            </div>
+            <aside class="card milk-summary">
+              <div class="card-title-row"><h3>Today's summary</h3><span class="trend-up">↑ 4.2%</span></div>
+              <div class="big-stat">2,846 <span>L</span></div>
+              <p class="muted">Across 3 milkings</p>
+              <div class="summary-list">
+                <div><span>Average yield</span><strong>34.1 L / cow</strong></div>
+                <div><span>High-risk stalls</span><strong class="danger-text">3</strong></div>
+                <div><span>Last cleaning cycle</span><strong>10:16 AM</strong></div>
+              </div>
+              <button class="primary-button full-width" data-view-target="alerts">Review risk alerts</button>
+            </aside>
+          </div>
+        </section>
+
+        <section id="alerts-view" class="view-panel" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">4 open · 1 urgent</p>
+              <h2>Alerts & care assistant</h2>
+            </div>
+            <button id="report-settings" class="secondary-button">Report settings</button>
+          </div>
+          <div class="alerts-layout">
+            <div class="alert-list">
+              <article class="alert-card urgent">
+                <div class="alert-icon">!</div><div><span class="alert-type">Urgent · Health</span><h3>Fern 221 has a sharp health-index change</h3><p>Activity is down 38% and rumination is outside her baseline. Last seen in Rest zone B.</p><div class="alert-actions"><button class="primary-button small">Assign to Dr. Patel</button><button class="text-button">Mark reviewed</button></div></div><time>12 min ago</time>
+              </article>
+              <article class="alert-card watch">
+                <div class="alert-icon">◒</div><div><span class="alert-type">Watch · Milking</span><h3>Stall 6 has elevated mastitis risk</h3><p>Three consecutive conductivity readings are above the barn baseline.</p><div class="alert-actions"><button class="secondary-button small">View stall</button><button class="text-button">Dismiss</button></div></div><time>34 min ago</time>
+              </article>
+              <article class="alert-card info">
+                <div class="alert-icon">i</div><div><span class="alert-type">Info · Partner access</span><h3>Dr. Patel shared a treatment report</h3><p>Review and acknowledge the 10:00 AM herd-health report.</p><div class="alert-actions"><button class="secondary-button small">Open report</button></div></div><time>1 hr ago</time>
+              </article>
+            </div>
+            <aside class="assistant card">
+              <div class="assistant-heading"><div class="assistant-avatar">✦</div><div><h3>Herdwise assistant</h3><span class="online-label">Connected to farm models</span></div></div>
+              <div class="assistant-message">I found 2 cows worth checking before the next milking. Ask me about a cow, a barn, or a trend.</div>
+              <div class="suggestion-row"><button class="suggestion">What changed today?</button><button class="suggestion">Explain Fern's alert</button></div>
+              <form id="assistant-form" class="assistant-input"><input id="assistant-input" placeholder="Ask about your herd..." aria-label="Ask the herd assistant" /><button aria-label="Send question">↑</button></form>
+              <p id="assistant-response" class="assistant-response" hidden></p>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <nav class="mobile-nav" aria-label="Mobile navigation">
+        <button class="mobile-nav-item active" data-view="barn"><span>⌂</span>Barn</button>
+        <button class="mobile-nav-item" data-view="milking"><span>◫</span>Milking</button>
+        <button class="mobile-nav-item" data-view="alerts"><span>!</span>Alerts <b>4</b></button>
+        <button class="mobile-nav-item" id="mobile-profile"><span>◎</span>Profile</button>
+      </nav>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
