@@ -64,6 +64,21 @@ python3 -m cleaning export --cows C01,C02 --days 2 --out /tmp/demo.parquet
 `--days` counts whole local days from the start of the span, so a slice never
 ends mid-milking-cycle. 2 cows x 2 days is ~4k rows / 300 KB.
 
+### Derived tables (brief S3)
+
+`python3 -m cleaning` also writes, next to `joined_1min`:
+
+| table | what |
+|---|---|
+| `lying_bouts` | continuous lying ≥ 5 min, median in‑pen location per bout — input to resting‑route tracing |
+| `location_1min` | per‑minute median position (joined carries the mean) |
+| `manual` | parity / DIM / pregnancy per cow, **derived from the real farm event log**, cross‑checked against the farm's DIM counter |
+| `mastitis_events` | real clinical‑mastitis diagnoses, cultures, withholds (57 rows, none inside the sensor window) — validation anchors, never labels |
+| `health_records` (interim) | the full event log, 3,503 rows, 16 cows |
+
+`joined_1min` gains `in_pen` and `<col>_gap_min` (missing runs > 5 min, marked
+never filled). Thresholds live in `cleaning/config.yaml`.
+
 Outputs: `data/interim/<table>.parquet` at native rate with a
 `<table>.schema.json` sidecar each, `data/interim/ingest.report.json`
 (dropped-key counts), and `data/processed/joined_1min.parquet` with its
@@ -89,4 +104,4 @@ assert_no_group_leakage(train, test)   # cheap, call it before training
 folds = group_kfold(df, by="cow_id", n_splits=5, seed=0)
 ```
 
-Tests: `cd backend-cleaning && python3 tests/test_splits.py && python3 tests/test_ingest.py`
+Tests: `cd backend-cleaning && for t in tests/test_*.py; do python3 $t; done`
