@@ -1,0 +1,90 @@
+[
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_a",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-07-21T08:00:00Z",
+    "bacterial_count": 2100000.0,
+    "dry_matter_pct": 84.5,
+    "notes": "Full cubicle cleanout and lime dressing prior to trial start",
+    "is_synthetic": true
+  },
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_b",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-07-21T08:00:00Z",
+    "bacterial_count": 2350000.0,
+    "dry_matter_pct": 83.8,
+    "notes": "Full cubicle cleanout and lime dressing prior to trial start",
+    "is_synthetic": true
+  },
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_a",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-07-25T08:30:00Z",
+    "bacterial_count": 3400000.0,
+    "dry_matter_pct": 81.2,
+    "notes": "Routine weekly bedding addition and rake",
+    "is_synthetic": true
+  },
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_b",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-07-25T08:30:00Z",
+    "bacterial_count": 4800000.0,
+    "dry_matter_pct": 79.5,
+    "notes": "Routine weekly bedding addition; noticeable moisture near waterer",
+    "is_synthetic": true
+  },
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_a",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-07-29T08:15:00Z",
+    "bacterial_count": 2800000.0,
+    "dry_matter_pct": 82.0,
+    "notes": "Post-heatwave bedding refresh and top dress",
+    "is_synthetic": true
+  },
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_b",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-07-29T08:15:00Z",
+    "bacterial_count": 5600000.0,
+    "dry_matter_pct": 77.0,
+    "notes": "Implicated cubicle cleanout and fresh bedding layer",
+    "is_synthetic": true
+  },
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_a",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-08-02T08:00:00Z",
+    "bacterial_count": 2200000.0,
+    "dry_matter_pct": 85.0,
+    "notes": "Weekly bedding refresh",
+    "is_synthetic": true
+  },
+  {
+    "barn_id": "main_barn_01",
+    "pen_id": "pen_01",
+    "zone_id": "cubicle_row_b",
+    "bedding_type": "recycled_manure_solids",
+    "changed_at": "2023-08-02T08:00:00Z",
+    "bacterial_count": 2900000.0,
+    "dry_matter_pct": 84.0,
+    "notes": "Weekly bedding refresh",
+    "is_synthetic": true
+  }
+]

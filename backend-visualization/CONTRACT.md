@@ -252,3 +252,149 @@ Exposes system modularity, capability profiles, and cost metrics for small-farm 
   ]
 }
 ```
+
+### 3.7 2D Pen Map (`/api/pen-map` or `pen_map.json`)
+Visualizes pen layout, resting density heatmap generated from lying bouts (duration >= 20 min), flagged cows, exposed cows shaded by continuous exposure score, and highlighted transmission elements.
+
+```json
+{
+  "ts_utc": "2023-07-28T14:00:00Z",
+  "barn_id": "main_barn_01",
+  "pen_id": "pen_01",
+  "grid": {
+    "width_m": 30.0,
+    "height_m": 15.0,
+    "cell_size_m": 1.0,
+    "heatmap": [[0.0, 0.65], [0.85, 0.0]]
+  },
+  "cows": [
+    {
+      "cow_id": "C01",
+      "display_name": "Fern (C01)",
+      "uwb_x_m": 12.4,
+      "uwb_y_m": 8.2,
+      "zone": "cubicle_row_b",
+      "activity_state": "resting",
+      "out_of_pen": false,
+      "flag_status": "flagged",
+      "exposure_score": 0.92,
+      "exposure_tier": "priority_watch",
+      "is_source_candidate": true
+    }
+  ],
+  "implicated_elements": {
+    "grid_cells": [{"x": 12, "y": 10, "risk_density": 0.88}],
+    "milking_units": ["unit_04"],
+    "resting_zones": ["cubicle_row_b"]
+  },
+  "is_synthetic": false
+}
+```
+
+### 3.8 Herd Health & Vitality Table (`/api/herd-health` or `herd_health.json`)
+Displays herd-wide cows with 0–100 health vitality index, acute mastitis risk split into rule vs anomaly components, cold-start baseline tier, and active watch-list flags.
+
+```json
+{
+  "ts_utc": "2023-07-28T14:00:00Z",
+  "cows": [
+    {
+      "cow_id": "C01",
+      "health_index": 58.5,
+      "health_breakdown": {
+        "thermal_vitality": 18.0,
+        "rumination_vitality": 14.0,
+        "activity_vitality": 16.5,
+        "production_vitality": 10.0
+      },
+      "mastitis_risk": 82.4,
+      "risk_components": {
+        "rule_score": 88.0,
+        "anomaly_score": 74.0,
+        "top_contributing_signals": ["conductivity_spike_quarter_rf", "cbt_elevation", "milk_yield_drop"]
+      },
+      "baseline_tier": "own_history",
+      "baseline_confidence": 0.95,
+      "active_flag": {
+        "flag_id": "auto_C01_20230728",
+        "source": "auto",
+        "type": "suspected",
+        "quarter": "RF",
+        "confidence": 0.824,
+        "reason": "Quarter conductivity elevation (6.2 mS/cm) and CBT increase",
+        "status": "active"
+      },
+      "is_synthetic": false
+    }
+  ],
+  "is_synthetic": false
+}
+```
+
+### 3.9 Outbreak Transmission Attribution Panel (`/api/attribution` or `attribution.json`)
+Exposes backtrace transmission attribution comparing resting cubicles vs milking machine contact, permutation test p-values, implicated source, and non-clinical pathogen group likelihood.
+
+```json
+{
+  "ts_utc": "2023-07-28T14:00:00Z",
+  "lookback_hours": 72,
+  "likely_route": "resting_cubicle_route",
+  "route_probabilities": {
+    "resting_cubicle_route": 0.78,
+    "milking_equipment_route": 0.18,
+    "sporadic_individual": 0.04
+  },
+  "p_values": {
+    "resting_permutation_p": 0.008,
+    "milking_permutation_p": 0.24
+  },
+  "transmission_source": {
+    "type": "resting_zone",
+    "identifier": "cubicle_row_b",
+    "primary_index_cow": "C01",
+    "bedding_window_start_utc": "2023-07-25T08:30:00Z",
+    "shared_hours_prior": 14.5
+  },
+  "pathogen_group_likelihood": {
+    "coliform_environmental_gram_negative": 0.76,
+    "streptococci_environmental_gram_positive": 0.18,
+    "contagious_staph_aureus": 0.06,
+    "statement": "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. Not a clinical diagnosis."
+  },
+  "recommended_actions": [
+    "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8",
+    "Verify teat pre-dip coverage and contact time prior to unit attachment",
+    "Segregate C01 milking order to end of session"
+  ],
+  "is_model_suggestion": true,
+  "is_synthetic": false
+}
+```
+
+### 3.10 Mitigation & Economic Impact Panel (`/api/impact` or `impact.json`)
+Quantifies early detection lead time and prevented cross-contamination impact.
+
+```json
+{
+  "ts_utc": "2023-07-28T14:00:00Z",
+  "cohort_size": 16,
+  "total_affected_cows": 3,
+  "flagged_early_count": 2,
+  "early_detection_rate_pct": 66.7,
+  "mean_lead_time_hours": 18.5,
+  "estimated_milk_saved_kg": 142.0,
+  "transmission_prevented_cases_est": 2.4,
+  "is_synthetic": false
+}
+```
+
+---
+
+## 4. Placeholder Datasets (`data/placeholder/`)
+
+Shipped as deterministic fixtures (`is_synthetic: true`) adhering to `docs/data_contracts.md`:
+1. `bedding.json`: Bedding refresh intervals per `zone_id` bounding resting exposure windows.
+2. `milk.json`: Per-milking visit records with `unit_id`, `stall_number`, quarter conductivity (`cond_lf`, `cond_lr`, `cond_rf`, `cond_rr`, `cond_max`), and `scc_kcells_ml`.
+3. `milking_log.json`: Visit sequence ordering per milking stall session.
+4. `sanitation.json`: Milking stall disinfection timestamps.
+

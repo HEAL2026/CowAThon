@@ -428,3 +428,266 @@ def generate_integrations_feasibility(
     ]
 
     return {"systems": default_systems}
+
+
+def generate_pen_map(
+    cows_data: Optional[List[Dict[str, Any]]] = None,
+    lying_bouts: Optional[List[Dict[str, Any]]] = None,
+    implicated_elements: Optional[Dict[str, Any]] = None,
+    barn_id: str = "main_barn_01",
+    pen_id: str = "pen_01",
+    ts_utc: Optional[str] = None,
+    is_synthetic: bool = False,
+) -> Dict[str, Any]:
+    """
+    Constructs the 2D pen map payload featuring resting heatmap derived from lying bouts,
+    flagged cows, exposed cows shaded by exposure score, and highlighted implicated cells/units.
+    """
+    if ts_utc is None:
+        ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
+
+    grid_w, grid_h = 30, 15
+    heatmap = [[0.0 for _ in range(grid_w)] for _ in range(grid_h)]
+
+    # Populate resting heatmap from lying bouts if available
+    if lying_bouts:
+        for bout in lying_bouts:
+            dur = float(bout.get("duration_min", 20.0))
+            if dur >= 20.0:  # Resting occupancy per brief: bouts >= 20 min
+                bx = float(bout.get("x_m", 15.0))
+                by = float(bout.get("y_m", 7.5))
+                gx = max(0, min(grid_w - 1, int(bx)))
+                gy = max(0, min(grid_h - 1, int(by)))
+                heatmap[gy][gx] = round(heatmap[gy][gx] + min(1.0, dur / 60.0), 2)
+    else:
+        # Standard resting zones in cubicle rows A and B
+        for y in range(2, 6):
+            for x in range(5, 25):
+                heatmap[y][x] = 0.65
+        for y in range(9, 13):
+            for x in range(5, 25):
+                heatmap[y][x] = 0.85
+
+    # Default cows if not passed
+    cows_payload = []
+    if cows_data:
+        cows_payload = cows_data
+    else:
+        for i in range(1, 17):
+            cid = f"C{i:02d}"
+            is_c01 = (cid == "C01")
+            is_c02 = (cid == "C02")
+            is_flagged = is_c01
+            exposure = 0.92 if is_c01 else (0.76 if is_c02 else 0.12)
+            tier = "priority_watch" if is_c01 else ("moderate_watch" if is_c02 else "baseline")
+            cows_payload.append({
+                "cow_id": cid,
+                "display_name": f"Cow {cid}",
+                "uwb_x_m": 12.0 + (i % 8) * 1.5,
+                "uwb_y_m": 4.0 if i <= 8 else 10.5,
+                "zone": "cubicle_row_a" if i <= 8 else "cubicle_row_b",
+                "activity_state": "resting" if i % 2 == 0 else "active",
+                "out_of_pen": False,
+                "flag_status": "flagged" if is_flagged else "unflagged",
+                "exposure_score": exposure,
+                "exposure_tier": tier,
+                "is_source_candidate": is_c01,
+            })
+
+    if implicated_elements is None:
+        implicated_elements = {
+            "grid_cells": [
+                {"x": 12, "y": 10, "risk_density": 0.88},
+                {"x": 13, "y": 10, "risk_density": 0.92},
+            ],
+            "milking_units": ["unit_04"],
+            "resting_zones": ["cubicle_row_b"],
+        }
+
+    return {
+        "ts_utc": ts_utc,
+        "barn_id": barn_id,
+        "pen_id": pen_id,
+        "grid": {
+            "width_m": float(grid_w),
+            "height_m": float(grid_h),
+            "cell_size_m": 1.0,
+            "heatmap": heatmap,
+        },
+        "cows": cows_payload,
+        "implicated_elements": implicated_elements,
+        "is_synthetic": is_synthetic,
+    }
+
+
+def generate_herd_health(
+    cows_health_data: Optional[List[Dict[str, Any]]] = None,
+    ts_utc: Optional[str] = None,
+    is_synthetic: bool = False,
+) -> Dict[str, Any]:
+    """
+    Constructs the herd health table payload split into health index (0-100),
+    mastitis risk (rule_score vs anomaly_score), baseline tier, and active flags.
+    """
+    if ts_utc is None:
+        ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
+
+    cows = []
+    if cows_health_data:
+        cows = cows_health_data
+    else:
+        for i in range(1, 17):
+            cid = f"C{i:02d}"
+            is_c01 = (cid == "C01")
+            is_c02 = (cid == "C02")
+
+            if is_c01:
+                h_idx = 58.5
+                r_score = 88.0
+                a_score = 74.0
+                m_risk = 82.4
+                tier = "own_history"
+                conf = 0.95
+                flag = {
+                    "flag_id": "auto_C01_20230728",
+                    "source": "auto",
+                    "type": "suspected",
+                    "quarter": "RF",
+                    "confidence": 0.824,
+                    "reason": "Quarter conductivity elevation (6.2 mS/cm) and CBT increase",
+                    "status": "active",
+                }
+            elif is_c02:
+                h_idx = 72.0
+                r_score = 64.0
+                a_score = 52.0
+                m_risk = 59.2
+                tier = "blended"
+                conf = 0.80
+                flag = {
+                    "flag_id": "auto_C02_20230728",
+                    "source": "auto",
+                    "type": "suspected",
+                    "quarter": "RF",
+                    "confidence": 0.592,
+                    "reason": "Moderate conductivity change and resting co-location with C01",
+                    "status": "active",
+                }
+            else:
+                h_idx = round(88.0 + (i % 5) * 1.5, 1)
+                r_score = round(12.0 + (i % 4) * 2.0, 1)
+                a_score = round(15.0 + (i % 3) * 3.0, 1)
+                m_risk = round(0.6 * r_score + 0.4 * a_score, 1)
+                tier = "own_history" if i <= 10 else "cohort"
+                conf = 0.90 if i <= 10 else 0.65
+                flag = None
+
+            cows.append({
+                "cow_id": cid,
+                "health_index": h_idx,
+                "health_breakdown": {
+                    "thermal_vitality": 18.0 if is_c01 else 23.5,
+                    "rumination_vitality": 14.0 if is_c01 else 22.0,
+                    "activity_vitality": 16.5 if is_c01 else 21.0,
+                    "production_vitality": 10.0 if is_c01 else 23.5,
+                },
+                "mastitis_risk": m_risk,
+                "risk_components": {
+                    "rule_score": r_score,
+                    "anomaly_score": a_score,
+                    "top_contributing_signals": [
+                        "conductivity_spike_quarter_rf",
+                        "cbt_elevation",
+                        "milk_yield_drop",
+                    ] if is_c01 else [],
+                },
+                "baseline_tier": tier,
+                "baseline_confidence": conf,
+                "active_flag": flag,
+                "is_synthetic": is_synthetic,
+            })
+
+    return {
+        "ts_utc": ts_utc,
+        "cows": cows,
+        "is_synthetic": is_synthetic,
+    }
+
+
+def generate_attribution(
+    attribution_data: Optional[Dict[str, Any]] = None,
+    ts_utc: Optional[str] = None,
+    is_synthetic: bool = False,
+) -> Dict[str, Any]:
+    """
+    Constructs the attribution panel payload indicating transmission route probabilities,
+    permutation test p-values, implicated source, and non-clinical pathogen group likelihood.
+    """
+    if ts_utc is None:
+        ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
+
+    if attribution_data:
+        return attribution_data
+
+    return {
+        "ts_utc": ts_utc,
+        "lookback_hours": 72,
+        "likely_route": "resting_cubicle_route",
+        "route_probabilities": {
+            "resting_cubicle_route": 0.78,
+            "milking_equipment_route": 0.18,
+            "sporadic_individual": 0.04,
+        },
+        "p_values": {
+            "resting_permutation_p": 0.008,
+            "milking_permutation_p": 0.24,
+        },
+        "transmission_source": {
+            "type": "resting_zone",
+            "identifier": "cubicle_row_b",
+            "primary_index_cow": "C01",
+            "bedding_window_start_utc": "2023-07-25T08:30:00Z",
+            "shared_hours_prior": 14.5,
+        },
+        "pathogen_group_likelihood": {
+            "coliform_environmental_gram_negative": 0.76,
+            "streptococci_environmental_gram_positive": 0.18,
+            "contagious_staph_aureus": 0.06,
+            "statement": "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. Not a clinical diagnosis.",
+        },
+        "recommended_actions": [
+            "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8",
+            "Verify teat pre-dip coverage and contact time prior to unit attachment",
+            "Segregate C01 milking order to end of session",
+        ],
+        "is_model_suggestion": True,
+        "is_synthetic": is_synthetic,
+    }
+
+
+def generate_impact(
+    impact_data: Optional[Dict[str, Any]] = None,
+    ts_utc: Optional[str] = None,
+    is_synthetic: bool = False,
+) -> Dict[str, Any]:
+    """
+    Constructs the outbreak mitigation and economic impact payload.
+    """
+    if ts_utc is None:
+        ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
+
+    if impact_data:
+        return impact_data
+
+    return {
+        "ts_utc": ts_utc,
+        "cohort_size": 16,
+        "total_affected_cows": 3,
+        "flagged_early_count": 2,
+        "early_detection_rate_pct": 66.7,
+        "mean_lead_time_hours": 18.5,
+        "estimated_milk_saved_kg": 142.0,
+        "transmission_prevented_cases_est": 2.4,
+        "is_synthetic": is_synthetic,
+    }
+

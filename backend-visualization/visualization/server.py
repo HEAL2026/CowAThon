@@ -38,6 +38,10 @@ from visualization.data_loader import (
     get_cow_timeseries_data,
     get_benchmarks_data,
     get_watch_list_data,
+    get_pen_map_data,
+    get_herd_health_data,
+    get_attribution_data,
+    get_impact_data,
 )
 
 
@@ -79,6 +83,10 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
                     "/api/watch-list",
                     "/api/benchmarks",
                     "/api/integrations",
+                    "/api/pen-map",
+                    "/api/herd-health",
+                    "/api/attribution",
+                    "/api/impact",
                 ],
             }
 
@@ -108,6 +116,26 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
 
         if path == "/api/integrations":
             return 200, generate_integrations_feasibility()
+
+        if path == "/api/pen-map":
+            payload, is_synth = get_pen_map_data()
+            payload["is_synthetic"] = is_synth
+            return 200, payload
+
+        if path == "/api/herd-health":
+            payload, is_synth = get_herd_health_data()
+            payload["is_synthetic"] = is_synth
+            return 200, payload
+
+        if path == "/api/attribution":
+            payload, is_synth = get_attribution_data()
+            payload["is_synthetic"] = is_synth
+            return 200, payload
+
+        if path == "/api/impact":
+            payload, is_synth = get_impact_data()
+            payload["is_synthetic"] = is_synth
+            return 200, payload
 
         cow_match = re.match(r"^/api/cows/([A-Za-z0-9_]+)$", path)
         if cow_match:

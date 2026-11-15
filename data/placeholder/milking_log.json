@@ -1,0 +1,3586 @@
+[
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-21T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-21T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-21T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-21T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-21T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-21T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-21T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-21T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-21T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-21T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-21T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-21T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-21T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-21T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-21T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-21T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230721_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-21T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-21T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-21T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-21T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-21T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-21T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-21T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-21T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-21T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-21T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-21T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-21T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-21T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-21T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-21T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-21T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230721_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-22T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-22T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-22T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-22T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-22T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-22T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-22T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-22T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-22T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-22T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-22T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-22T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-22T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-22T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-22T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-22T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230722_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-22T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-22T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-22T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-22T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-22T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-22T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-22T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-22T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-22T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-22T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-22T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-22T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-22T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-22T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-22T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-22T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230722_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-23T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-23T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-23T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-23T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-23T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-23T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-23T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-23T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-23T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-23T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-23T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-23T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-23T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-23T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-23T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-23T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230723_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-23T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-23T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-23T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-23T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-23T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-23T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-23T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-23T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-23T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-23T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-23T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-23T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-23T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-23T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-23T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-23T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230723_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-24T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-24T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-24T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-24T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-24T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-24T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-24T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-24T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-24T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-24T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-24T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-24T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-24T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-24T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-24T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-24T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230724_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-24T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-24T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-24T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-24T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-24T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-24T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-24T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-24T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-24T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-24T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-24T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-24T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-24T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-24T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-24T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-24T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230724_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-25T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-25T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-25T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-25T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-25T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-25T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-25T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-25T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-25T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-25T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-25T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-25T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-25T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-25T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-25T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-25T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230725_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-25T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-25T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-25T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-25T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-25T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-25T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-25T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-25T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-25T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-25T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-25T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-25T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-25T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-25T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-25T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-25T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230725_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-26T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-26T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-26T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-26T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-26T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-26T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-26T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-26T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-26T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-26T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-26T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-26T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-26T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-26T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-26T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-26T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230726_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-26T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-26T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-26T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-26T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-26T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-26T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-26T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-26T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-26T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-26T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-26T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-26T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-26T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-26T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-26T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-26T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230726_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-27T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-27T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-27T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-27T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-27T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-27T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-27T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-27T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-27T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-27T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-27T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-27T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-27T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-27T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-27T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-27T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230727_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-27T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-27T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-27T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-27T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-27T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-27T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-27T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-27T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-27T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-27T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-27T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-27T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-27T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-27T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-27T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-27T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230727_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-28T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-28T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-28T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-28T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-28T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-28T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-28T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-28T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-28T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-28T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-28T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-28T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-28T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-28T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-28T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-28T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230728_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-28T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-28T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-28T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-28T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-28T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-28T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-28T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-28T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-28T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-28T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-28T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-28T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-28T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-28T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-28T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-28T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230728_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-29T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-29T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-29T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-29T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-29T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-29T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-29T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-29T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-29T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-29T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-29T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-29T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-29T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-29T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-29T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-29T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230729_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-29T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-29T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-29T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-29T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-29T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-29T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-29T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-29T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-29T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-29T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-29T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-29T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-29T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-29T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-29T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-29T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230729_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-30T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-30T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-30T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-30T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-30T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-30T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-30T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-30T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-30T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-30T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-30T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-30T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-30T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-30T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-30T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-30T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230730_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-30T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-30T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-30T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-30T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-30T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-30T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-30T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-30T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-30T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-30T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-30T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-30T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-30T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-30T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-30T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-30T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230730_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-31T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-31T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-31T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-31T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-31T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-31T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-31T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-31T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-31T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-31T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-31T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-31T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-31T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-31T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-31T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-31T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230731_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-07-31T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-07-31T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-07-31T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-07-31T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-07-31T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-07-31T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-07-31T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-07-31T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-07-31T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-07-31T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-07-31T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-07-31T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-07-31T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-07-31T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-07-31T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-07-31T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230731_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-08-01T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-08-01T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-08-01T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-08-01T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-08-01T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-08-01T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-08-01T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-08-01T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-08-01T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-08-01T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-08-01T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-08-01T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-08-01T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-08-01T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-08-01T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-08-01T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230732_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-08-01T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-08-01T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-08-01T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-08-01T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-08-01T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-08-01T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-08-01T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-08-01T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-08-01T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-08-01T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-08-01T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-08-01T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-08-01T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-08-01T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-08-01T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-08-01T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230732_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-08-02T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-08-02T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-08-02T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-08-02T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-08-02T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-08-02T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-08-02T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-08-02T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-08-02T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-08-02T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-08-02T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-08-02T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-08-02T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-08-02T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-08-02T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-08-02T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230733_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-08-02T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-08-02T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-08-02T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-08-02T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-08-02T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-08-02T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-08-02T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-08-02T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-08-02T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-08-02T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-08-02T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-08-02T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-08-02T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-08-02T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-08-02T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-08-02T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230733_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-08-03T04:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-08-03T04:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-08-03T04:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-08-03T04:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-08-03T04:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-08-03T04:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-08-03T04:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-08-03T04:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-08-03T04:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-08-03T04:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-08-03T04:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-08-03T04:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-08-03T04:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-08-03T04:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-08-03T04:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-08-03T04:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230734_04",
+    "order_in_session": 16,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C01",
+    "milking_time": "2023-08-03T15:02:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 1,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C02",
+    "milking_time": "2023-08-03T15:04:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 2,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C03",
+    "milking_time": "2023-08-03T15:06:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 3,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C04",
+    "milking_time": "2023-08-03T15:08:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 4,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C05",
+    "milking_time": "2023-08-03T15:10:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 5,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C06",
+    "milking_time": "2023-08-03T15:12:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 6,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C07",
+    "milking_time": "2023-08-03T15:14:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 7,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C08",
+    "milking_time": "2023-08-03T15:16:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 8,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C09",
+    "milking_time": "2023-08-03T15:18:00+00:00",
+    "unit_id": "unit_02",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 9,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C10",
+    "milking_time": "2023-08-03T15:20:00+00:00",
+    "unit_id": "unit_03",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 10,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C11",
+    "milking_time": "2023-08-03T15:22:00+00:00",
+    "unit_id": "unit_04",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 11,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C12",
+    "milking_time": "2023-08-03T15:24:00+00:00",
+    "unit_id": "unit_05",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 12,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C13",
+    "milking_time": "2023-08-03T15:26:00+00:00",
+    "unit_id": "unit_06",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 13,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C14",
+    "milking_time": "2023-08-03T15:28:00+00:00",
+    "unit_id": "unit_07",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 14,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C15",
+    "milking_time": "2023-08-03T15:30:00+00:00",
+    "unit_id": "unit_08",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 15,
+    "is_synthetic": true
+  },
+  {
+    "cow_id": "C16",
+    "milking_time": "2023-08-03T15:32:00+00:00",
+    "unit_id": "unit_01",
+    "session_id": "sess_20230734_15",
+    "order_in_session": 16,
+    "is_synthetic": true
+  }
+]

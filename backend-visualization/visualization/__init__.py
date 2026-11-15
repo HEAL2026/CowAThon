@@ -8,7 +8,12 @@ from visualization.payloads import (
     generate_cow_timeseries,
     generate_milking_stalls,
     generate_watch_list,
+    generate_benchmarks_summary,
     generate_integrations_feasibility,
+    generate_pen_map,
+    generate_herd_health,
+    generate_attribution,
+    generate_impact,
 )
 
 __all__ = [
@@ -16,5 +21,10 @@ __all__ = [
     "generate_cow_timeseries",
     "generate_milking_stalls",
     "generate_watch_list",
+    "generate_benchmarks_summary",
     "generate_integrations_feasibility",
+    "generate_pen_map",
+    "generate_herd_health",
+    "generate_attribution",
+    "generate_impact",
 ]
