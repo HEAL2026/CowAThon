@@ -105,6 +105,17 @@ def calculate_resting_exposure(
         t_end = bout["end_utc"]
         dur = float(bout["duration_min"])
         last_change = get_last_bedding_change(t_start)
+
+        # Omit records with missing/NaN coordinates or out_of_pen from spatial calculations
+        is_out = bool(bout.get("out_of_pen")) if pd.notna(bout.get("out_of_pen")) else False
+        has_valid_coords = (
+            pd.notna(bout.get("x_m"))
+            and pd.notna(bout.get("y_m"))
+            and not is_out
+        )
+        if not has_valid_coords:
+            continue
+
         # A later cow is exposed only if its resting center falls inside the
         # flagged cow's real-coordinate circle and bedding has not changed.
         for area in area_exposure.values():

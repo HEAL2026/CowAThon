@@ -74,6 +74,24 @@ class TestS8S11Backtrace(unittest.TestCase):
         self.assertEqual(circle["until_bedding_change_utc"], "2023-07-25T15:00:00Z")
         self.assertEqual(circle["contact_cows"], ["C01"])
 
+    def test_resting_exposure_omits_nan_and_out_of_pen_coordinates(self):
+        # Bouts with NaN coordinates or out_of_pen=True must be safely omitted
+        # from spatial coordinate calculations rather than raising ValueError or creating NaN areas
+        bouts_df = pd.DataFrame([
+            {"cow_id": "C02", "start_utc": "2023-07-25 10:00:00+00:00", "end_utc": "2023-07-25 11:00:00+00:00", "duration_min": 60, "x_m": 5.1, "y_m": 3.1},
+            {"cow_id": "C04", "start_utc": "2023-07-25 10:15:00+00:00", "end_utc": "2023-07-25 11:15:00+00:00", "duration_min": 60, "x_m": np.nan, "y_m": np.nan, "out_of_pen": True},
+            {"cow_id": "C01", "start_utc": "2023-07-25 12:00:00+00:00", "end_utc": "2023-07-25 13:00:00+00:00", "duration_min": 60, "x_m": 6.4, "y_m": 3.1},
+        ])
+        res = calculate_resting_exposure(
+            lying_bouts_df=bouts_df,
+            flagged_cows={"C02"},
+            lookback_hours=72,
+        )
+        # C04 is safely omitted from spatial contact matching; C01 is exposed
+        self.assertEqual([e["exposed_cow"] for e in res["contact_events"]], ["C01"])
+        self.assertEqual(len(res["implicated_resting_areas"]), 1)
+        self.assertFalse(np.isnan(res["implicated_resting_areas"][0]["center_x_m"]))
+
     def test_milking_exposure_with_sanitization(self):
         # Milking visits:
         # C02 (flagged) milks on STALL-01 at 09:00

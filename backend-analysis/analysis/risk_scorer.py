@@ -126,7 +126,7 @@ class MultimodalRiskScorer:
             confidence -= 0.15
 
         # 4. Movement / Spatial strain component (0 - 10)
-        out_of_pen = bool(row.get("out_of_pen", False))
+        out_of_pen = bool(row.get("out_of_pen")) if pd.notna(row.get("out_of_pen")) else False
         idling_fraction = row.get("idling_fraction")
         uwb_present = (row.get("uwb_x_m") is not None and not pd.isna(row.get("uwb_x_m"))) or idling_fraction is not None
 
