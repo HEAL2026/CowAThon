@@ -376,7 +376,8 @@ def load_milk_visits_data() -> List[Dict[str, Any]]:
 
 def get_pen_map_data() -> Tuple[Dict[str, Any], bool]:
     """
-    Constructs the 2D pen map payload using real lying bouts if available.
+    Constructs the 2D pen map payload using real lying bouts and
+    analysis resting circles (1.5m radius) if available.
     Returns (pen_map_payload, is_synthetic).
     """
     from visualization.payloads import generate_pen_map
@@ -399,7 +400,32 @@ def get_pen_map_data() -> Tuple[Dict[str, Any], bool]:
             except Exception:
                 pass
 
-    payload = generate_pen_map(lying_bouts=bouts, is_synthetic=is_synthetic)
+    # Check for real implicated resting circles (1.5m) and contact events from analysis backtrace
+    resting_areas = None
+    contact_events = None
+    bt_candidates = [
+        REPO_ROOT / "backend-analysis" / "data" / "output" / "backtrace_result.json",
+        REPO_ROOT / "backend-analysis" / "data" / "backtrace_result.json",
+    ]
+    for p in bt_candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    bt_data = json.load(f)
+                resting_areas = bt_data.get("implicated_resting_areas") or bt_data.get("implicated_circles")
+                contact_events = bt_data.get("contact_events")
+                if resting_areas:
+                    is_synthetic = False
+                    break
+            except Exception as e:
+                logger.warning("Failed to parse resting circles from %s: %s", p, e)
+
+    payload = generate_pen_map(
+        lying_bouts=bouts,
+        resting_areas=resting_areas,
+        contact_events=contact_events,
+        is_synthetic=is_synthetic,
+    )
     return payload, is_synthetic
 
 

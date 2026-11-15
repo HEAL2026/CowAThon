@@ -434,6 +434,8 @@ def generate_pen_map(
     cows_data: Optional[List[Dict[str, Any]]] = None,
     lying_bouts: Optional[List[Dict[str, Any]]] = None,
     implicated_elements: Optional[Dict[str, Any]] = None,
+    resting_areas: Optional[List[Dict[str, Any]]] = None,
+    contact_events: Optional[List[Dict[str, Any]]] = None,
     barn_id: str = "main_barn_01",
     pen_id: str = "pen_01",
     ts_utc: Optional[str] = None,
@@ -441,7 +443,8 @@ def generate_pen_map(
 ) -> Dict[str, Any]:
     """
     Constructs the 2D pen map payload featuring resting heatmap derived from lying bouts,
-    flagged cows, exposed cows shaded by exposure score, and highlighted implicated cells/units.
+    real-coordinate 1.5m resting circles, contact event overlays, flagged cows,
+    and exposed cows shaded by exposure score.
     """
     if ts_utc is None:
         ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
@@ -504,6 +507,41 @@ def generate_pen_map(
             "resting_zones": ["cubicle_row_b"],
         }
 
+    # Real-coordinate 1.5m resting circles bounded by bedding change
+    if resting_areas is None:
+        resting_areas = [
+            {
+                "area_id": "rest_circle_01",
+                "center_x_m": 12.4,
+                "center_y_m": 10.2,
+                "radius_m": 1.5,
+                "zone_id": "cubicle_row_b",
+                "target_cow_id": "C01",
+                "target_cows": ["C01"],
+                "until_bedding_change_utc": "2023-07-29T08:15:00Z",
+                "contact_cows": ["C02", "C07"],
+                "cumulative_shed_duration_min": 140.0,
+                "n_contacts": 2,
+            }
+        ]
+
+    # Contact events overlay
+    if contact_events is None:
+        contact_events = [
+            {
+                "event_id": "contact_event_01",
+                "shedding_cow": "C01",
+                "exposed_cow": "C02",
+                "center_x_m": 12.4,
+                "center_y_m": 10.2,
+                "radius_m": 1.5,
+                "source_time": "2023-07-26T10:15:00Z",
+                "exposed_time": "2023-07-26T14:30:00Z",
+                "hours_since_shedding": 4.25,
+                "exposure_score": 0.78,
+            }
+        ]
+
     return {
         "ts_utc": ts_utc,
         "barn_id": barn_id,
@@ -516,18 +554,23 @@ def generate_pen_map(
         },
         "cows": cows_payload,
         "implicated_elements": implicated_elements,
+        "resting_areas": resting_areas,
+        "implicated_circles": resting_areas,
+        "contact_events": contact_events,
         "is_synthetic": is_synthetic,
     }
 
 
 def generate_herd_health(
     cows_health_data: Optional[List[Dict[str, Any]]] = None,
+    group_trends: Optional[Dict[str, Any]] = None,
     ts_utc: Optional[str] = None,
     is_synthetic: bool = False,
 ) -> Dict[str, Any]:
     """
     Constructs the herd health table payload split into health index (0-100),
-    mastitis risk (rule_score vs anomaly_score), baseline tier, and active flags.
+    mastitis risk (rule_score vs anomaly_score), baseline tier, active flags,
+    and herd-level group trends.
     """
     if ts_utc is None:
         ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
@@ -607,9 +650,38 @@ def generate_herd_health(
                 "is_synthetic": is_synthetic,
             })
 
+    # Group trend metrics
+    if group_trends is None:
+        mean_h = round(sum(c.get("health_index", 85.0) for c in cows) / len(cows), 1) if cows else 85.0
+        mean_m = round(sum(c.get("mastitis_risk", 20.0) for c in cows) / len(cows), 1) if cows else 20.0
+        p_watch = sum(1 for c in cows if c.get("mastitis_risk", 0.0) >= 70.0)
+        m_watch = sum(1 for c in cows if 40.0 <= c.get("mastitis_risk", 0.0) < 70.0)
+        base_cnt = len(cows) - p_watch - m_watch
+
+        group_trends = {
+            "cohort_size": len(cows),
+            "mean_health_index": mean_h,
+            "mean_mastitis_risk": mean_m,
+            "watch_counts": {
+                "priority_watch": p_watch,
+                "moderate_watch": m_watch,
+                "baseline": base_cnt,
+            },
+            "route_exposure_summary": {
+                "resting_contact_cows_count": 2,
+                "milking_contact_cows_count": 1,
+            },
+            "daily_trends": [
+                {"date": "2023-07-26", "mean_health_index": 86.2, "flagged_count": 1},
+                {"date": "2023-07-27", "mean_health_index": 84.1, "flagged_count": 1},
+                {"date": "2023-07-28", "mean_health_index": mean_h, "flagged_count": p_watch},
+            ],
+        }
+
     return {
         "ts_utc": ts_utc,
         "cows": cows,
+        "group_trends": group_trends,
         "is_synthetic": is_synthetic,
     }
 

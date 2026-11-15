@@ -254,7 +254,7 @@ Exposes system modularity, capability profiles, and cost metrics for small-farm 
 ```
 
 ### 3.7 2D Pen Map (`/api/pen-map` or `pen_map.json`)
-Visualizes pen layout, resting density heatmap generated from lying bouts (duration >= 20 min), flagged cows, exposed cows shaded by continuous exposure score, and highlighted transmission elements.
+Visualizes pen layout, resting density heatmap generated from lying bouts (duration >= 20 min), real-coordinate 1.5m resting circles bounded by bedding change cutoff, contact event overlays, flagged cows, and exposed cows shaded by continuous exposure score.
 
 ```json
 {
@@ -287,17 +287,107 @@ Visualizes pen layout, resting density heatmap generated from lying bouts (durat
     "milking_units": ["unit_04"],
     "resting_zones": ["cubicle_row_b"]
   },
+  "resting_areas": [
+    {
+      "area_id": "rest_circle_01",
+      "center_x_m": 12.4,
+      "center_y_m": 10.2,
+      "radius_m": 1.5,
+      "zone_id": "cubicle_row_b",
+      "target_cow_id": "C01",
+      "target_cows": ["C01"],
+      "until_bedding_change_utc": "2023-07-29T08:15:00Z",
+      "contact_cows": ["C02", "C07"],
+      "cumulative_shed_duration_min": 140.0,
+      "n_contacts": 2
+    }
+  ],
+  "implicated_circles": [
+    {
+      "center_x_m": 12.4,
+      "center_y_m": 10.2,
+      "radius_m": 1.5,
+      "target_cow_id": "C01",
+      "contact_cows": ["C02", "C07"],
+      "until_bedding_change_utc": "2023-07-29T08:15:00Z"
+    }
+  ],
+  "contact_events": [
+    {
+      "event_id": "contact_event_01",
+      "shedding_cow": "C01",
+      "exposed_cow": "C02",
+      "center_x_m": 12.4,
+      "center_y_m": 10.2,
+      "radius_m": 1.5,
+      "source_time": "2023-07-26T10:15:00Z",
+      "exposed_time": "2023-07-26T14:30:00Z",
+      "hours_since_shedding": 4.25,
+      "exposure_score": 0.78
+    }
+  ],
   "is_synthetic": false
 }
 ```
 
 ### 3.8 Herd Health & Vitality Table (`/api/herd-health` or `herd_health.json`)
-Displays herd-wide cows with 0–100 health vitality index, acute mastitis risk split into rule vs anomaly components, cold-start baseline tier, and active watch-list flags.
+Displays herd-wide cows with 0–100 health vitality index, acute mastitis risk split into rule vs anomaly components, cold-start baseline tier, active watch-list flags, and aggregate herd group trends.
 
 ```json
 {
   "ts_utc": "2023-07-28T14:00:00Z",
   "cows": [
+    {
+      "cow_id": "C01",
+      "health_index": 58.5,
+      "health_breakdown": {
+        "thermal_vitality": 18.0,
+        "rumination_vitality": 14.0,
+        "activity_vitality": 16.5,
+        "production_vitality": 10.0
+      },
+      "mastitis_risk": 82.4,
+      "risk_components": {
+        "rule_score": 88.0,
+        "anomaly_score": 74.0,
+        "top_contributing_signals": ["conductivity_spike_quarter_rf", "cbt_elevation", "milk_yield_drop"]
+      },
+      "baseline_tier": "own_history",
+      "baseline_confidence": 0.95,
+      "active_flag": {
+        "flag_id": "auto_C01_20230728",
+        "source": "auto",
+        "type": "suspected",
+        "quarter": "RF",
+        "confidence": 0.824,
+        "reason": "Quarter conductivity elevation (6.2 mS/cm) and CBT increase",
+        "status": "active"
+      },
+      "is_synthetic": false
+    }
+  ],
+  "group_trends": {
+    "cohort_size": 16,
+    "mean_health_index": 82.4,
+    "mean_mastitis_risk": 22.8,
+    "watch_counts": {
+      "priority_watch": 1,
+      "moderate_watch": 1,
+      "baseline": 14
+    },
+    "route_exposure_summary": {
+      "resting_contact_cows_count": 2,
+      "milking_contact_cows_count": 1
+    },
+    "daily_trends": [
+      {"date": "2023-07-26", "mean_health_index": 86.2, "flagged_count": 1},
+      {"date": "2023-07-27", "mean_health_index": 84.1, "flagged_count": 1},
+      {"date": "2023-07-28", "mean_health_index": 82.4, "flagged_count": 1}
+    ]
+  },
+  "is_synthetic": false
+}
+```
     {
       "cow_id": "C01",
       "health_index": 58.5,
