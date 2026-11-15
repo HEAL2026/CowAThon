@@ -22,3 +22,8 @@ location context, and a model-assistant interaction placeholder. The shell
 labels its local synthetic readings as `Demo data` until API adapters are wired.
 Mock data is intentionally local to `app.js`; replace it with backend contracts
 without moving cleaning or analysis logic into the frontend.
+
+The visualization API defaults to `http://127.0.0.1:8000`; the interactive ICAR
+API used for backtrace actions defaults to `http://127.0.0.1:8001`. Override
+them with `HERDWISE_API_BASE` and `HERDWISE_INTERACTIVE_API_BASE`, or the
+`api` and `interactiveApi` query parameters.
