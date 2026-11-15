@@ -207,9 +207,11 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 elif "animal_ids" in payload and isinstance(payload["animal_ids"], list):
                     target_ids = payload["animal_ids"]
                 elif "animal_id" in payload:
-                    target_ids = [payload["animal_id"]]
+                    val = payload["animal_id"]
+                    target_ids = val if isinstance(val, list) else [val]
                 elif "target_animal_id" in payload:
-                    target_ids = [payload["target_animal_id"]]
+                    val = payload["target_animal_id"]
+                    target_ids = val if isinstance(val, list) else [val]
 
                 if not target_ids:
                     target_ids = ["C02"]
