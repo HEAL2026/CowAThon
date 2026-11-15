@@ -486,10 +486,16 @@ class IcarAdeService:
         Surfaces spec v2 Section 6 resources (resting_spots carrying spot_id and milking_units)
         and preserves legacy ICAR backwards compatibility.
         """
-        target_cows = [animal_id] if isinstance(animal_id, str) else list(animal_id)
+        raw_targets = [animal_id] if isinstance(animal_id, str) else list(animal_id)
+        target_cows: List[str] = []
+        for item in raw_targets:
+            if isinstance(item, list):
+                target_cows.extend([str(x) for x in item])
+            elif item is not None:
+                target_cows.append(str(item))
         if not target_cows:
             target_cows = ["C02"]
-        primary_target = target_cows[0]
+        primary_target = str(target_cows[0])
 
         now_utc = datetime.now(timezone.utc)
         now_iso = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
