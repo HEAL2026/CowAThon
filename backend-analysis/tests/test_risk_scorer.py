@@ -1,9 +1,10 @@
 """Tests for multimodal watch-list risk scoring and graceful degradation."""
 
 import unittest
+import numpy as np
 import pandas as pd
 from analysis.risk_scorer import MultimodalRiskScorer
-from analysis.behavior import classify_posture_state
+from analysis.behavior import classify_posture_state, detect_stationary_hardware_candidate
 
 
 class TestRiskScorer(unittest.TestCase):
@@ -16,7 +17,7 @@ class TestRiskScorer(unittest.TestCase):
             "ts_utc": "2023-07-25T10:00:00Z",
             "cbt_c": 38.7,
             "indoor_thi": 64.0,
-            "neck_imu_magnitude_std": 0.035,
+            "neck_imu_magnitude_std": 0.40,
             "rumination_proxy": 85.0,
             "milk_drop_pct": 0.5,
             "idling_fraction": 0.3,
@@ -33,7 +34,7 @@ class TestRiskScorer(unittest.TestCase):
             "ts_utc": "2023-07-25T10:00:00Z",
             "cbt_c": 40.2, # Elevated fever / heat strain
             "indoor_thi": 76.0, # High environmental THI
-            "neck_imu_magnitude_std": 0.010, # Lethargy
+            "neck_imu_magnitude_std": 0.08, # Lethargy
             "rumination_proxy": 15.0, # Depressed rumination
             "milk_drop_pct": 18.0, # Significant milk drop
             "idling_fraction": 0.8,
@@ -51,7 +52,7 @@ class TestRiskScorer(unittest.TestCase):
             "ts_utc": "2023-07-25T10:00:00Z",
             "cbt_c": None,
             "indoor_thi": 75.0,
-            "neck_imu_magnitude_std": 0.03,
+            "neck_imu_magnitude_std": 0.35,
             "rumination_proxy": 45.0,
             "milk_drop_pct": 2.0,
         }
@@ -64,12 +65,12 @@ class TestRiskScorer(unittest.TestCase):
 
     def test_stationary_reference_hardware_tag(self):
         # Stress-test case: T13/T14 stationary reference tag
-        # Collar and UWB present, but zero biological movement (std < 0.005)
+        # Collar and UWB present, but zero biological movement
         # No CBT bolus, no milk, no barn environment
         record = {
             "cow_id": "T13",
             "ts_utc": "2023-07-25T12:00:00Z",
-            "neck_imu_magnitude_std": 0.002, # Stationary hardware noise floor
+            "neck_imu_magnitude_std": 0.095, # Real empirical post noise floor
             "uwb_x_m": 5.4,
             "uwb_y_m": 3.2,
             "cbt_c": None,
@@ -78,8 +79,10 @@ class TestRiskScorer(unittest.TestCase):
             "lying": None,
         }
 
-        # 1. Posture state correctly identifies stationary hardware rather than resting animal
-        posture = classify_posture_state(pd.Series([record["neck_imu_magnitude_std"]]))
+        # 1. Structural + kinetic detection identifies stationary reference hardware
+        df_rec = pd.DataFrame([record])
+        is_hw = detect_stationary_hardware_candidate(df_rec)
+        posture = classify_posture_state(df_rec["neck_imu_magnitude_std"], is_stationary_hardware=is_hw)
         self.assertEqual(posture.iloc[0], "stationary_hardware")
 
         # 2. Risk scoring drops confidence severely and reports missing channels
