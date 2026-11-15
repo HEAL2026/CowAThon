@@ -1,4 +1,4 @@
-"""Behavioral metrics, kinetic activity indexing, and rumination estimation.
+"""Behavioral metrics, kinetic activity indexing, and empirical posture classification.
 
 Calibrated against empirical MMCows sensor distributions:
 - Live cows: |accel| std p25 = 0.28, p50 = 0.45, p75 = 0.64 m/s²
@@ -152,8 +152,8 @@ def calculate_behavior_anomaly_score(
     Derived strictly from empirical sensor channels without ungrounded synthetic proxies:
     - Kinetic lethargy / depression (up to 15 points): profound hypoactivity (activity_index < 0.12 m/s²)
       while in upright/standing posture outside normal resting recumbency.
-    - Kinetic agitation / restlessness (up to 15 points): acute movement spikes (activity_index > 0.70 m/s²)
-      characteristic of physiological discomfort or systemic distress.
+    - Kinetic agitation / restlessness (up to 15 points): acute movement spikes (activity_index > 0.85 m/s²,
+      calibrated to empirical p90 of live cattle neck IMU variance) characteristic of discomfort or systemic distress.
     """
     score = np.zeros(len(df), dtype=float)
 
@@ -174,8 +174,8 @@ def calculate_behavior_anomaly_score(
         hypo = np.where(~is_lying & (act < 0.12), np.clip((0.12 - act) / 0.12, 0.0, 1.0), 0.0)
         score += hypo * 15.0
 
-        # 2. Hyperactivity / distress agitation: elevated kinetic variance
-        hyper = np.clip((act - 0.70) / (1.50 - 0.70), 0.0, 1.0)
+        # 2. Hyperactivity / distress agitation: elevated kinetic variance (calibrated to p90 = 0.85 m/s²)
+        hyper = np.clip((act - 0.85) / (1.60 - 0.85), 0.0, 1.0)
         score += hyper * 15.0
 
     return pd.Series(
