@@ -71,7 +71,8 @@ All endpoints support CORS (`Access-Control-Allow-Origin: *`):
 | `/api/integrations` | GET | Commercial dairy systems (Nedap, Allflex, Munters, Tomorrow.io, VAS) |
 | `/api/pen-map` | GET | S12 2D pen map with resting heatmap from lying bouts and exposed cows |
 | `/api/herd-health` | GET | S12 Herd table with 0–100 health index and acute mastitis risk split |
-| `/api/attribution` | GET | S12 Outbreak backtrace route attribution and permutation p-values |
+| `/api/attribution` | GET, POST | S12 Outbreak backtrace route attribution and permutation p-values |
+| `/backtrace` | POST | Dynamic S12 backtrace execution for manual/group flags and lookback window |
 | `/api/impact` | GET | S12 Mitigation lead time, milk saved, and prevented cases impact |
 
 ---
@@ -84,7 +85,7 @@ The test suite requires zero external pip dependencies and runs with standard li
 python -m unittest discover -s backend-visualization/tests
 ```
 
-All 26 tests validate payload schemas, non-clinical guardrails, CWD independence, and server wire behavior.
+All 28 tests validate payload schemas, non-clinical guardrails, CWD independence, and server wire behavior.
 
 ---
 

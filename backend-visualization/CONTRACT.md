@@ -421,18 +421,22 @@ Displays herd-wide cows with 0–100 health vitality index, acute mastitis risk 
 }
 ```
 
-### 3.9 Outbreak Transmission Attribution Panel (`/api/attribution` or `attribution.json`)
-Exposes backtrace transmission attribution comparing resting cubicles vs milking machine contact, permutation test p-values, implicated source, and non-clinical pathogen group likelihood.
+### 3.9 Outbreak Transmission Attribution Panel (`/api/attribution`, `POST /backtrace`, or `attribution.json`)
+Exposes backtrace transmission attribution comparing resting cubicles vs milking machine contact, permutation test p-values, implicated source, real-coordinate 1.5m resting circles, and non-clinical pathogen group likelihood.
+
+Supports `POST /backtrace` and `POST /api/backtrace` accepting frontend manual flags (`flags: [{cow_id, timestamp}]` or `animal_ids: [...]`) and `lookback_hours: 72`, returning dynamic attribution and economic impact.
 
 ```json
 {
   "ts_utc": "2023-07-28T14:00:00Z",
   "lookback_hours": 72,
-  "likely_route": "resting_cubicle_route",
+  "likely_route": "resting_area",
+  "likely_route_alias": "resting_cubicle_route",
   "route_probabilities": {
-    "resting_cubicle_route": 0.78,
-    "milking_equipment_route": 0.18,
-    "sporadic_individual": 0.04
+    "resting_area": 0.78,
+    "milking_equipment": 0.18,
+    "both": 0.0,
+    "no_common_route": 0.04
   },
   "p_values": {
     "resting_permutation_p": 0.008,
@@ -445,6 +449,37 @@ Exposes backtrace transmission attribution comparing resting cubicles vs milking
     "bedding_window_start_utc": "2023-07-25T08:30:00Z",
     "shared_hours_prior": 14.5
   },
+  "implicated_resting_areas": [
+    {
+      "area_id": "rest_circle_01",
+      "center_x_m": 12.4,
+      "center_y_m": 10.2,
+      "radius_m": 1.5,
+      "zone_id": "cubicle_row_b",
+      "target_cow_id": "C01",
+      "target_cows": ["C01"],
+      "until_bedding_change_utc": "2023-07-29T08:15:00Z",
+      "contact_cows": ["C02", "C07"],
+      "cumulative_shed_duration_min": 140.0,
+      "n_contacts": 2
+    }
+  ],
+  "resting_areas": [
+    {
+      "area_id": "rest_circle_01",
+      "center_x_m": 12.4,
+      "center_y_m": 10.2,
+      "radius_m": 1.5,
+      "zone_id": "cubicle_row_b",
+      "target_cow_id": "C01",
+      "target_cows": ["C01"],
+      "until_bedding_change_utc": "2023-07-29T08:15:00Z",
+      "contact_cows": ["C02", "C07"],
+      "cumulative_shed_duration_min": 140.0,
+      "n_contacts": 2
+    }
+  ],
+  "contact_cows": ["C02", "C07"],
   "pathogen_group_likelihood": {
     "coliform_environmental_gram_negative": 0.76,
     "streptococci_environmental_gram_positive": 0.18,
@@ -456,6 +491,18 @@ Exposes backtrace transmission attribution comparing resting cubicles vs milking
     "Verify teat pre-dip coverage and contact time prior to unit attachment",
     "Segregate C01 milking order to end of session"
   ],
+  "impact": {
+    "total_affected_cows": 3,
+    "flagged_early_count": 1,
+    "mean_lead_time_hours": 18.5,
+    "estimated_milk_saved_kg": 142.0,
+    "transmission_prevented_cases_est": 2.4,
+    "estimated_savings_usd": 4200.0,
+    "clean_up_cost_usd": 650.0,
+    "roi_ratio": 6.46,
+    "early_detection_rate_pct": 66.7,
+    "is_synthetic": false
+  },
   "is_model_suggestion": true,
   "is_synthetic": false
 }

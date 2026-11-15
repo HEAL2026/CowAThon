@@ -542,7 +542,7 @@ def get_attribution_data() -> Tuple[Dict[str, Any], bool]:
                 with open(p, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 is_synthetic = bool(data.get("is_synthetic", False))
-                return data, is_synthetic
+                return generate_attribution(attribution_data=data, is_synthetic=is_synthetic), is_synthetic
             except Exception as e:
                 logger.warning("Failed to parse backtrace_result at %s: %s", p, e)
 

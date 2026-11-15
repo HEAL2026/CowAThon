@@ -63,9 +63,38 @@ class TestVisualizationServer(unittest.TestCase):
         self.assertEqual(code, 404)
         self.assertIn("error", data)
 
+        # GET /backtrace alias
+        code, data = VisualizationAPIHandler.route_request("/backtrace")
+        self.assertEqual(code, 200)
+        self.assertIn("likely_route", data)
+
         # Unknown route
         code, data = VisualizationAPIHandler.route_request("/api/nonexistent")
         self.assertEqual(code, 404)
+
+    def test_handler_route_post_backtrace_unit(self):
+        # POST /backtrace with flags
+        payload = {
+            "flags": [{"cow_id": "C01", "timestamp": "2023-07-28T14:00:00Z", "source": "manual"}],
+            "lookback_hours": 72,
+        }
+        code, data = VisualizationAPIHandler.route_post_request("/backtrace", payload)
+        self.assertEqual(code, 200)
+        self.assertIn("likely_route", data)
+        self.assertIn("p_values", data)
+        self.assertIn("resting_areas", data)
+        self.assertIn("implicated_resting_areas", data)
+        self.assertIn("impact", data)
+        self.assertEqual(data["impact"]["flagged_early_count"], 1)
+
+        # POST /api/backtrace with animal_ids
+        code2, data2 = VisualizationAPIHandler.route_post_request("/api/backtrace", {"animal_ids": ["C02", "C03"]})
+        self.assertEqual(code2, 200)
+        self.assertEqual(data2["impact"]["flagged_early_count"], 2)
+
+        # Unknown POST route
+        code_err, err_data = VisualizationAPIHandler.route_post_request("/api/unknown", {})
+        self.assertEqual(code_err, 404)
 
     def test_live_http_server_and_cors(self):
         server = create_server("127.0.0.1", 0)  # Bind ephemeral port
@@ -81,8 +110,29 @@ class TestVisualizationServer(unittest.TestCase):
                 self.assertEqual(resp.status, 200)
                 # Verify CORS header
                 self.assertEqual(resp.headers.get("Access-Control-Allow-Origin"), "*")
+                allow_methods = resp.headers.get("Access-Control-Allow-Methods", "")
+                self.assertIn("POST", allow_methods)
                 body = json.loads(resp.read().decode("utf-8"))
                 self.assertEqual(body["status"], "healthy")
+
+            # Test live POST /backtrace over wire
+            post_url = f"http://127.0.0.1:{port}/backtrace"
+            post_body = json.dumps({
+                "flags": [{"cow_id": "C01", "timestamp": "2023-07-28T14:00:00Z"}],
+                "lookback_hours": 72,
+            }).encode("utf-8")
+            post_req = Request(post_url, data=post_body, headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            })
+            with urlopen(post_req, timeout=3.0) as resp:
+                self.assertEqual(resp.status, 200)
+                self.assertEqual(resp.headers.get("Access-Control-Allow-Origin"), "*")
+                data = json.loads(resp.read().decode("utf-8"))
+                self.assertIn("likely_route", data)
+                self.assertIn("p_values", data)
+                self.assertIn("implicated_resting_areas", data)
+                self.assertIn("impact", data)
 
             # Test 404 handling over wire
             url_404 = f"http://127.0.0.1:{port}/api/cows/INVALID"
