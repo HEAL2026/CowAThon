@@ -90,6 +90,24 @@ def test_behavior_minute_mode_ignores_unknown():
     assert abs(m["behavior_known_frac"].iloc[0] - 0.5) < 1e-9 and abs(m["behavior_lying_frac"].iloc[0] - 2 / 3) < 1e-9
 
 
+def test_stationary_tags_become_collar_unmapped_fixture():
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        raw, interim = tmp / "main_data", tmp / "interim"
+        ts = T0 + np.arange(0, 60, 0.1)
+        for tag in ("T01", "T13"):
+            (raw / "pressure" / tag).mkdir(parents=True)
+            pd.DataFrame({"timestamp": ts, "pressure_Pa": 98000.0, "elevation_m": 1.0}).to_csv(raw / "pressure" / tag / f"{tag}_0725.csv", index=False)
+        report = {}
+        ingest.ingest_collar(raw, interim, report)
+        mapped = pd.read_parquet(interim / "collar_1min.parquet")
+        fixture = pd.read_parquet(interim / "collar_unmapped.parquet")
+        assert mapped["cow_id"].tolist() == ["C01"] and fixture["tag_id"].tolist() == ["T13"]
+        assert "cow_id" not in fixture.columns and abs(fixture["collar_pressure_hpa"].iloc[0] - 980.0) < 1e-9
+    finally:
+        shutil.rmtree(tmp)
+
+
 def _write_synthetic_raw(raw: Path) -> None:
     """Two cows (C01 via T01, C02 via T02), 3 minutes, plus unmapped T13."""
     mins = [T0 + 60 * i for i in range(3)]

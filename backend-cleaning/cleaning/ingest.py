@@ -287,20 +287,28 @@ def ingest_collar(raw_dir: Path, out_dir: Path, report: dict) -> None:
     if not keys:
         report.setdefault("skipped", []).append("collar_1min")
         return
-    parts = []
+    parts, unmapped = [], []
     for tag, day in keys:
-        cow = TAG_TO_COW.get(tag)
-        if cow is None:
-            report.setdefault("unmapped_tags_skipped", {}).setdefault("collar_1min", []).append(f"{tag}_{day}")
-            continue
         immu = pd.read_csv(immu_files[(tag, day)]) if (tag, day) in immu_files else None
         pres = pd.read_csv(pres_files[(tag, day)], usecols=["timestamp", "pressure_Pa"]) if (tag, day) in pres_files else None
+        cow = TAG_TO_COW.get(tag)
+        if cow is None:
+            # stationary reference tags: kept apart as the data-scarce fixture
+            unmapped.append(aggregate_collar_minute(immu, pres, tag).rename(columns={"cow_id": "tag_id"}))
+            continue
         parts.append(aggregate_collar_minute(immu, pres, cow))
     df = _finish(pd.concat(parts, ignore_index=True), ["cow_id", "ts_utc"], report, "collar_1min")
     write_table(df, out_dir, "collar_1min", "1min", ["cow_id", "ts_utc"],
                 {"source_files": len(immu_files) + len(pres_files),
                  "note": "per-minute aggregate of 10 Hz immu/pressure; native rate stays in raw CSV",
                  "immu_cow_days": len(immu_files), "pressure_cow_days": len(pres_files)})
+    if unmapped:
+        u = _finish(pd.concat(unmapped, ignore_index=True), ["tag_id", "ts_utc"], report, "collar_unmapped")
+        write_table(u, out_dir, "collar_unmapped", "1min", ["tag_id", "ts_utc"],
+                    {"note": "T13/T14 stationary reference tags. Deliberately kept as a data-scarce test "
+                             "fixture: location + collar streams only, no cbt/ankle/milk/labels. Stationary, "
+                             "so any motion or behaviour inference on them should read as 'no activity'.",
+                     "tags": sorted(u["tag_id"].unique())})
 
 
 def ingest_behavior(raw_dir: Path, out_dir: Path, report: dict) -> None:
