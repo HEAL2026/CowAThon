@@ -241,5 +241,61 @@ class TestIcarAdeService(unittest.TestCase):
             self.assertNotIn("cell_X", run["summary"]["implicatedResource"])
 
 
+class TestIcarServerIntegration(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import threading
+        from http.server import HTTPServer
+        from apis.icar.server import IcarAdeHandler
+
+        cls.server = HTTPServer(("127.0.0.1", 0), IcarAdeHandler)
+        cls.port = cls.server.server_port
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def test_get_s12_endpoints(self):
+        import json
+        from urllib.request import urlopen
+
+        url = f"http://127.0.0.1:{self.port}/api/integrations"
+        with urlopen(url) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode())
+            self.assertIn("systems", data)
+
+    def test_post_backtrace_frontend_payload(self):
+        import json
+        from urllib.request import Request, urlopen
+
+        url = f"http://127.0.0.1:{self.port}/backtrace"
+        payload = {
+            "flags": [
+                {"cow_id": "C02", "timestamp": "2023-07-28T12:00:00Z", "source": "manual"},
+                {"cow_id": "C05", "timestamp": "2023-07-28T14:00:00Z", "source": "manual"},
+            ],
+            "lookback_hours": 72,
+        }
+        req = Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(req) as resp:
+            self.assertEqual(resp.status, 200)
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertIn("likely_route", data)
+            self.assertIn("p_values", data)
+            self.assertIn("implicated_resting_areas", data)
+            self.assertIn("transmission_source", data)
+            self.assertIn("impact", data)
+            self.assertEqual(data["transmission_source"]["primary_index_cow"], "C02")
+
+
 if __name__ == "__main__":
     unittest.main()

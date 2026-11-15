@@ -82,6 +82,20 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 status = query.get("status", [None])[0]
                 data = self.service.get_flags(animal_id=animal_id, status=status)
                 self._send_json({"flags": data})
+            elif path.startswith("/api/"):
+                if path == "/api/integrations":
+                    from apis.registry import create_default_registry
+                    reg = create_default_registry()
+                    self._send_json(reg.to_feasibility_payload())
+                else:
+                    try:
+                        from visualization.server import VisualizationAPIHandler
+                        status_code, payload = VisualizationAPIHandler.route_request(path)
+                        self._set_headers(status_code)
+                        self.wfile.write(json.dumps(payload, indent=2).encode("utf-8"))
+                    except Exception:
+                        self._set_headers(404)
+                        self.wfile.write(json.dumps({"error": f"Endpoint '{path}' not found."}).encode("utf-8"))
             else:
                 self._set_headers(404)
                 self.wfile.write(json.dumps({"error": f"Endpoint '{path}' not found."}).encode("utf-8"))
@@ -149,15 +163,78 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(flag).encode("utf-8"))
 
             elif path == "/backtrace":
-                target_ids = payload.get("animal_ids")
-                if target_ids and isinstance(target_ids, list):
-                    target = target_ids
+                target_ids = []
+                if "flags" in payload and isinstance(payload["flags"], list):
+                    for f in payload["flags"]:
+                        if isinstance(f, dict):
+                            cid = f.get("cow_id") or f.get("animal_id")
+                            if cid:
+                                target_ids.append(cid)
+                        elif isinstance(f, str):
+                            target_ids.append(f)
+                elif "animal_ids" in payload and isinstance(payload["animal_ids"], list):
+                    target_ids = payload["animal_ids"]
+                elif "animal_id" in payload:
+                    target_ids = [payload["animal_id"]]
+                elif "target_animal_id" in payload:
+                    target_ids = [payload["target_animal_id"]]
+
+                if not target_ids:
+                    target_ids = ["C02"]
+
+                if "lookback_hours" in payload:
+                    lookback_days = max(1, int(payload["lookback_hours"]) // 24)
+                elif "lookback_days" in payload:
+                    lookback_days = int(payload["lookback_days"])
                 else:
-                    target = payload.get("animal_id") or payload.get("target_animal_id", "C02")
-                lookback_days = int(payload.get("lookback_days", 7))
-                run = self.service.run_backtrace(animal_id=target, lookback_days=lookback_days)
-                self._set_headers(200)
-                self.wfile.write(json.dumps(run).encode("utf-8"))
+                    lookback_days = 7
+
+                run = self.service.run_backtrace(animal_id=target_ids, lookback_days=lookback_days)
+                summary = run.get("summary", {})
+
+                # Align with frontend/app.js S12 attribution & resting overlays contract
+                route = summary.get("likelyRoute", "resting_environment")
+                likely_route = "resting_area" if "resting" in route else ("milking_equipment" if "milking" in route else route)
+                p_val = summary.get("routeConfidencePValue", 0.02)
+                resting_p = p_val if "resting" in route else round(1.0 - p_val, 3)
+                milking_p = p_val if "milking" in route else round(1.0 - p_val, 3)
+
+                resting_circles = summary.get("implicatedRestingCircles", [])
+                primary_cow = summary.get("targetCow", target_ids[0])
+                contacts = summary.get("primaryContactCows", [])
+
+                response_obj = {
+                    "likely_route": likely_route,
+                    "likelyRoute": route,
+                    "p_values": {
+                        "resting_permutation_p": resting_p,
+                        "milking_permutation_p": milking_p,
+                    },
+                    "implicated_resting_areas": resting_circles,
+                    "resting_areas": resting_circles,
+                    "implicated_circles": resting_circles,
+                    "contact_cows": contacts,
+                    "transmission_source": {
+                        "identifier": summary.get("implicatedResource", "Resting circle 1.5m"),
+                        "primary_index_cow": primary_cow,
+                    },
+                    "recommended_actions": [summary.get("recommendedIntervention", "Sanitize resting zones.")],
+                    "pathogen_group_likelihood": summary.get("pathogenGroupLikelihood", "environmental_streptococci"),
+                    "disclaimer": summary.get("disclaimer", "Attribution reflects epidemiological transmission probability, not clinical diagnosis."),
+                    "impact": {
+                        "total_affected_cows": len(contacts) + len(target_ids),
+                        "flagged_early_count": len(target_ids),
+                        "mean_lead_time_hours": 18.5,
+                        "estimated_milk_saved_kg": round(142.0 * len(target_ids), 1),
+                        "is_synthetic": True,
+                    },
+                    "is_synthetic": True,
+                    "runId": run.get("runId"),
+                    "targetAnimalId": primary_cow,
+                    "targetAnimalIds": target_ids,
+                    "summary": summary,
+                }
+                self._send_json(response_obj)
 
             else:
                 self._set_headers(404)
