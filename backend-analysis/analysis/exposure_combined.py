@@ -48,13 +48,13 @@ def calculate_combined_exposure(
         if e_comb >= 0.20:
             # Primary route
             if e_rest > e_milk:
-                primary_route = "resting_environment"
+                primary_route = "resting_area"
                 rec_action = "Inspect resting cubicle cleanliness; apply dry disinfectant bedding powder"
             elif e_milk > e_rest:
                 primary_route = "milking_equipment"
                 rec_action = "Sanitize teat cluster before attaching; inspect teat end condition"
             else:
-                primary_route = "dual_contact"
+                primary_route = "both"
                 rec_action = "Execute comprehensive parlor and bedding disinfection protocol"
 
             base_risk = float(base_risk_scores.get(cid, 0.0)) if base_risk_scores else 0.0

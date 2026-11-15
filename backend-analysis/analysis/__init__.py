@@ -14,6 +14,7 @@ from .exposure_resting import calculate_resting_exposure
 from .exposure_milking import calculate_milking_exposure
 from .exposure_combined import calculate_combined_exposure
 from .backtrace import backtrace, run_permutation_attribution_test
+from .backtrace_eval import evaluate_backtrace_against_synthetic
 
 __all__ = [
     "calculate_thi",
@@ -36,4 +37,5 @@ __all__ = [
     "calculate_combined_exposure",
     "backtrace",
     "run_permutation_attribution_test",
+    "evaluate_backtrace_against_synthetic",
 ]

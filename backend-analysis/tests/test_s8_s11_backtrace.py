@@ -98,7 +98,8 @@ class TestS8S11Backtrace(unittest.TestCase):
             n_permutations=100,
             seed=42,
         )
-        self.assertEqual(res["likely_route"], "resting_environment")
+        self.assertEqual(res["likely_route"], "resting_area")
+        self.assertEqual(res["likely_route_alias"], "resting_environment")
         self.assertLess(res["p_value_resting"], 0.05)
         self.assertGreater(res["pathogen_group_likelihood"]["environmental_bedding_associated"], 0.70)
 
@@ -114,6 +115,7 @@ class TestS8S11Backtrace(unittest.TestCase):
             seed=42,
         )
         self.assertEqual(res["likely_route"], "milking_equipment")
+        self.assertEqual(res["likely_route_alias"], "milking_equipment")
         self.assertLess(res["p_value_milking"], 0.05)
         self.assertGreater(res["pathogen_group_likelihood"]["contagious_milking_associated"], 0.70)
 
@@ -128,7 +130,8 @@ class TestS8S11Backtrace(unittest.TestCase):
             n_permutations=50,
             seed=42,
         )
-        self.assertEqual(res["likely_route"], "sporadic_inconclusive")
+        self.assertEqual(res["likely_route"], "no_common_route")
+        self.assertEqual(res["likely_route_alias"], "sporadic_inconclusive")
         self.assertGreaterEqual(res["p_value_resting"], 0.05)
         self.assertGreaterEqual(res["p_value_milking"], 0.05)
 
@@ -138,10 +141,14 @@ class TestS8S11Backtrace(unittest.TestCase):
         self.assertIn("investigation_id", res)
         self.assertIn("generated_at_utc", res)
         self.assertIn("likely_route", res)
+        self.assertIn("likely_route_alias", res)
+        self.assertIn("route_p_values", res)
         self.assertIn("p_values", res)
         self.assertIn("pathogen_group_likelihood", res)
         self.assertIn("implicated_units_or_cells", res)
+        self.assertIn("implicated_resources", res)
         self.assertIn("exposed_cows", res)
+        self.assertIn("high_risk_contacts", res)
         self.assertIn("recommended_actions", res)
         self.assertTrue(res["is_model_suggestion"])
 

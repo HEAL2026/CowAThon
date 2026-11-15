@@ -21,6 +21,22 @@ from .exposure_milking import calculate_milking_exposure
 from .exposure_combined import calculate_combined_exposure
 
 
+# Canonical vocabulary aligned with cleaning/synth.py:make_cases true_route
+CANONICAL_TO_LEGACY_ROUTES = {
+    "resting_area": "resting_environment",
+    "milking_equipment": "milking_equipment",
+    "both": "mixed_transmission",
+    "no_common_route": "sporadic_inconclusive",
+}
+
+LEGACY_TO_CANONICAL_ROUTES = {
+    "resting_environment": "resting_area",
+    "milking_equipment": "milking_equipment",
+    "mixed_transmission": "both",
+    "sporadic_inconclusive": "no_common_route",
+}
+
+
 def run_permutation_attribution_test(
     lying_bouts_df: pd.DataFrame,
     milking_log_df: pd.DataFrame,
@@ -71,7 +87,8 @@ def run_permutation_attribution_test(
             "p_value_milking": 1.0,
             "t_resting_obs": t_resting_obs,
             "t_milking_obs": t_milking_obs,
-            "likely_route": "sporadic_inconclusive",
+            "likely_route": "no_common_route",
+            "likely_route_alias": "sporadic_inconclusive",
             "pathogen_group_likelihood": {
                 "contagious_milking_associated": 0.50,
                 "environmental_bedding_associated": 0.50,
@@ -124,7 +141,8 @@ def run_permutation_attribution_test(
     is_milk_sig = (p_milking < alpha) and (t_milking_obs > 0)
 
     if is_rest_sig and not is_milk_sig:
-        likely_route = "resting_environment"
+        likely_route = "resting_area"
+        likely_route_alias = "resting_environment"
         pathogen_dist = {
             "environmental_bedding_associated": 0.85,
             "contagious_milking_associated": 0.15,
@@ -132,20 +150,23 @@ def run_permutation_attribution_test(
         }
     elif is_milk_sig and not is_rest_sig:
         likely_route = "milking_equipment"
+        likely_route_alias = "milking_equipment"
         pathogen_dist = {
             "contagious_milking_associated": 0.85,
             "environmental_bedding_associated": 0.15,
             "note": "Significant un-sanitized serial milking stall contacts; typical of contagious pathogens (e.g. Staph aureus)",
         }
     elif is_rest_sig and is_milk_sig:
-        likely_route = "mixed_transmission"
+        likely_route = "both"
+        likely_route_alias = "mixed_transmission"
         pathogen_dist = {
             "environmental_bedding_associated": 0.50,
             "contagious_milking_associated": 0.50,
             "note": "Both resting and milking routes exhibit statistically significant contact clustering",
         }
     else:
-        likely_route = "sporadic_inconclusive"
+        likely_route = "no_common_route"
+        likely_route_alias = "sporadic_inconclusive"
         pathogen_dist = {
             "environmental_bedding_associated": 0.50,
             "contagious_milking_associated": 0.50,
@@ -158,6 +179,7 @@ def run_permutation_attribution_test(
         "t_resting_obs": t_resting_obs,
         "t_milking_obs": t_milking_obs,
         "likely_route": likely_route,
+        "likely_route_alias": likely_route_alias,
         "pathogen_group_likelihood": pathogen_dist,
     }
 
@@ -383,7 +405,7 @@ def backtrace(
 
     # Synthesize implicated units/cells
     implicated = []
-    if perm_res["likely_route"] == "resting_environment":
+    if perm_res["likely_route"] in ("resting_area", "resting_environment"):
         for c in res_resting["implicated_cells"]:
             implicated.append(c["cell_id"])
     elif perm_res["likely_route"] == "milking_equipment":
@@ -396,7 +418,7 @@ def backtrace(
             implicated.append(u["unit_id"])
 
     # Action recommendations
-    if perm_res["likely_route"] == "resting_environment":
+    if perm_res["likely_route"] in ("resting_area", "resting_environment"):
         actions = [
             "Deep rake and renew organic bedding in implicated cubicle zones",
             "Verify stall curb cleanliness and apply dry lime/disinfectant bedding powder",
@@ -420,13 +442,23 @@ def backtrace(
         "lookback_hours": lookback_hours,
         "flagged_cows": flagged_ids,
         "likely_route": perm_res["likely_route"],
+        "likely_route_alias": perm_res.get("likely_route_alias"),
+        "route_p_values": {
+            "resting_p_value": perm_res["p_value_resting"],
+            "milking_p_value": perm_res["p_value_milking"],
+        },
         "p_values": {
             "resting_route": perm_res["p_value_resting"],
             "milking_equipment": perm_res["p_value_milking"],
         },
         "pathogen_group_likelihood": perm_res["pathogen_group_likelihood"],
         "implicated_units_or_cells": implicated,
+        "implicated_resources": {
+            "primary_unit_or_cell": implicated[0] if implicated else None,
+            "all": implicated,
+        },
         "exposed_cows": res_comb["exposed_cows"],
+        "high_risk_contacts": [{"cow_id": c["cow_id"], **c} for c in res_comb["exposed_cows"]],
         "recommended_actions": actions,
         "is_model_suggestion": True,
         "is_synthetic": is_synthetic,
