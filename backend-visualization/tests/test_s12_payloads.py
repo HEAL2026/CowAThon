@@ -678,6 +678,44 @@ class TestS12Payloads(unittest.TestCase):
         self.assertIn("w", s1["successors"][0])
         self.assertEqual(s1["radius_m"], 1.5)
 
+    def test_pen_map_herd_size_and_zero_default_flags_and_grid_bounds(self):
+        """
+        Verifies:
+        1. When real cows are passed without flags, n_flagged is 0 across all resting spots;
+        2. Grid emits non-null explicit x_min, x_max, y_min, y_max, width, height aliases;
+        3. Flagging a specific cow (e.g. C01) increments n_flagged on its implicated spots;
+        4. get_pen_map_data honours flagged_cows parameter without phantom cows.
+        """
+        # 1. 10 unflagged cows in centered frame
+        ten_unflagged = [{"cow_id": f"C{i:02d}", "uwb_x_m": -2.5 + i * 0.5, "uwb_y_m": 0.5, "flag_status": "unflagged"} for i in range(1, 11)]
+        p_unflagged = generate_pen_map(cows_data=ten_unflagged)
+        self.assertEqual(len(p_unflagged["cows"]), 10)
+        self.assertEqual(p_unflagged["grid"]["x_min"], -12.45)
+        self.assertEqual(p_unflagged["grid"]["x_max"], 12.45)
+        self.assertEqual(p_unflagged["grid"]["y_min"], -9.31)
+        self.assertEqual(p_unflagged["grid"]["y_max"], 8.39)
+        self.assertEqual(p_unflagged["grid"]["width"], 24.9)
+        self.assertEqual(p_unflagged["grid"]["height"], 17.7)
+
+        for spot in p_unflagged["resting_spots"]:
+            self.assertEqual(spot["n_flagged"], 0)
+            self.assertEqual(spot["flagged_cows"], [])
+            self.assertEqual(spot["dwell_min_by_flagged"], {})
+
+        # 2. Flagging C01
+        ten_with_c01 = [{"cow_id": f"C{i:02d}", "uwb_x_m": -2.5 + i * 0.5, "uwb_y_m": 0.5, "flag_status": "flagged" if i == 1 else "unflagged"} for i in range(1, 11)]
+        p_flagged = generate_pen_map(cows_data=ten_with_c01)
+        s1 = next(s for s in p_flagged["resting_spots"] if s["spot_id"] == "spot_01")
+        self.assertEqual(s1["n_flagged"], 1)
+        self.assertEqual(s1["flagged_cows"], ["C01"])
+
+        # 3. get_pen_map_data honours flagged_cows parameter
+        p_data, is_syn = get_pen_map_data(flagged_cows=["C01"])
+        c01 = next(c for c in p_data["cows"] if c["cow_id"] == "C01")
+        self.assertEqual(c01["flag_status"], "flagged")
+        c02 = next(c for c in p_data["cows"] if c["cow_id"] == "C02")
+        self.assertEqual(c02["flag_status"], "unflagged")
+
 
 if __name__ == "__main__":
     unittest.main()
