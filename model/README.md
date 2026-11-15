@@ -173,3 +173,15 @@ experiment only after reproducing the official preprocessing and verifying
 the required head-direction input. Do not commit or publicly upload the
 archive; MMCows data and derived weights are CC BY-NC-SA 4.0 and subject to
 the project restricted-data policy.
+
+The reproducible comparison command is:
+
+```bash
+python3 behavior/compare_pretrained.py
+```
+
+It writes `reports/pretrained_immu_comparison.json` and compares the official
+checkpoint with the grouped RandomForest on the same held-out cows and
+matching timestamps. Because the separate official head-direction stream is
+not present locally, the comparison explicitly uses a magnetometer horizontal
+angle proxy and must not be treated as the final transfer-learning result.

@@ -1,0 +1,149 @@
+{
+  "protocol": "official IMMU checkpoint, cow-disjoint test cows C05/C07",
+  "checkpoint": "model/external/sensor_weights/immu/fold_0.h5",
+  "test_cows": [
+    "C05",
+    "C07"
+  ],
+  "preprocessing": "10 Hz, 100 samples, 50% overlap, Haar DWT, magnetometer horizontal angle proxy, global StandardScaler",
+  "proxy_warning": "Official relative_angle head-direction stream was unavailable; magnetometer angle is a controlled proxy.",
+  "deep_learning": {
+    "n_windows": 28470,
+    "macro_f1": 0.1170806453216461,
+    "accuracy": 0.20772743238496663,
+    "per_class": {
+      "walking": {
+        "precision": 0.015257969798657718,
+        "recall": 0.6510067114093959,
+        "f1-score": 0.029817101285926535,
+        "support": 447.0
+      },
+      "standing": {
+        "precision": 0.33664068036853295,
+        "recall": 0.07225433526011561,
+        "f1-score": 0.11897307451471509,
+        "support": 6574.0
+      },
+      "feed_up": {
+        "precision": 0.027312775330396475,
+        "recall": 0.011863758132414848,
+        "f1-score": 0.016542155816435433,
+        "support": 2613.0
+      },
+      "feed_down": {
+        "precision": 0.7204081632653061,
+        "recall": 0.11829758713136729,
+        "f1-score": 0.20322394933793897,
+        "support": 2984.0
+      },
+      "licking": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 326.0
+      },
+      "drinking": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 279.0
+      },
+      "lying": {
+        "precision": 0.8103418948800817,
+        "recall": 0.31245490916245816,
+        "f1-score": 0.45100823629650666,
+        "support": 15247.0
+      },
+      "accuracy": 0.20772743238496663,
+      "macro avg": {
+        "precision": 0.272851640520425,
+        "recall": 0.16655390015653596,
+        "f1-score": 0.1170806453216461,
+        "support": 28470.0
+      },
+      "weighted avg": {
+        "precision": 0.5899629524974128,
+        "recall": 0.20772743238496663,
+        "f1-score": 0.2922945111668472,
+        "support": 28470.0
+      }
+    },
+    "confusion": [
+      [
+        291,
+        66,
+        49,
+        16,
+        19,
+        0,
+        6
+      ],
+      [
+        4414,
+        475,
+        790,
+        95,
+        145,
+        3,
+        652
+      ],
+      [
+        1764,
+        371,
+        31,
+        23,
+        25,
+        2,
+        397
+      ],
+      [
+        1982,
+        364,
+        9,
+        353,
+        244,
+        0,
+        32
+      ],
+      [
+        219,
+        83,
+        0,
+        1,
+        0,
+        0,
+        23
+      ],
+      [
+        191,
+        8,
+        43,
+        2,
+        30,
+        0,
+        5
+      ],
+      [
+        10211,
+        44,
+        213,
+        0,
+        15,
+        0,
+        4764
+      ]
+    ]
+  },
+  "random_forest_same_timestamps": {
+    "n_windows": 7894,
+    "macro_f1": 0.5625442163499964,
+    "accuracy": 0.7501900177349886,
+    "lying_f1": 0.8960926907432516
+  },
+  "deep_learning_same_timestamps": {
+    "n_windows": 7894,
+    "macro_f1": 0.11915242853490245,
+    "accuracy": 0.20559918925766404,
+    "lying_f1": 0.4456206248932901
+  }
+}
