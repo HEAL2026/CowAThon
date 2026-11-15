@@ -213,7 +213,20 @@ The `evaluation_protocol` explicitly distinguishes `group_kfold_K (n=N)`, `leave
 ```
 
 ### 4.4 Backtrace Result Schema (`backtrace()` / `POST /backtrace`)
-Returned by `analysis.backtrace(flags, lookback_hours=72)` and consumed by `apis/` and dashboard attribution panels:
+Returned by `analysis.backtrace(flags, lookback_hours=72)` and consumed by `apis/` and dashboard attribution panels.
+
+#### Route Attribution Vocabulary (Aligned with `cleaning/synth.py:make_cases` `true_route`)
+- **Canonical Vocabulary**:
+  - `"resting_area"`: Statistically significant spatial cubicle co-occupancy clustering ($p < 0.05$).
+  - `"milking_equipment"`: Statistically significant un-sanitized serial milking stall contacts ($p < 0.05$).
+  - `"both"`: Both resting and milking routes exhibit statistically significant clustering ($p < 0.05$).
+  - `"no_common_route"`: No statistically significant transmission clustering ($p \ge 0.05$).
+- **Legacy Aliases (provided via `likely_route_alias` and `analysis.backtrace.CANONICAL_TO_LEGACY_ROUTES`)**:
+  - `"resting_area"` $\leftrightarrow$ `"resting_environment"`
+  - `"milking_equipment"` $\leftrightarrow$ `"milking_equipment"`
+  - `"both"` $\leftrightarrow$ `"mixed_transmission"`
+  - `"no_common_route"` $\leftrightarrow$ `"sporadic_inconclusive"`
+
 ```json
 {
   "investigation_id": "trace_20230725_143000",
@@ -221,6 +234,11 @@ Returned by `analysis.backtrace(flags, lookback_hours=72)` and consumed by `apis
   "lookback_hours": 72,
   "flagged_cows": ["C02", "C01"],
   "likely_route": "milking_equipment",
+  "likely_route_alias": "milking_equipment",
+  "route_p_values": {
+    "resting_p_value": 0.35,
+    "milking_p_value": 0.025
+  },
   "p_values": {
     "resting_route": 0.35,
     "milking_equipment": 0.025
@@ -231,7 +249,22 @@ Returned by `analysis.backtrace(flags, lookback_hours=72)` and consumed by `apis
     "note": "Significant un-sanitized serial milking stall contacts; typical of contagious pathogens (e.g. Staph aureus)"
   },
   "implicated_units_or_cells": ["STALL-01"],
+  "implicated_resources": {
+    "primary_unit_or_cell": "STALL-01",
+    "all": ["STALL-01"]
+  },
   "exposed_cows": [
+    {
+      "cow_id": "C03",
+      "combined_exposure_score": 0.72,
+      "resting_exposure_score": 0.10,
+      "milking_exposure_score": 0.69,
+      "primary_route": "milking_equipment",
+      "contact_adjusted_risk": 46.8,
+      "recommended_preventative_action": "Sanitize teat cluster before attaching; inspect teat end condition"
+    }
+  ],
+  "high_risk_contacts": [
     {
       "cow_id": "C03",
       "combined_exposure_score": 0.72,
@@ -249,5 +282,39 @@ Returned by `analysis.backtrace(flags, lookback_hours=72)` and consumed by `apis
   ],
   "is_model_suggestion": true,
   "is_synthetic": false
+}
+```
+
+### 4.5 S11 Outbreak Backtrace Benchmark Schema (`backtrace_benchmark.json`)
+Produced by `analysis.evaluate_backtrace_against_synthetic()`:
+```json
+{
+  "benchmark_protocol": "S11 Outbreak Backtrace & Route Attribution Benchmark",
+  "evaluated_at_utc": "2026-11-15T06:30:00Z",
+  "total_episodes": 3,
+  "route_accuracy": 1.0,
+  "source_hit_rate": 1.0,
+  "overall_precision_at_1": 1.0,
+  "overall_recall_at_1": 1.0,
+  "episodes": [
+    {
+      "scenario": "resting_route",
+      "true_route": "resting_area",
+      "predicted_route": "resting_area",
+      "route_match": true,
+      "p_values": {
+        "resting_route": 0.01,
+        "milking_equipment": 0.35
+      },
+      "source_hit": true,
+      "true_source": {"cells": [[2, 1]], "cell_id": "cubicle_row_a:cell_X2_Y1"},
+      "implicated_sources": ["cubicle_row_a:cell_X2_Y1"],
+      "index_cow": "C02",
+      "secondary_cows": ["C01"],
+      "precision_at_k": {"1": 1.0, "2": 0.5, "3": 0.33},
+      "recall_at_k": {"1": 1.0, "2": 1.0, "3": 1.0}
+    }
+  ],
+  "is_synthetic": true
 }
 ```

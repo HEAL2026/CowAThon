@@ -25,6 +25,7 @@ import pandas as pd
 
 from .pipeline import run_analysis_pipeline
 from .fixtures import generate_synthetic_mmcows_data
+from .backtrace_eval import evaluate_backtrace_against_synthetic
 
 
 def find_default_parquet_path() -> Optional[Path]:
@@ -95,6 +96,11 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
         "--no-fallback",
         action="store_true",
         help="Fail if parquet file does not exist rather than falling back to synthetic fixtures.",
+    )
+    parser.add_argument(
+        "--eval-backtrace",
+        action="store_true",
+        help="Execute S11 transmission backtrace evaluation benchmark against synthetic labels ground truth.",
     )
     parser.add_argument(
         "--export-vis-dir",
@@ -170,12 +176,23 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
         is_synthetic=is_synthetic,
     )
 
-    # 6. Optional visualization export copy
+    # 6. S11 Outbreak Backtrace Benchmark (if requested)
+    backtrace_benchmark = None
+    if args.eval_backtrace:
+        if not args.quiet:
+            print("[backend-analysis] Evaluating S11 outbreak backtrace against synthetic ground truth...")
+        backtrace_benchmark = evaluate_backtrace_against_synthetic(
+            output_dir=out_dir,
+            n_permutations=100,
+            seed=42,
+        )
+
+    # 7. Optional visualization export copy
     if args.export_vis_dir:
         vis_dir = Path(args.export_vis_dir)
         vis_dir.mkdir(parents=True, exist_ok=True)
         import shutil
-        for fname in ["cow_risk_summary.json", "benchmark_results.json"]:
+        for fname in ["cow_risk_summary.json", "benchmark_results.json", "backtrace_benchmark.json"]:
             src = out_dir / fname
             if src.exists():
                 shutil.copy2(src, vis_dir / fname)
@@ -230,6 +247,17 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
             print(f"  - Ankle Concordance   : {gt_val.get('ankle_sensor_ground_truth_concordance', 0.0):.2%}")
             posture_acc = gt_val.get("imu_posture_model", {}).get("accuracy", 0.0)
             print(f"  - IMU Posture Accuracy: {posture_acc:.2%}")
+
+        if backtrace_benchmark is not None:
+            print("\nS11 Outbreak Backtrace & Route Attribution Benchmark:")
+            print(f"  - Route Accuracy      : {backtrace_benchmark.get('route_accuracy', 0.0):.1%}")
+            print(f"  - Source Hit Rate     : {backtrace_benchmark.get('source_hit_rate', 0.0):.1%}")
+            prec1 = backtrace_benchmark.get('overall_precision_at_1')
+            rec1 = backtrace_benchmark.get('overall_recall_at_1')
+            if prec1 is not None:
+                print(f"  - Precision@1 (Index) : {prec1:.1%}")
+            if rec1 is not None:
+                print(f"  - Recall@1 (Index)    : {rec1:.1%}")
         print("=" * 80 + "\n")
 
     return 0
