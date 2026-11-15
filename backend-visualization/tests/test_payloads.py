@@ -72,6 +72,31 @@ class TestVisualizationPayloads(unittest.TestCase):
             for val in row:
                 self.assertTrue(0.0 <= val <= 1.0)
 
+    def test_barn_overview_nan_uwb_coordinates(self):
+        """Verifies generate_barn_overview handles NaN UWB coordinates gracefully without ValueError."""
+        cows_with_nans = [
+            {
+                "cow_id": "C01",
+                "uwb_x_m": float("nan"),
+                "uwb_y_m": float("nan"),
+                "zone": "cubicle_row_a",
+                "activity_state": "resting",
+            },
+            {
+                "cow_id": "C02",
+                "uwb_x_m": 12.5,
+                "uwb_y_m": 4.5,
+                "zone": "cubicle_row_a",
+                "activity_state": "resting",
+            },
+        ]
+        payload = generate_barn_overview(cows_data=cows_with_nans)
+        self.assertEqual(len(payload["cows"]), 2)
+        c01 = next(c for c in payload["cows"] if c["cow_id"] == "C01")
+        self.assertIsNone(c01["uwb_x_m"])
+        self.assertIsNone(c01["uwb_y_m"])
+        self.assertIn("uwb", c01["missing_modalities"])
+
     def test_cow_timeseries_contract_and_imputation(self):
         points = generate_mock_timeseries("C01", days=3, cadence_hours=2, seed=12)
         payload = generate_cow_timeseries(

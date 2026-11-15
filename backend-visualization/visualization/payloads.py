@@ -42,8 +42,21 @@ def generate_barn_overview(
     for cow in cows_data:
         cid = str(cow["cow_id"])
         display_name = str(cow.get("display_name", cid))
-        x = float(cow.get("uwb_x_m", cow.get("x_coord", 0.0)))
-        y = float(cow.get("uwb_y_m", cow.get("y_coord", 0.0)))
+
+        raw_x = cow.get("uwb_x_m", cow.get("x_coord"))
+        raw_y = cow.get("uwb_y_m", cow.get("y_coord"))
+        has_coords = False
+        x, y = 15.0, 7.5
+        try:
+            if raw_x is not None and raw_y is not None:
+                fx = float(raw_x)
+                fy = float(raw_y)
+                if not (math.isnan(fx) or math.isnan(fy)):
+                    x, y = fx, fy
+                    has_coords = True
+        except (ValueError, TypeError):
+            has_coords = False
+
         zone = str(cow.get("zone", "cubicle_row_a"))
         activity = str(cow.get("activity_state", "resting"))
         out_of_pen = bool(cow.get("out_of_pen", False))
@@ -53,6 +66,8 @@ def generate_barn_overview(
         on_watch_list = bool(cow.get("on_watch_list", False))
         vet_flagged = bool(cow.get("vet_flagged", False))
         missing_modalities = list(cow.get("missing_modalities", []))
+        if not has_coords and "uwb" not in missing_modalities:
+            missing_modalities.append("uwb")
         is_instrumented = bool(cow.get("is_instrumented", True))
 
         zone_counts[zone] = zone_counts.get(zone, 0) + 1
@@ -62,10 +77,10 @@ def generate_barn_overview(
         cows_payload.append({
             "cow_id": cid,
             "display_name": display_name,
-            "uwb_x_m": round(x, 2),
-            "uwb_y_m": round(y, 2),
-            "x_coord": round(x, 2),
-            "y_coord": round(y, 2),
+            "uwb_x_m": round(x, 2) if has_coords else None,
+            "uwb_y_m": round(y, 2) if has_coords else None,
+            "x_coord": round(x, 2) if has_coords else None,
+            "y_coord": round(y, 2) if has_coords else None,
             "zone": zone,
             "activity_state": activity,
             "out_of_pen": out_of_pen,
@@ -78,10 +93,11 @@ def generate_barn_overview(
             "is_instrumented": is_instrumented,
         })
 
-        # Populate heatmap density grid (clamped to grid boundaries)
-        gx = max(0, min(grid_w - 1, int(x / 1.5)))
-        gy = max(0, min(grid_h - 1, int(y / 1.5)))
-        grid[gy][gx] += 1.0
+        # Populate heatmap density grid for cows with valid fixes (clamped to grid boundaries)
+        if has_coords:
+            gx = max(0, min(grid_w - 1, int(x / 1.5)))
+            gy = max(0, min(grid_h - 1, int(y / 1.5)))
+            grid[gy][gx] += 1.0
 
     # Normalize heatmap density between 0.0 and 1.0
     max_val = max([max(row) for row in grid]) if grid else 1.0

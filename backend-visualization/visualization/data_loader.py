@@ -220,6 +220,27 @@ def get_barn_overview_data(
                     "is_instrumented": cid in COW_IDS[:10],
                 })
 
+            # Ensure uninstrumented cohort animals (C11-C16) are represented if missing from joined sensor table
+            if custom_records is None:
+                for uid in COW_IDS:
+                    if uid not in by_cow:
+                        cows.append({
+                            "cow_id": uid,
+                            "display_name": f"Cow {uid}",
+                            "uwb_x_m": None,
+                            "uwb_y_m": None,
+                            "zone": "cubicle_row_a",
+                            "activity_state": "resting",
+                            "out_of_pen": False,
+                            "risk_status": "baseline",
+                            "risk_score": 0.15,
+                            "factors": ["Uninstrumented cohort animal"],
+                            "on_watch_list": False,
+                            "vet_flagged": False,
+                            "missing_modalities": ["cbt", "uwb", "neck_imu", "ankle", "pressure"],
+                            "is_instrumented": False,
+                        })
+
             latest = records[-1]
             env = {
                 "indoor_thi": float(latest.get("indoor_thi") or 72.0),
