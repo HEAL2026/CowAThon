@@ -110,11 +110,17 @@ function renderRestingOverlays(payload) {
   const target = document.querySelector("#resting-overlays");
   if (!target) return;
   const hasOverlayData = Object.prototype.hasOwnProperty.call(payload || {}, "resting_areas")
+    || Object.prototype.hasOwnProperty.call(payload || {}, "implicated_resting_areas")
+    || Object.prototype.hasOwnProperty.call(payload || {}, "implicated_circles")
     || Object.prototype.hasOwnProperty.call(payload?.implicated_elements || {}, "resting_areas");
   if (!hasOverlayData) return;
   target.replaceChildren();
   document.querySelectorAll(".cow-dot.resting-contact").forEach((dot) => dot.classList.remove("resting-contact"));
-  const areas = payload?.resting_areas || payload?.implicated_elements?.resting_areas || [];
+  const areas = payload?.resting_areas
+    || payload?.implicated_resting_areas
+    || payload?.implicated_circles
+    || payload?.implicated_elements?.resting_areas
+    || [];
   const width = Number(payload?.grid?.width_m || state.s12.penMap?.grid?.width_m || 30);
   const height = Number(payload?.grid?.height_m || state.s12.penMap?.grid?.height_m || 15);
   areas.forEach((area, index) => {
@@ -127,7 +133,8 @@ function renderRestingOverlays(payload) {
     circle.style.top = `${Math.max(0, ((y - radius) / height) * 100)}%`;
     circle.style.width = `${(radius * 2 / width) * 100}%`;
     circle.style.height = `${(radius * 2 / height) * 100}%`;
-    circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius`;
+    const cutoff = area.until_bedding_change_utc ? ` · until bedding change ${area.until_bedding_change_utc}` : "";
+    circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius${cutoff}`;
     target.append(circle);
   });
   const contacts = new Set(
@@ -174,9 +181,13 @@ function renderAttribution(payload) {
   const source = payload?.transmission_source || {};
   const pValues = payload?.p_values || {};
   const actions = payload?.recommended_actions || [];
-  const restingAreas = payload?.resting_areas || payload?.transmission_source?.resting_areas || [];
+  const restingAreas = payload?.resting_areas
+    || payload?.implicated_resting_areas
+    || payload?.implicated_circles
+    || payload?.transmission_source?.resting_areas
+    || [];
   const restingSummary = restingAreas.length
-    ? `<div class="source-note"><strong>Real resting areas:</strong> ${restingAreas.map((area) => area.zone_id || area.cell_id || "area").join(", ")} · 1.5 m contact radius, bounded by bedding changes.</div>`
+    ? `<div class="source-note"><strong>Real resting areas:</strong> ${restingAreas.map((area) => area.zone_id || area.cell_id || `circle (${area.center_x_m ?? "—"}m, ${area.center_y_m ?? "—"}m)`).join(", ")} · 1.5 m contact radius, bounded by bedding changes.</div>`
     : "";
   const sourceSummary = restingAreas.length
     ? `<div class="source-note"><strong>Source candidate:</strong> ${source.identifier || "Real resting area"}${source.primary_index_cow ? ` · ${source.primary_index_cow}` : ""}</div>`
