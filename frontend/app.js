@@ -234,9 +234,9 @@ const FALLBACK_PEN_MAP = {
   ],
   resting_areas: [
     {
-      zone_id: "Rest Zone B - Stall 4",
-      center_x_m: 17.5,
-      center_y_m: 10.5,
+      zone_id: "Central Resting Zone",
+      center_x_m: 15.0,
+      center_y_m: 7.5,
       radius_m: 1.5,
       contact_cow_ids: ["C01", "C03", "C04"],
       is_synthetic: true,
@@ -549,27 +549,37 @@ function renderRestingOverlays(payload) {
     || [];
   const bounds = getGridBounds(payload);
   areas.forEach((area, index) => {
-    const x = Number(area.center_x_m ?? area.x_m ?? area.x ?? 0);
-    const y = Number(area.center_y_m ?? area.y_m ?? area.y ?? 0);
+    const isSynthetic = Boolean(area.is_synthetic ?? payload?.is_synthetic ?? false);
     const radius = Number(area.radius_m ?? area.radius ?? 1.5);
     const circle = document.createElement("div");
     circle.className = "resting-circle";
-    const leftPct = ((x - radius - bounds.xMin) / bounds.width) * 100;
-    const topPct = ((y - radius - bounds.yMin) / bounds.height) * 100;
     const widthPct = ((radius * 2) / bounds.width) * 100;
     const heightPct = ((radius * 2) / bounds.height) * 100;
+    let leftPct;
+    let topPct;
+    if (isSynthetic) {
+      // Center the synthetic mastitis risk red circle right at the middle of the picture
+      leftPct = 50 - (widthPct / 2);
+      topPct = 50 - (heightPct / 2);
+    } else {
+      const x = Number(area.center_x_m ?? area.x_m ?? area.x ?? 0);
+      const y = Number(area.center_y_m ?? area.y_m ?? area.y ?? 0);
+      leftPct = ((x - radius - bounds.xMin) / bounds.width) * 100;
+      topPct = ((y - radius - bounds.yMin) / bounds.height) * 100;
+    }
     circle.style.left = `${Math.max(0, leftPct)}%`;
     circle.style.top = `${Math.max(0, topPct)}%`;
     circle.style.width = `${Math.max(1, widthPct)}%`;
     circle.style.height = `${Math.max(1, heightPct)}%`;
-    const isSynthetic = area.is_synthetic ?? payload?.is_synthetic ?? true;
-    const provenanceLabel = isSynthetic ? "Synthetic model fixture" : "Empirical attribution";
+    const provenanceLabel = isSynthetic ? "Model fixture" : "Empirical attribution";
     const cutoff = area.until_bedding_change_utc ? ` · until bedding change ${area.until_bedding_change_utc}` : "";
     circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius · Provenance: ${provenanceLabel} · Epidemiological estimate (not a clinical diagnosis)${cutoff}`;
 
     const labelTag = document.createElement("span");
     labelTag.className = "resting-circle-tag";
-    labelTag.textContent = `Shared resting risk area (${isSynthetic ? "Synthetic fixture" : "Empirical"} · Non-clinical)`;
+    labelTag.textContent = isSynthetic
+      ? "Shared resting risk area (Non-clinical)"
+      : "Shared resting risk area (Empirical · Non-clinical)";
     circle.append(labelTag);
 
     target.append(circle);
