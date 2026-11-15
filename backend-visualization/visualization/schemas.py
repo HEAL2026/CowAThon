@@ -157,6 +157,9 @@ class PenMapPayload:
     grid: Dict[str, Any]
     cows: List[Dict[str, Any]]
     implicated_elements: Dict[str, Any]
+    resting_areas: List[Dict[str, Any]] = field(default_factory=list)
+    contact_events: List[Dict[str, Any]] = field(default_factory=list)
+    implicated_circles: List[Dict[str, Any]] = field(default_factory=list)
     is_synthetic: bool = False
 
 
@@ -164,6 +167,7 @@ class PenMapPayload:
 class HerdHealthTablePayload:
     ts_utc: str
     cows: List[Dict[str, Any]]
+    group_trends: Dict[str, Any] = field(default_factory=dict)
     is_synthetic: bool = False
 
 

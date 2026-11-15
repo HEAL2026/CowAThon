@@ -55,10 +55,30 @@ class TestS12Payloads(unittest.TestCase):
         self.assertIn("milking_units", elements)
         self.assertIn("resting_zones", elements)
 
+        # Real-coordinate 1.5m resting circles & contact overlays
+        self.assertIn("resting_areas", payload)
+        self.assertIn("implicated_circles", payload)
+        self.assertIn("contact_events", payload)
+        self.assertGreaterEqual(len(payload["resting_areas"]), 1)
+        circle = payload["resting_areas"][0]
+        self.assertEqual(circle["radius_m"], 1.5)
+        self.assertIn("center_x_m", circle)
+        self.assertIn("center_y_m", circle)
+        self.assertIn("until_bedding_change_utc", circle)
+        self.assertIn("contact_cows", circle)
+
     def test_herd_health_table_vitality_and_risk(self):
         payload = generate_herd_health()
         cows = payload["cows"]
         self.assertEqual(len(cows), 16)
+
+        # Herd group trends
+        self.assertIn("group_trends", payload)
+        trends = payload["group_trends"]
+        self.assertEqual(trends["cohort_size"], 16)
+        self.assertIn("mean_health_index", trends)
+        self.assertIn("mean_mastitis_risk", trends)
+        self.assertIn("watch_counts", trends)
 
         c01 = next(c for c in cows if c["cow_id"] == "C01")
         self.assertLess(c01["health_index"], 70.0)
