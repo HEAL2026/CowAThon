@@ -49,8 +49,19 @@
             </select>
           </label>
           <div class="partner-summary">
-            <span class="field-label">Care team</span>
-            <span><span class="online-dot"></span> Dr. Maya Patel <button class="text-button">Manage</button></span>
+            <div class="care-team-farmer">
+              <span class="field-label">Assigned veterinarian</span>
+              <span class="care-team-val"><span class="online-dot"></span> Dr. Maya Patel <span class="clinic-sub">(Valley Vet)</span> <button class="text-button" id="vet-contact-btn">Message</button></span>
+            </div>
+            <div class="partner-farm-vet" hidden>
+              <label for="partner-farm-select" class="field-label">Assigned partner farm</label>
+              <select id="partner-farm-select" class="partner-farm-select">
+                <option value="north-barn" selected>North Barn Dairy — Farmer Mike Johnson (16 cows, 10 tracked)</option>
+                <option value="sunrise-coop">Sunrise Cooperative — Farmer John Doe (120 cows)</option>
+                <option value="green-pastures">Green Pastures — Farmer Sarah Smith (85 cows)</option>
+                <option value="highland-cattle">Highland Cattle Co. — Farmer David Miller (64 cows)</option>
+              </select>
+            </div>
           </div>
         </section>
 
@@ -81,7 +92,7 @@
             </div>
             <div class="segmented-control">
               <button class="mode-button active" data-mode="location">Live location</button>
-              <button class="mode-button" data-mode="heatmap">Activity heatmap</button>
+              <button class="mode-button" data-mode="heatmap">Idle area heatmap</button>
             </div>
             <label class="cow-search">
               <span class="field-label">Find a cow</span>
@@ -95,6 +106,20 @@
                 <span class="map-legend"><i class="legend-dot healthy"></i> Cow location</span>
                 <button id="problem-overlay" class="overlay-button"><span class="toggle"></span> Mastitis risk areas</button>
               </div>
+              <div id="heatmap-gradient-key" class="heatmap-gradient-key" hidden>
+                <div class="gradient-header-row">
+                  <span class="gradient-title">Idle area density (lying bouts &ge; 20 min)</span>
+                  <span class="gradient-sub">Spatial rest accumulation</span>
+                </div>
+                <div class="gradient-bar-wrap">
+                  <span class="gradient-scale-bar"></span>
+                  <div class="gradient-labels">
+                    <span>Low idle (&lt;30m)</span>
+                    <span>Moderate (30–60m)</span>
+                    <span>High idle / hotspot (&gt;60m)</span>
+                  </div>
+                </div>
+              </div>
               <div class="barn-polygon">
                 <canvas id="heatmap-canvas" class="heatmap-canvas" width="400" height="284" hidden></canvas>
                 <div class="feed-lane">Feed lane</div>
@@ -102,7 +127,7 @@
                 <div class="rest-zone zone-b">Rest zone B</div>
                 <div class="water-zone">Water</div>
                 <div id="resting-overlays" class="resting-overlays" aria-label="Real-coordinate resting exposure areas"></div>
-                <div class="cow-dot cow-a" data-cow="Bessie 142" data-cow-id="C01" data-rest-zone="zone-a" title="Bessie 142 · Within baseline" hidden></div>
+                <div class="cow-dot cow-a" data-cow="Bessie 01" data-cow-id="C01" data-rest-zone="zone-a" title="Bessie 01 · Within baseline" hidden></div>
                 <div class="cow-dot cow-b" data-cow="Daisy 108" data-cow-id="C02" data-rest-zone="zone-a" title="Daisy 108 · Pregnant" hidden></div>
                 <div class="cow-dot cow-c model-watch" data-cow="Fern 221" data-cow-id="C03" data-rest-zone="zone-b" title="Fern 221 · Elevated risk · model" hidden></div>
                 <div class="cow-dot cow-d" data-cow="Luna 095" data-cow-id="C04" data-rest-zone="zone-b" title="Luna 095 · Estrus" hidden></div>
@@ -146,6 +171,104 @@
               <div class="metric-row"><span><i class="legend-dot watch"></i> Worth a look</span><strong id="legend-count-watch">1</strong></div>
               <div class="metric-row"><span><i class="legend-dot urgent"></i> Needs attention</span><strong id="legend-count-urgent">1</strong></div>
             </aside>
+          </div>
+
+          <!-- Farmer View: Front-Facing Actionable AI Advisor & Decision Support -->
+          <div class="farmer-action-banner card" id="farmer-action-banner">
+            <div class="action-banner-header">
+              <div class="assistant-badge"><span class="brand-mark-mini">✦</span> AI Herd Advisor</div>
+              <span class="priority-tag">Today’s Actionable Priorities (Aug 4)</span>
+            </div>
+            <div class="action-recommendations">
+              <div class="action-item urgent">
+                <span class="action-num">1</span>
+                <div>
+                  <strong>Inspect Fern 221 before milking</strong>
+                  <p>Lying duration anomaly in Rest zone B indicates elevated mastitis risk (exposure score 0.85). Perform California Mastitis Test (CMT) &amp; inspect rear quarters.</p>
+                </div>
+                <button class="primary-button small" id="farmer-action-btn-1" type="button">Locate on map</button>
+              </div>
+              <div class="action-item warning">
+                <span class="action-num">2</span>
+                <div>
+                  <strong>Sanitize Rest Zone B cubicle bedding</strong>
+                  <p>Environmental bedding contamination hotspot identified. Condition bedding and replace soiled material to break environmental transmission cycle.</p>
+                </div>
+                <button class="secondary-button small" id="farmer-action-btn-2" type="button">Highlight zone</button>
+              </div>
+              <div class="action-item info">
+                <span class="action-num">3</span>
+                <div>
+                  <strong>Service &amp; flush Stall 6 cluster</strong>
+                  <p>Elevated milk conductivity observed in recent cycle. Run sanitize flush on cluster #6 before milking next cohort.</p>
+                </div>
+                <button class="secondary-button small" id="farmer-action-btn-3" type="button">View stall</button>
+              </div>
+            </div>
+            <div class="farmer-chat-container">
+              <div class="quick-questions">
+                <span class="quick-label">Ask advisor:</span>
+                <button class="quick-chip" type="button" data-query="What should I do first this morning?">What should I do first this morning?</button>
+                <button class="quick-chip" type="button" data-query="Explain Fern's alert">Explain Fern's alert</button>
+                <button class="quick-chip" type="button" data-query="How do I sanitize Rest zone B?">How do I sanitize Rest zone B?</button>
+                <button class="quick-chip" type="button" data-query="Which milking stalls need service?">Which milking stalls need service?</button>
+              </div>
+              <form id="farmer-inline-chat-form" class="farmer-chat-form">
+                <input id="farmer-inline-chat-input" placeholder="Ask AI advisor what to do on the farm today..." aria-label="Ask AI advisor" />
+                <button type="submit" class="primary-button small">Ask Advisor</button>
+              </form>
+              <div id="farmer-inline-chat-reply" class="farmer-chat-reply" hidden></div>
+            </div>
+          </div>
+
+          <!-- Vet View: Clinical Review & Differential Diagnosis -->
+          <div class="vet-differential-panel card" id="vet-differential-panel" hidden>
+            <div class="card-title-row">
+              <div>
+                <p class="eyebrow">Clinical veterinary review</p>
+                <h3>Differential diagnosis &amp; transmission attribution</h3>
+              </div>
+              <button class="secondary-button small" id="export-clinical-report-btn" type="button">Export clinical summary ↗</button>
+            </div>
+            <div class="differential-grid">
+              <div class="diff-card primary-etiology">
+                <div class="diff-header">
+                  <span class="etiology-tag environmental">84% Likely Route: Environmental</span>
+                  <span class="p-val-badge">Resting permutation p = 0.024 *</span>
+                </div>
+                <h4>Suspected Pathogens: <em>E. coli</em>, <em>Streptococcus uberis</em>, <em>S. dysgalactiae</em></h4>
+                <p>Transmission vector: Soiled cubicle bedding in Rest Zone B. Rapid environmental bacterial multiplication during humid conditions (THI 71.4).</p>
+                <div class="clinical-rx">
+                  <strong>Clinical recommendations:</strong>
+                  <ul>
+                    <li>Perform California Mastitis Test (CMT) on all quarters of cow C03 (Fern 221) and C01 (Bessie 01).</li>
+                    <li>If confirmed, initiate targeted intramammary antibiotic protocol with veterinary oversight.</li>
+                    <li>Immediate removal and renewal of organic bedding in Rest Zone B cubicles 1–8.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="diff-card secondary-etiology">
+                <div class="diff-header">
+                  <span class="etiology-tag contagious">16% Contagious Route (Low likelihood)</span>
+                  <span class="p-val-badge muted-badge">Milking permutation p = 0.412 (n.s.)</span>
+                </div>
+                <h4>Comparative Pathogens: <em>Staphylococcus aureus</em>, <em>Streptococcus agalactiae</em></h4>
+                <p>Transmission vector: Milking unit cluster liner transfer. Less supported by permutation backtrace (p &gt; 0.05), though Stall 6 shows minor conductivity deviation.</p>
+                <div class="clinical-rx">
+                  <strong>Contagious precautions:</strong>
+                  <ul>
+                    <li>Milk suspect cows (C03, C01) last in order to prevent cluster cross-contamination.</li>
+                    <li>Ensure post-milking teat dip with 0.5% iodine barrier solution.</li>
+                    <li>Sanitize milking cluster #6 before next group.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="vet-meta-strip">
+              <span><strong>Primary Index Case Candidate:</strong> C01 (Bessie 01)</span>
+              <span><strong>Exposed Cohort Contacts:</strong> C01, C03 (Fern 221), C04 (Luna 095)</span>
+              <span><strong>Statistical Significance:</strong> Permutation test 1,000 resamples (resting p &lt; 0.05)</span>
+            </div>
           </div>
           <div class="resting-filter-card card">
             <div class="card-title-row">
@@ -272,27 +395,38 @@
         <section id="alerts-view" class="view-panel" hidden>
           <div class="section-heading">
             <div>
-              <p class="eyebrow">4 open · 1 urgent</p>
-              <h2>Alerts & care assistant</h2>
+              <p class="eyebrow" id="alerts-summary-eyebrow">Real model predictions · Aug 4 (Now)</p>
+              <h2>Alerts &amp; notifications</h2>
             </div>
-            <button id="report-settings" class="secondary-button">Report settings</button>
+            <div class="alerts-header-actions">
+              <button id="mark-all-routine-read" class="secondary-button small" type="button">Mark routine as read</button>
+              <button id="report-settings" class="secondary-button">Report settings</button>
+            </div>
           </div>
           <div class="alerts-layout">
-            <div class="alert-list">
-              <article class="alert-card urgent">
-                <div class="alert-icon">!</div><div><span class="alert-type">Urgent · Health</span><h3>Fern 221 has a sharp health-index change</h3><p>Activity is down 38% and rumination is outside her baseline. Last seen in Rest zone B.</p><div class="alert-actions"><button class="primary-button small">Assign to Dr. Patel</button><button class="text-button">Mark reviewed</button></div></div><time>12 min ago</time>
-              </article>
-              <article class="alert-card watch">
-                <div class="alert-icon">◒</div><div><span class="alert-type">Watch · Milking</span><h3>Stall 6 has elevated mastitis risk</h3><p>Three consecutive conductivity readings are above the barn baseline.</p><div class="alert-actions"><button class="secondary-button small">View stall</button><button class="text-button">Dismiss</button></div></div><time>34 min ago</time>
-              </article>
-              <article class="alert-card info">
-                <div class="alert-icon">i</div><div><span class="alert-type">Info · Partner access</span><h3>Dr. Patel shared a treatment report</h3><p>Review and acknowledge the 10:00 AM herd-health report.</p><div class="alert-actions"><button class="secondary-button small">Open report</button></div></div><time>1 hr ago</time>
-              </article>
+            <div class="alerts-stream">
+              <div class="alert-tier-header critical-tier">
+                <span class="tier-pill urgent">Critical alerts (Urgent attention)</span>
+                <span class="tier-desc">Automated alerts dispatched to primary vet &amp; farmer</span>
+              </div>
+              <div id="critical-alerts-list" class="alert-list"></div>
+
+              <div class="alert-tier-header routine-tier">
+                <span class="tier-pill routine">Routine activity inbox</span>
+                <span class="tier-desc">Stacked observations grouped to prevent notification fatigue</span>
+              </div>
+              <div id="stacked-routine-inbox" class="stacked-inbox"></div>
             </div>
+
             <aside class="assistant card">
               <div class="assistant-heading"><div class="assistant-avatar">✦</div><div><h3>Herdwise assistant</h3><span class="online-label">Connected to farm models</span></div></div>
-              <div class="assistant-message">I found 2 cows worth checking before the next milking. Ask me about a cow, a barn, or a trend.</div>
-              <div class="suggestion-row"><button class="suggestion">What changed today?</button><button class="suggestion">Explain Fern's alert</button></div>
+              <div class="assistant-message" id="assistant-summary-msg">I analyzed your herd data for Aug 4 (Now). 1 cow requires urgent inspection before milking, and Rest zone B has elevated environmental mastitis risk.</div>
+              <div class="suggestion-row">
+                <button class="suggestion">What should I do first this morning?</button>
+                <button class="suggestion">Explain Fern's alert</button>
+                <button class="suggestion">How do I sanitize Rest zone B?</button>
+                <button class="suggestion">Show differential diagnosis</button>
+              </div>
               <form id="assistant-form" class="assistant-input"><input id="assistant-input" placeholder="Ask about your herd..." aria-label="Ask the herd assistant" /><button aria-label="Send question">↑</button></form>
               <p id="assistant-response" class="assistant-response" hidden></p>
             </aside>
