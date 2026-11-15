@@ -31,7 +31,7 @@ def calculate_milking_exposure(
     Returns:
         Dictionary with cow_exposure (dict), implicated_units (list), and contact_events (list).
     """
-    flag_set = set(flagged_cows) if flagged_cows else set()
+    flag_set = {c if isinstance(c, str) else str(c.get("cow_id", "")) for c in flagged_cows} if flagged_cows else set()
     if len(milking_log_df) == 0:
         return {
             "cow_exposure": {},

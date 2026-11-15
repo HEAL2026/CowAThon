@@ -144,8 +144,12 @@ def run_analysis_pipeline(
     is_hardware = detect_stationary_hardware_candidate(df_proc)
     df_proc["is_stationary_hardware"] = is_hardware
 
-    b_col = df_proc["behavior"] if "behavior" in df_proc.columns else None
-    b_name_col = df_proc["behavior_name"] if "behavior_name" in df_proc.columns else None
+    b_col = df_proc["behavior"] if "behavior" in df_proc.columns else (
+        df_proc["behavior_mode"] if "behavior_mode" in df_proc.columns else None
+    )
+    b_name_col = df_proc["behavior_name"] if "behavior_name" in df_proc.columns else (
+        df_proc["behavior_mode_name"] if "behavior_mode_name" in df_proc.columns else None
+    )
 
     if "posture_state" not in df_proc.columns or is_hardware.any() or b_col is not None:
         df_proc["posture_state"] = classify_posture_state(
@@ -174,6 +178,37 @@ def run_analysis_pipeline(
     )
     baselines_by_cow = compute_tiered_baselines(pd.DataFrame(), live_cow_days)
 
+    # Barn-level environmental THI context (indoor_thi has zero spatial variation across animals)
+    thi_series = df_proc["indoor_thi"].dropna() if "indoor_thi" in df_proc.columns else (
+        df_proc["thi"].dropna() if "thi" in df_proc.columns else pd.Series(dtype=float)
+    )
+    thi_mean_val = round(float(thi_series.mean()), 1) if len(thi_series) > 0 else None
+    thi_max_val = round(float(thi_series.max()), 1) if len(thi_series) > 0 else None
+    hours_above_72_val = round(float((thi_series >= 72.0).sum() / 60.0), 2) if len(thi_series) > 0 else 0.0
+    heat_confounded_val = bool(hours_above_72_val > 0.0 or (thi_mean_val is not None and thi_mean_val >= 72.0))
+    barn_herd_context = {
+        "thi_mean": thi_mean_val,
+        "thi_max": thi_max_val,
+        "hours_thi_above_72": hours_above_72_val,
+        "heat_confounded": heat_confounded_val,
+    }
+
+    # Load optional non-index corroborating evidence from cleaning synthetic files if available
+    repo_root = Path(__file__).resolve().parents[2]
+    synth_dir = repo_root / "backend-cleaning" / "data" / "synthetic"
+    milk_synth_df = None
+    bedding_synth_df = None
+    if (synth_dir / "milk_visits_synthetic.parquet").is_file():
+        try:
+            milk_synth_df = pd.read_parquet(synth_dir / "milk_visits_synthetic.parquet")
+        except Exception:
+            pass
+    if (synth_dir / "bedding_synthetic.parquet").is_file():
+        try:
+            bedding_synth_df = pd.read_parquet(synth_dir / "bedding_synthetic.parquet")
+        except Exception:
+            pass
+
     auto_flags: list[dict[str, Any]] = []
 
     # 6. Group Summaries per Animal (Latest Status)
@@ -188,8 +223,55 @@ def run_analysis_pipeline(
         milk_val = latest_row.get("milk_yield_kg") if latest_row.get("milk_yield_kg") is not None else latest_row.get("milk_yield")
         is_hw = bool(latest_row.get("is_stationary_hardware", False))
 
+        cow_corroborating: dict[str, Any] = {
+            "milk_tests": {"cond_max": None, "scc_kcells_ml": None, "provenance": "absent"},
+            "bedding_window": {"zone_id": None, "changed_at": None, "provenance": "absent"},
+            "feeding_duration_min": {"value": None, "provenance": "absent"},
+        }
+        if milk_synth_df is not None and "cow_id" in milk_synth_df.columns:
+            c_milk = milk_synth_df[milk_synth_df["cow_id"] == cid]
+            if len(c_milk) > 0:
+                latest_m = c_milk.iloc[-1]
+                cow_corroborating["milk_tests"] = {
+                    "cond_max": round(float(latest_m["cond_max"]), 2) if pd.notna(latest_m.get("cond_max")) else None,
+                    "scc_kcells_ml": round(float(latest_m["scc_kcells_ml"]), 1) if pd.notna(latest_m.get("scc_kcells_ml")) else None,
+                    "provenance": "synthetic",
+                }
+        if bedding_synth_df is not None and len(bedding_synth_df) > 0:
+            latest_b = bedding_synth_df.iloc[-1]
+            cow_corroborating["bedding_window"] = {
+                "zone_id": str(latest_b.get("zone_id", "pen_4a")),
+                "changed_at": str(latest_b.get("changed_at", "")),
+                "provenance": "synthetic",
+            }
+        if "clf_feeding_time_min" in cow_day_df.columns:
+            c_days = cow_day_df[cow_day_df["cow_id"] == cid]
+            if len(c_days) > 0 and pd.notna(c_days.iloc[-1].get("clf_feeding_time_min")):
+                cow_corroborating["feeding_duration_min"] = {
+                    "value": round(float(c_days.iloc[-1]["clf_feeding_time_min"]), 1),
+                    "provenance": "real_classifier",
+                }
+
         c_base = baselines_by_cow.get(cid, {})
-        h_info = compute_health_index(c_base) if not is_hw else {"health_index": None, "vitality_tier": "hardware", "components": {}}
+        h_info = (
+            compute_health_index(
+                c_base,
+                herd_context=barn_herd_context,
+                corroborating_data=cow_corroborating,
+            )
+            if not is_hw
+            else {
+                "health_index": None,
+                "vitality_tier": "hardware",
+                "coverage": 0.0,
+                "confidence": 0.0,
+                "components": {},
+                "vitality_components": {},
+                "herd_context": barn_herd_context,
+                "corroborating": cow_corroborating,
+                "is_model_suggestion": True,
+            }
+        )
         m_info = evaluate_acute_mastitis_risk(c_base, all_cows_baseline_info=baselines_by_cow) if not is_hw else {
             "mastitis_risk": 0.0,
             "rule_score": 0.0,
@@ -209,7 +291,12 @@ def run_analysis_pipeline(
             "confidence_score": score_info["confidence_score"],
             "health_index": h_info["health_index"],
             "vitality_tier": h_info["vitality_tier"],
-            "vitality_components": h_info["components"],
+            "coverage": h_info.get("coverage", 0.0),
+            "confidence": h_info.get("confidence", 0.0),
+            "components": h_info.get("components", {}),
+            "vitality_components": h_info.get("vitality_components", h_info.get("components", {})),
+            "herd_context": h_info.get("herd_context", barn_herd_context),
+            "corroborating": h_info.get("corroborating", cow_corroborating),
             "acute_mastitis_risk": m_info["mastitis_risk"],
             "mastitis_rule_score": m_info["rule_score"],
             "mastitis_anomaly_score": m_info["anomaly_score"],

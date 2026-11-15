@@ -74,33 +74,122 @@ class TestS5S7Pipeline(unittest.TestCase):
         self.assertLessEqual(c01_own["threshold_multiplier"], 1.15)
 
     def test_health_index_computation(self):
-        # Healthy cow: zero deviations
+        # Healthy cow: zero deviations across all 3 core modalities
         healthy_base = {
+            "overall_baseline_confidence": 0.95,
             "metrics": {
                 "cbt_mean": {"effective_z_score": 0.0},
                 "clf_feeding_time_min": {"effective_z_score": 0.0},
-                "lying_time_min": {"effective_z_score": 0.0},
-                "activity_index_mean": {"effective_z_score": 0.0},
+                "clf_lying_time_min": {"effective_z_score": 0.0},
                 "daily_milk_yield_kg": {"effective_z_score": 0.0},
-            }
+            },
         }
         res_healthy = compute_health_index(healthy_base)
         self.assertEqual(res_healthy["health_index"], 100.0)
         self.assertEqual(res_healthy["vitality_tier"], "thriving")
+        self.assertEqual(res_healthy["coverage"], 1.0)
+        self.assertEqual(res_healthy["confidence"], 0.95)
+        self.assertTrue(res_healthy["is_model_suggestion"])
+
+        # Check 3 core components
+        comp = res_healthy["components"]
+        self.assertEqual(comp["behavior"]["score"], 35.0)
+        self.assertEqual(comp["behavior"]["weight"], 35.0)
+        self.assertEqual(comp["behavior"]["provenance"], "real_classifier")
+        self.assertEqual(comp["production"]["score"], 35.0)
+        self.assertEqual(comp["production"]["provenance"], "real_sensor")
+        self.assertEqual(comp["thermal"]["score"], 30.0)
+        self.assertEqual(comp["thermal"]["provenance"], "real_sensor")
+
+        # Check backward-compatible vitality fields
+        self.assertEqual(res_healthy["vitality_components"]["behavior_vitality"], 35.0)
+        self.assertEqual(res_healthy["vitality_components"]["thermal_vitality"], 30.0)
+        self.assertEqual(res_healthy["vitality_components"]["production_vitality"], 35.0)
 
         # Strained cow: elevated CBT, dropped lying/feeding and yield
         strained_base = {
+            "overall_baseline_confidence": 0.90,
             "metrics": {
                 "cbt_mean": {"effective_z_score": 2.2},
                 "clf_feeding_time_min": {"effective_z_score": -2.0},
-                "lying_time_min": {"effective_z_score": -1.5},
-                "activity_index_mean": {"effective_z_score": -1.8},
+                "clf_lying_time_min": {"effective_z_score": -1.5},
                 "daily_milk_yield_kg": {"effective_z_score": -2.5},
-            }
+            },
         }
         res_strained = compute_health_index(strained_base)
         self.assertLess(res_strained["health_index"], 50.0)
         self.assertIn(res_strained["vitality_tier"], ["moderate_strain", "acute_attention"])
+
+    def test_health_index_missing_modalities_no_renormalisation(self):
+        # Missing thermal modality (cbt_mean missing entirely)
+        missing_thermal_base = {
+            "overall_baseline_confidence": 0.90,
+            "metrics": {
+                "clf_feeding_time_min": {"effective_z_score": 0.0},
+                "clf_lying_time_min": {"effective_z_score": 0.0},
+                "daily_milk_yield_kg": {"effective_z_score": 0.0},
+            },
+        }
+        res = compute_health_index(missing_thermal_base)
+        # Score must be 35 + 35 = 70.0; NEVER renormalised/inflated to 100.0
+        self.assertEqual(res["health_index"], 70.0)
+        self.assertEqual(res["components"]["thermal"]["score"], None)
+        self.assertEqual(res["components"]["thermal"]["provenance"], "absent")
+        self.assertEqual(res["coverage"], 0.67)  # 2 of 3 modalities present
+        self.assertEqual(res["confidence"], round(0.90 * 0.67, 2))
+
+        # Missing all modalities -> insufficient data
+        empty_base = {"metrics": {}}
+        res_empty = compute_health_index(empty_base)
+        self.assertIsNone(res_empty["health_index"])
+        self.assertEqual(res_empty["vitality_tier"], "insufficient_data")
+        self.assertEqual(res_empty["coverage"], 0.0)
+        self.assertEqual(res_empty["confidence"], 0.0)
+
+    def test_health_index_herd_context_and_corroborating(self):
+        base = {
+            "overall_baseline_confidence": 0.90,
+            "metrics": {
+                "cbt_mean": {"effective_z_score": 0.0},
+                "clf_feeding_time_min": {"effective_z_score": 0.0, "current_value": 180.0},
+                "clf_lying_time_min": {"effective_z_score": 0.0},
+                "daily_milk_yield_kg": {"effective_z_score": 0.0},
+            },
+        }
+
+        # 1. Heat-confounded herd context
+        hot_context = {
+            "thi_mean": 74.5,
+            "thi_max": 78.2,
+            "hours_thi_above_72": 5.5,
+            "heat_confounded": True,
+        }
+        corroborating = {
+            "milk_tests": {"cond_max": 5.62, "scc_kcells_ml": 250.0, "provenance": "synthetic"},
+            "bedding_window": {"zone_id": "pen_4a", "changed_at": "2023-07-28T14:00:00Z", "provenance": "synthetic"},
+            "feeding_duration_min": {"value": 180.0, "provenance": "real_classifier"},
+        }
+
+        res_hot = compute_health_index(base, herd_context=hot_context, corroborating_data=corroborating)
+        self.assertTrue(res_hot["herd_context"]["heat_confounded"])
+        self.assertEqual(res_hot["herd_context"]["hours_thi_above_72"], 5.5)
+
+        # Corroborating evidence does not affect health_index (still 100.0)
+        self.assertEqual(res_hot["health_index"], 100.0)
+        self.assertEqual(res_hot["corroborating"]["milk_tests"]["cond_max"], 5.62)
+        self.assertEqual(res_hot["corroborating"]["milk_tests"]["provenance"], "synthetic")
+        self.assertEqual(res_hot["corroborating"]["bedding_window"]["provenance"], "synthetic")
+        self.assertEqual(res_hot["corroborating"]["feeding_duration_min"]["provenance"], "real_classifier")
+
+        # 2. Cool herd context
+        cool_context = {
+            "thi_mean": 64.0,
+            "thi_max": 68.0,
+            "hours_thi_above_72": 0.0,
+            "heat_confounded": False,
+        }
+        res_cool = compute_health_index(base, herd_context=cool_context)
+        self.assertFalse(res_cool["herd_context"]["heat_confounded"])
 
     def test_acute_mastitis_risk_and_autoflag(self):
         # Healthy cow: low risk, no auto flag

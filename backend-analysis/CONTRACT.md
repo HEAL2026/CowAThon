@@ -97,17 +97,28 @@ $$\text{watch\_risk\_score} = S_{\text{thermal}} + S_{\text{behavior}} + S_{\tex
 - **Movement / Spatial component ($S_{\text{movement}}$, max 10)**: Prolonged displacement from comfort/ventilation zones, respecting `out_of_pen` milking trips.
 
 ### 3.5 Dairy Health Vitality Index ($0 - 100$)
-Comprehensive welfare index aggregating 4 orthogonal physiological vitality components (each $0 - 25$ points, strictly summing to $100$):
-$$\text{health\_index} = V_{\text{thermal}} + V_{\text{behavior}} + V_{\text{activity}} + V_{\text{production}}$$
-- **Thermal Vitality ($V_{\text{thermal}}$, max 25)**: Starts at 25 points, penalized by CBT fever elevation ($z_{\text{cbt}} > 0$, up to 25 pt penalty).
-- **Behavior & Rest Vitality ($V_{\text{behavior}}$, max 25)**: Starts at 25 points, penalized by abnormal lying duration drop below baseline ($z_{\text{lying}} < 0$, up to 15 pt penalty) or depressed feeding duration ($z_{\text{feed}} < 0$, up to 10 pt penalty). Derived strictly from empirical ankle lying and classifier durations (`clf_lying_time_min`, `clf_feeding_time_min`).
-- **Activity & Kinetic Vitality ($V_{\text{activity}}$, max 25)**: Starts at 25 points, penalized by profound kinetic lethargy ($z_{\text{act}} < -1.0$) or extreme restlessness ($z_{\text{act}} > 2.5$).
-- **Production Vitality ($V_{\text{production}}$, max 25)**: Starts at 25 points, penalized by milk yield drop below rolling baseline ($z_{\text{yield}} < 0$, up to 25 pt penalty).
-- **Vitality Tiers**:
-  - `thriving`: $\text{health\_index} \ge 85.0$
-  - `stable_monitoring`: $65.0 \le \text{health\_index} < 85.0$
-  - `moderate_strain`: $45.0 \le \text{health\_index} < 65.0$
-  - `acute_attention`: $\text{health\_index} < 45.0$
+Comprehensive welfare index aggregating 3 core physiological vitality components (strictly summing to $100$ points):
+$$\text{health\_index} = V_{\text{behavior}} + V_{\text{production}} + V_{\text{thermal}}$$
+
+- **Behavior Vitality ($V_{\text{behavior}}$, max 35)**:
+  - **Lying Duration ($V_{\text{lying}}$, max 20)**: Penalized by abnormal lying duration drop below baseline ($z_{\text{lying}} < 0$, up to 20 pt penalty: $\min(20.0, |z_{\text{lying}}| \times 10.0)$). Derived from empirical ankle lying or classifier durations (`clf_lying_time_min`).
+  - **Feeding Duration ($V_{\text{feeding}}$, max 15)**: Penalized by depressed feeding duration ($z_{\text{feed}} < 0$, up to 15 pt penalty: $\min(15.0, |z_{\text{feed}}| \times 7.5)$). Derived from classifier feeding durations (`clf_feeding_time_min`).
+- **Production Vitality ($V_{\text{production}}$, max 35)**: Starts at 35 points, penalized by daily milk yield drop below rolling baseline ($z_{\text{yield}} < 0$, up to 35 pt penalty: $\min(35.0, |z_{\text{yield}}| \times 17.5)$).
+- **Thermal Vitality ($V_{\text{thermal}}$, max 30)**: Starts at 30 points, penalized by CBT fever elevation ($z_{\text{cbt}} > 0$, up to 30 pt penalty: $\min(30.0, z_{\text{cbt}} \times 12.0)$).
+
+**Design Principles & Governing Rules**:
+1. **No Renormalisation on Missing Factors**: If a core modality input is absent, its component score emits `null` and `provenance: "absent"`. Weights are never redistributed to present modalities, preventing silent score inflation for animals with the least data.
+2. **Explicit Coverage & Confidence**:
+   $$\text{coverage} = \frac{N_{\text{valid\_components}}}{3.0} \quad (0.0 \dots 1.0)$$
+   $$\text{confidence} = \text{round}(\text{overall\_baseline\_confidence} \times \text{coverage}, 2)$$
+3. **Herd-Level Context (`herd_context`)**: Barn-wide environmental metrics (`thi_mean`, `thi_max`, `hours_thi_above_72`, `heat_confounded`) are isolated in `herd_context`. Because THI exhibits 0 spatial variation across the herd, it acts as a behavioral confounder (`heat_confounded: true`), explaining lying and intake depressions rather than penalizing individual animals.
+4. **Corroborating Evidence (`corroborating`)**: Optional modalities (`milk_tests`, `bedding_window`, `feeding_duration_min`) carry explicit provenance tags (`"synthetic"`, `"real_classifier"`, `"absent"`) and never alter `health_index`.
+5. **Vitality Tiers**:
+   - `thriving`: $\text{health\_index} \ge 80.0$
+   - `stable_monitoring`: $60.0 \le \text{health\_index} < 80.0$
+   - `moderate_strain`: $40.0 \le \text{health\_index} < 60.0$
+   - `acute_attention`: $\text{health\_index} < 40.0$
+   - `insufficient_data`: no valid core modalities (`health_index: null`)
 
 ---
 
@@ -124,11 +135,59 @@ Dictionary keyed by `cow_id`:
   "confidence_score": 0.92,
   "health_index": 72.5,
   "vitality_tier": "stable_monitoring",
+  "coverage": 1.0,
+  "confidence": 0.92,
+  "components": {
+    "behavior": {
+      "score": 30.0,
+      "weight": 35.0,
+      "z_lying": -0.5,
+      "z_feeding": 0.0,
+      "inputs_used": ["clf_lying_time_min", "clf_feeding_time_min"],
+      "provenance": "real_classifier"
+    },
+    "production": {
+      "score": 24.5,
+      "weight": 35.0,
+      "z_yield": -0.6,
+      "inputs_used": ["daily_milk_yield_kg"],
+      "provenance": "real_sensor"
+    },
+    "thermal": {
+      "score": 18.0,
+      "weight": 30.0,
+      "z_cbt": 1.0,
+      "inputs_used": ["cbt_mean"],
+      "provenance": "real_sensor"
+    }
+  },
   "vitality_components": {
     "thermal_vitality": 18.0,
-    "behavior_vitality": 17.5,
-    "activity_vitality": 19.0,
-    "production_vitality": 18.0
+    "behavior_vitality": 30.0,
+    "activity_vitality": 0.0,
+    "production_vitality": 24.5
+  },
+  "herd_context": {
+    "thi_mean": 68.4,
+    "thi_max": 74.2,
+    "hours_thi_above_72": 3.5,
+    "heat_confounded": true
+  },
+  "corroborating": {
+    "milk_tests": {
+      "cond_max": 5.51,
+      "scc_kcells_ml": 208.5,
+      "provenance": "synthetic"
+    },
+    "bedding_window": {
+      "zone_id": "pen_4a",
+      "changed_at": "2023-07-28T14:00:00Z",
+      "provenance": "synthetic"
+    },
+    "feeding_duration_min": {
+      "value": 185.0,
+      "provenance": "real_classifier"
+    }
   },
   "acute_mastitis_risk": 34.2,
   "mastitis_rule_score": 38.0,
