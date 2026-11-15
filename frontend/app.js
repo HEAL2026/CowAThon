@@ -177,7 +177,16 @@ function attachCowDot(dot) {
     state.selectedCow = dot.dataset.cow;
     const detail = document.querySelector("#cow-detail");
     document.querySelectorAll(".cow-dot").forEach((item) => item.classList.toggle("selected", item === dot));
-    detail.textContent = `${dot.dataset.cow} · ${state.modelWatchList.has(dot.dataset.cow) ? "Elevated risk · model" : state.manualWatchList.has(dot.dataset.cow) ? "Vet watch list" : "Within baseline"}`;
+    const rec = state.cowRecords.get(dot.dataset.cow);
+    const statusNote = rec?.out_of_pen
+      ? "Out of pen"
+      : (!rec?.is_instrumented && rec?.factors?.includes("Uninstrumented cohort animal"))
+        ? "Uninstrumented cohort (No UWB)"
+        : (rec?.missing_modalities?.includes("uwb") || dot.hidden)
+          ? "No UWB fix"
+          : null;
+    const noteSuffix = statusNote ? ` · ${statusNote}` : "";
+    detail.textContent = `${dot.dataset.cow} · ${state.modelWatchList.has(dot.dataset.cow) ? "Elevated risk · model" : state.manualWatchList.has(dot.dataset.cow) ? "Vet watch list" : "Within baseline"}${noteSuffix}`;
     detail.hidden = false;
     renderRestingFilter();
   });
@@ -499,29 +508,48 @@ function isOnWatchList(cow) {
   }
 
 function renderRestingFilter() {
-    const content = document.querySelector("#resting-filter-content");
-    const empty = document.querySelector("#resting-filter-empty");
-    const title = document.querySelector("#selected-cow-title");
-    const cow = document.querySelector(`[data-cow="${state.selectedCow}"]`);
-    if (!cow) return;
-    const zone = cow.dataset.restZone;
-    const zoneLabel = zone === "zone-a" ? "Rest zone A" : "Rest zone B";
-    const coResters = [...document.querySelectorAll(`.cow-dot[data-rest-zone="${zone}"]`)]
-      .map((dot) => dot.dataset.cow)
-      .filter((name) => name !== state.selectedCow);
-    title.textContent = state.selectedCow;
-    empty.hidden = true;
-    content.hidden = false;
-    document.querySelector("#flag-illness").textContent = isOnWatchList(state.selectedCow) ? "Remove from watch list" : "Add to watch list";
+  const content = document.querySelector("#resting-filter-content");
+  const empty = document.querySelector("#resting-filter-empty");
+  const title = document.querySelector("#selected-cow-title");
+  const cow = document.querySelector(`[data-cow="${state.selectedCow}"]`);
+  if (!cow) return;
+  const rec = state.cowRecords.get(state.selectedCow);
+  const zone = cow.dataset.restZone;
+  const zoneLabels = {
+    "zone-a": "Rest zone A",
+    "cubicle_row_a": "Rest zone A",
+    "zone-b": "Rest zone B",
+    "cubicle_row_b": "Rest zone B",
+    "feed_alley": "Feed lane",
+    "water_trough": "Water zone",
+  };
+  const zoneLabel = zoneLabels[zone] || zone || "Rest zone A";
+  const coResters = [...document.querySelectorAll(`.cow-dot[data-rest-zone="${zone}"]`)]
+    .map((dot) => dot.dataset.cow)
+    .filter((name) => name !== state.selectedCow);
+  title.textContent = state.selectedCow;
+  empty.hidden = true;
+  content.hidden = false;
+  document.querySelector("#flag-illness").textContent = isOnWatchList(state.selectedCow) ? "Remove from watch list" : "Add to watch list";
+
+  if (rec && !rec.is_instrumented && rec.factors?.includes("Uninstrumented cohort animal")) {
+    document.querySelector("#resting-spots").innerHTML = '<span class="resting-spot">Uninstrumented cohort animal · No active sensor telemetry</span>';
+    document.querySelector("#co-resters").innerHTML = '<strong>Cohort animal</strong><p class="muted">Part of the uninstrumented 16-cow pen cohort.</p>';
+  } else if (rec?.out_of_pen) {
+    document.querySelector("#resting-spots").innerHTML = '<span class="resting-spot">Out of pen · Milking / handling activity</span>';
+    document.querySelector("#co-resters").innerHTML = '<strong>Out of pen</strong><p class="muted">Currently outside the pen grid.</p>';
+  } else {
     document.querySelector("#resting-spots").innerHTML = state.restingFilter
       ? `<span class="resting-spot">${zoneLabel} · 10:42 AM</span><span class="resting-spot">${zoneLabel} · 7:18 AM</span><span class="resting-spot">Rest zone A · yesterday</span>`
       : `<span class="resting-spot">Last seen: ${zoneLabel}</span><span class="resting-spot">3 recorded spots</span>`;
     document.querySelector("#co-resters").innerHTML = `<strong>${coResters.length} other cows shared this resting area</strong><ul>${coResters.map((name) => `<li>${name} <span class="shared-label">shared resting area</span></li>`).join("")}</ul>`;
-    document.querySelectorAll(".cow-dot").forEach((dot) => {
-      dot.classList.toggle("shared-resting", state.restingFilter && dot.dataset.restZone === zone && dot.dataset.cow !== state.selectedCow);
-    });
-    document.querySelector("#flag-count").textContent = `${state.modelWatchList.size + state.manualWatchList.size} on watch list`;
   }
+
+  document.querySelectorAll(".cow-dot").forEach((dot) => {
+    dot.classList.toggle("shared-resting", state.restingFilter && dot.dataset.restZone === zone && dot.dataset.cow !== state.selectedCow);
+  });
+  document.querySelector("#flag-count").textContent = `${state.modelWatchList.size + state.manualWatchList.size} on watch list`;
+}
 
 document.querySelector("#flag-illness").addEventListener("click", () => {
   if (!state.selectedCow) return;
