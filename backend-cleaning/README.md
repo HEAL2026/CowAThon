@@ -32,6 +32,38 @@ python3 -m cleaning --skip-heavy                 # tabular core, ~6 s
 python3 -m cleaning                              # + 10 Hz immu/pressure -> collar_1min
 ```
 
+### Reading it from another folder
+
+Do not hardcode a relative path to the parquet — folders are nested
+differently and a wrong guess looks like "no data" rather than an error:
+
+```python
+from cleaning.locate import find_joined          # also: find_interim, sidecar_for
+import pandas as pd
+
+path = find_joined()                              # None when it has not been built
+df = pd.read_parquet(path) if path else my_fixtures()
+is_synthetic = path is None
+```
+
+`find_joined()` honours `$MMCOWS_JOINED` (a parquet, or a directory holding
+one) so a consumer can be pointed at an exported slice. `python3 -m cleaning
+where` prints what it resolves, which is the quickest way to find out why a
+consumer fell back to fixtures.
+
+### Sharing a slice
+
+The raw data is 11 GB under CC BY-NC-SA and the track prompt forbids
+redistributing source data, so what travels is a derived slice:
+
+```bash
+python3 -m cleaning export --cows C01,C02 --days 2 --out /tmp/demo.parquet
+# -> demo.parquet + demo.meta.json (provenance, span, columns, source sidecar)
+```
+
+`--days` counts whole local days from the start of the span, so a slice never
+ends mid-milking-cycle. 2 cows x 2 days is ~4k rows / 300 KB.
+
 Outputs: `data/interim/<table>.parquet` at native rate with a
 `<table>.schema.json` sidecar each, `data/interim/ingest.report.json`
 (dropped-key counts), and `data/processed/joined_1min.parquet` with its

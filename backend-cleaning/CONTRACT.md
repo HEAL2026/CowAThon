@@ -162,6 +162,21 @@ hardcoding it.
 Fast channels are aggregated, slow channels are forward-filled and flagged —
 never the reverse — and nothing is filled across an `out_of_pen` gap.
 
+**Finding this table.** `cleaning.locate.find_joined()` is the one resolver:
+it honours `$MMCOWS_JOINED` (a parquet path, or a directory holding one) and
+otherwise returns the default processed path, or `None` when the table has not
+been built. Absence is normal — the raw data is never committed — so consumers
+fall back to their own fixtures and say so (`is_synthetic`) rather than
+crashing. `find_interim(name)` reaches the native-rate tables, the behaviour
+ground truth and the data-scarce fixture; `sidecar_for(path)` gets the schema
+JSON, which is where the cadence should be read from. `python3 -m cleaning
+where` prints what would resolve.
+
+**Sharing a slice.** `python3 -m cleaning export --cows C01,C02 --days 2 --out
+<path>` writes a derived slice plus a `.meta.json` carrying provenance, span,
+columns and the source sidecar. The slice is a derived aggregate, not source
+data: raw MMCows files are never redistributed.
+
 ### 5.3 What each consumer can rely on
 
 Not instructions — availability. Each owner decides how their folder uses
