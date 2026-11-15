@@ -7,7 +7,7 @@ Alignd with MMCows raw schema and backend-analysis CONTRACT.md.
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Sequence, Tuple, Union
 import math
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
