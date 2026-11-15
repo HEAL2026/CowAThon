@@ -24,7 +24,7 @@ Analysis consumes the canonical processed joined table produced by `backend-clea
   - `rectal_temp_c`: Alternative core body temperature in °C (serves as fallback for CBT strain when `cbt_c` is absent).
   - `respiration_rate_bpm`, `pulse_rate_bpm`: Physiological respiration and pulse rate in breaths/beats per minute.
   - `dmi_kg`: Daily dry matter intake in kg.
-  - `fat_pct`, `protein_pct`: Milk solids composition percentages.
+  - `milk_fat_pct`, `milk_protein_pct`, `milk_lactose_pct`: Milk solids composition percentages (aliases: `fat_pct`, `protein_pct`, `lactose_pct`).
 
 ---
 
