@@ -99,6 +99,32 @@ its native rate, then **one joined table** at a single declared cadence.
 
 ### 5.1 Raw layout and interim tables, native rate
 
+### 5.1a Optional external milk source
+
+The [Mendeley Data 954f6g36sb/2](https://data.mendeley.com/datasets/954f6g36sb/2)
+release (DOI `10.17632/954f6g36sb.2`, CC BY 4.0) is an optional testing and
+calibration source for milk yield, composition, physiology, and THI groups.
+It is not part of the MMCows evaluation cohort and is not redistributed here.
+`cleaning.optional_milk.normalize_optional_milk()` produces these optional
+columns when the source provides them:
+
+| Column | Meaning |
+|---|---|
+| `cow_id` | external source animal identifier; never assumed to be an MMCows ID |
+| `ts_utc` | sampling date normalized to UTC |
+| `milk_yield_kg` | milk yield, kg |
+| `milk_fat_pct`, `milk_protein_pct`, `milk_lactose_pct` | milk composition, percent |
+| `scc` | somatic cell count, source units |
+| `respiration_rate_bpm`, `pulse_rate_bpm` | physiological rates, beats/breaths per minute as applicable |
+| `rectal_temp_c` | rectal temperature, degC |
+| `dmi_kg` | dry matter intake, kg |
+| `thi_category` | source THI category/group |
+
+Joining to MMCows requires an explicit animal mapping and date/time alignment.
+If the optional source is absent, consumers continue with standard MMCows
+inputs and preserve missing optional features; no fallback values are
+fabricated.
+
 Raw lives at `data/raw/sensor_data/main_data/<section>/…`, fetched by
 [scripts/fetch_mmcows.py](scripts/fetch_mmcows.py) straight out of the
 official HuggingFace `sensor_data.zip` (RGB excluded). Every raw file keys on

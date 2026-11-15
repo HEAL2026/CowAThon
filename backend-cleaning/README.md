@@ -67,6 +67,28 @@ one) so a consumer can be pointed at an exported slice. `python3 -m cleaning
 where` prints what it resolves, which is the quickest way to find out why a
 consumer fell back to fixtures.
 
+### Optional external milk example
+
+For testing milk/physiology features under heat stress, users may download the
+CC BY 4.0 Mendeley Data release [954f6g36sb/2](https://data.mendeley.com/datasets/954f6g36sb/2)
+(`10.17632/954f6g36sb.2`) and normalize a CSV or parquet file without adding
+the source data to this repository:
+
+```python
+from cleaning.optional_milk import load_optional_milk, optional_milk_metadata
+
+milk = load_optional_milk("/path/to/downloaded/milk.csv")
+print(optional_milk_metadata())
+```
+
+The adapter exposes `cow_id`, `ts_utc`, `milk_yield_kg`, milk composition,
+`scc`, `respiration_rate_bpm`, `pulse_rate_bpm`, `rectal_temp_c`, `dmi_kg`,
+and `thi_category` when present. It does not map the external animal
+IDs to MMCows IDs or concatenate cohorts automatically; callers must provide
+an explicit mapping and date alignment before using these rows in evaluation.
+The health pipeline remains valid with no optional file: missing milk features
+stay missing and the existing MMCows-only evaluation is unchanged.
+
 ### Sharing a slice
 
 The raw data is 11 GB under CC BY-NC-SA and the track prompt forbids

@@ -16,7 +16,7 @@ from typing import Any, Sequence
 import numpy as np
 import pandas as pd
 
-from .exposure_resting import calculate_resting_exposure
+from .exposure_resting import calculate_resting_exposure, get_grid_cell_id
 from .exposure_milking import calculate_milking_exposure
 from .exposure_combined import calculate_combined_exposure
 
@@ -449,15 +449,29 @@ def backtrace(
     # Synthesize implicated units/cells and real 1.5m resting circles
     implicated = []
     implicated_resting_areas = res_resting.get("implicated_resting_areas", [])
+    if perm_res["likely_route"] == "resting_area" and len(implicated_resting_areas) > 1:
+        primary = implicated_resting_areas[0]
+        source_areas = [
+            area for area in implicated_resting_areas
+            if area.get("target_cow_id") in flagged_ids
+        ]
+        if source_areas:
+            primary["center_x_m"] = round(float(np.median([a["center_x_m"] for a in source_areas])), 2)
+            primary["center_y_m"] = round(float(np.median([a["center_y_m"] for a in source_areas])), 2)
     if perm_res["likely_route"] in ("resting_area", "resting_environment"):
         for c in res_resting["implicated_cells"]:
             implicated.append(c["cell_id"])
+        if not res_resting["implicated_cells"]:
+            implicated.extend(
+                get_grid_cell_id(area["center_x_m"], area["center_y_m"])
+                for area in implicated_resting_areas
+            )
     elif perm_res["likely_route"] == "milking_equipment":
         for u in res_milking["implicated_units"]:
             implicated.append(u["unit_id"])
     else:
-        for c in res_resting["implicated_cells"][:1]:
-            implicated.append(c["cell_id"])
+        for area in res_resting.get("implicated_resting_areas", [])[:1]:
+            implicated.append(area["area_id"])
         for u in res_milking["implicated_units"][:1]:
             implicated.append(u["unit_id"])
 

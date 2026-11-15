@@ -4,6 +4,7 @@ data/
 
 # build artifacts, not source
 checkpoints/
+external/
 runs/
 *.pt
 *.pth

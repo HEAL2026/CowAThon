@@ -2,7 +2,7 @@
 
 Tracks environmental pathogen transmission via contaminated bedding in cubicles/cells:
 - Identifies resting occupancy (lying_bouts >= 20 min in-pen).
-- Discretizes barn into spatial cubicle grid cells (default 2.0m x 2.0m).
+- Uses the flagged cow's real resting coordinates and a 1.5m radius area.
 - Bounds transmission windows by bedding replacement events (changed_at per zone/pen).
 - Computes resting exposure scores for herd members and flags implicated stalls/cells.
 """
@@ -28,6 +28,7 @@ def calculate_resting_exposure(
     lookback_hours: int = 72,
     resting_min_duration_min: int = 20,
     cell_size_m: float = 2.0,
+    radius_m: float = 1.5,
     reference_time: pd.Timestamp | None = None,
 ) -> dict[str, Any]:
     """Calculate resting-route environmental exposure and identify contaminated cubicles.
@@ -42,9 +43,13 @@ def calculate_resting_exposure(
         reference_time: Reference end time for lookback (default: latest bout timestamp).
 
     Returns:
-        Dictionary with cow_exposure (dict), implicated_cells (list), and contact_events (list).
+        Dictionary with cow_exposure (dict), implicated_resting_areas (list),
+        and contact_events (list). `implicated_cells` remains as a deprecated
+        compatibility summary and is not used for attribution.
     """
     flag_set = set(flagged_cows) if flagged_cows else set()
+    if radius_m <= 0:
+        raise ValueError(f"radius_m must be positive, got {radius_m}")
     if len(lying_bouts_df) == 0:
         return {
             "cow_exposure": {},
@@ -72,12 +77,6 @@ def calculate_resting_exposure(
     )
     bouts = df_bouts[mask_valid].sort_values("start_utc").copy()
 
-    # Assign grid cell to each bout
-    bouts["cell_id"] = [
-        get_grid_cell_id(row["x_m"], row["y_m"], cell_size_m=cell_size_m, zone_id=row.get("zone_id"))
-        for _, row in bouts.iterrows()
-    ]
-
     # Parse bedding change events
     bedding_changes: list[pd.Timestamp] = []
     if bedding_df is not None and len(bedding_df) > 0:
@@ -91,59 +90,65 @@ def calculate_resting_exposure(
 
     def get_next_bedding_change(t: pd.Timestamp) -> pd.Timestamp:
         future_changes = [bc for bc in bedding_changes if bc > t]
-        return min(future_changes) if future_changes else (ref_t + pd.Timedelta(days=1))
+        return min(future_changes) if future_changes else (ref_t + pd.Timedelta(hours=2))
 
     # Track cell contamination and exposure
     # cell_id -> list of shedding events: (cow_id, end_utc, duration_min)
     cell_shedding: dict[str, list[dict[str, Any]]] = {}
     contact_events: list[dict[str, Any]] = []
     cow_exposure_raw: dict[str, float] = {str(cid): 0.0 for cid in df_bouts["cow_id"].unique()}
-    cell_exposure_load: dict[str, float] = {}
+    area_exposure: dict[str, dict[str, Any]] = {}
 
     for _, bout in bouts.iterrows():
         cid = str(bout["cow_id"])
-        cell = bout["cell_id"]
         t_start = bout["start_utc"]
         t_end = bout["end_utc"]
         dur = float(bout["duration_min"])
         last_change = get_last_bedding_change(t_start)
-
-        if cell not in cell_shedding:
-            cell_shedding[cell] = []
-            cell_exposure_load[cell] = 0.0
-
-        # Check active contamination from earlier shedders in this cell
-        if cell in cell_shedding:
-            for shed in cell_shedding[cell]:
-                if shed["cow_id"] != cid:
-                    shed_t = shed["deposited_at"]
-                    # Must be after shedding and within the same bedding window
-                    if shed_t < t_start and last_change <= shed_t:
-                        hours_diff = (t_start - shed_t).total_seconds() / 3600.0
-                        decay = np.exp(-hours_diff / 24.0)  # 24-hour half-life persistence in organic bedding
-                        exposure_inc = float(min(1.0, (dur / 60.0) * decay * (shed["duration_min"] / 60.0)))
-
-                        if exposure_inc > 0.01:
-                            cow_exposure_raw[cid] = cow_exposure_raw.get(cid, 0.0) + exposure_inc
-                            contact_events.append({
-                                "source_cow": shed["cow_id"],
-                                "exposed_cow": cid,
-                                "cell_id": cell,
-                                "source_time": shed_t.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "exposed_time": t_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                "hours_since_shedding": round(hours_diff, 1),
-                                "exposure_score": round(exposure_inc, 3),
-                            })
+        # A later cow is exposed only if its resting center falls inside the
+        # flagged cow's real-coordinate circle and bedding has not changed.
+        for area in area_exposure.values():
+            if t_start <= area["source_end"] or last_change > area["source_end"]:
+                continue
+            distance_m = float(np.hypot(
+                float(bout["x_m"]) - area["center_x_m"],
+                float(bout["y_m"]) - area["center_y_m"],
+            ))
+            if distance_m > area["radius_m"]:
+                continue
+            hours_diff = (t_start - area["source_end"]).total_seconds() / 3600.0
+            decay = np.exp(-hours_diff / 24.0)
+            exposure_inc = float(min(1.0, (dur / 60.0) * decay * (area["cumulative_duration_min"] / 60.0)))
+            if exposure_inc <= 0.01:
+                continue
+            cow_exposure_raw[cid] = cow_exposure_raw.get(cid, 0.0) + exposure_inc
+            area["contacts"] += 1
+            contact_events.append({
+                "source_cow": area["source_cow"],
+                "exposed_cow": cid,
+                "area_id": area["area_id"],
+                "source_time": area["source_end"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "exposed_time": t_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "distance_m": round(distance_m, 3),
+                "radius_m": area["radius_m"],
+                "hours_since_shedding": round(hours_diff, 1),
+                "exposure_score": round(exposure_inc, 3),
+            })
 
         if cid in flag_set:
-            # Shedding cow deposits pathogen in bedding for subsequent visits
-            cell_shedding[cell].append({
-                "cow_id": cid,
-                "deposited_at": t_end,
-                "duration_min": dur,
-                "bedding_change_cutoff": last_change,
-            })
-            cell_exposure_load[cell] += dur
+            area_id = f"resting_area_{len(area_exposure) + 1:04d}"
+            area_exposure[area_id] = {
+                "area_id": area_id,
+                "source_cow": cid,
+                "source_start": t_start,
+                "source_end": t_end,
+                "center_x_m": float(bout["x_m"]),
+                "center_y_m": float(bout["y_m"]),
+                "radius_m": float(radius_m),
+                "bedding_changed_at": last_change,
+                "cumulative_duration_min": dur,
+                "contacts": 0,
+            }
 
     # Normalize cow exposure scores to [0.0, 1.0]
     cow_exposure: dict[str, float] = {}
@@ -153,41 +158,28 @@ def calculate_resting_exposure(
         else:
             cow_exposure[cid] = float(round(np.clip(1.0 - np.exp(-raw_score), 0.0, 1.0), 3))
 
-    # Identify implicated cells and 1.5m resting circles ranked by transmission load
     implicated_cells = []
     implicated_resting_areas = []
-    for cell, load in sorted(cell_exposure_load.items(), key=lambda x: x[1], reverse=True):
-        if load > 0.0:
-            matching_bouts = bouts[bouts["cell_id"] == cell]
-            matching_flagged = bouts[(bouts["cell_id"] == cell) & (bouts["cow_id"].astype(str).isin(flag_set))].sort_values("start_utc")
-            center_x = round(float(matching_bouts["x_m"].median()), 2)
-            center_y = round(float(matching_bouts["y_m"].median()), 2)
-            contacts_in_cell = sorted(list({e["exposed_cow"] for e in contact_events if e["cell_id"] == cell}))
-
-            implicated_cells.append({
-                "cell_id": cell,
-                "x_m": center_x,
-                "y_m": center_y,
-                "cumulative_shed_duration_min": round(load, 1),
-                "n_contacts": len([e for e in contact_events if e["cell_id"] == cell]),
-            })
-
-            target_cows = list(dict.fromkeys(matching_flagged["cow_id"].astype(str).tolist())) if len(matching_flagged) > 0 else sorted(list(flag_set))
-            primary_target = target_cows[0] if target_cows else "unknown"
-            latest_shed_end = matching_flagged["end_utc"].max() if len(matching_flagged) > 0 else ref_t
-            until_bedding_change = get_next_bedding_change(latest_shed_end)
-
-            implicated_resting_areas.append({
-                "center_x_m": center_x,
-                "center_y_m": center_y,
-                "radius_m": 1.5,
-                "target_cow_id": primary_target,
-                "target_cows": target_cows,
-                "until_bedding_change_utc": until_bedding_change.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "contact_cows": contacts_in_cell,
-                "cumulative_shed_duration_min": round(load, 1),
-                "n_contacts": len([e for e in contact_events if e["cell_id"] == cell]),
-            })
+    for area in sorted(area_exposure.values(), key=lambda item: item["contacts"], reverse=True):
+        next_change = get_next_bedding_change(area["source_end"])
+        contacts = sorted({
+            event["exposed_cow"] for event in contact_events
+            if event["area_id"] == area["area_id"]
+        })
+        implicated_resting_areas.append({
+            "area_id": area["area_id"],
+            "center_x_m": round(area["center_x_m"], 2),
+            "center_y_m": round(area["center_y_m"], 2),
+            "radius_m": area["radius_m"],
+            "source_cow": area["source_cow"],
+            "target_cow_id": area["source_cow"],
+            "target_cows": [area["source_cow"]],
+            "until_bedding_change_utc": next_change.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "bedding_changed_at": area["bedding_changed_at"].strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "contact_cows": contacts,
+            "cumulative_shed_duration_min": round(area["cumulative_duration_min"], 1),
+            "n_contacts": area["contacts"],
+        })
 
     return {
         "cow_exposure": cow_exposure,

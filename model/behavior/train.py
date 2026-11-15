@@ -16,11 +16,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix, f1_score
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.metrics import brier_score_loss, classification_report, confusion_matrix, f1_score
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "backend-cleaning"))
 from cleaning.ingest import BEHAVIOR_NAMES  # noqa: E402
+from cleaning.splits import assert_no_group_leakage, group_split  # noqa: E402
 
 DATA = REPO / "model" / "data"
 REPORTS = REPO / "model" / "reports"
@@ -41,6 +43,88 @@ def make_model(n_estimators: int = 300) -> RandomForestClassifier:
     )
 
 
+def _aligned_probabilities(clf, X: np.ndarray) -> np.ndarray:
+    """Return probabilities in the stable seven-class order."""
+    p = clf.predict_proba(X)
+    out = np.zeros((len(X), len(CLASSES)))
+    for j, c in enumerate(clf.classes_):
+        if c in CLASSES:
+            out[:, CLASSES.index(c)] = p[:, j]
+    return out
+
+
+def grouped_train_test(
+    df: pd.DataFrame,
+    test_frac: float = 0.2,
+    calibration_frac: float = 0.2,
+    seed: int = SEED,
+) -> tuple[pd.DataFrame, dict]:
+    """Evaluate on cows absent from fitting and probability calibration.
+
+    The split is hierarchical: test cows are selected first; the remaining
+    cows are split into fit and calibration groups. Thus no cow contributes
+    repeated windows to more than one of fit, calibration, or test.
+    """
+    fit_cal, test = group_split(df, by="cow_id", test_frac=test_frac, seed=seed)
+    fit, calibration = group_split(
+        fit_cal, by="cow_id", test_frac=calibration_frac, seed=seed + 1
+    )
+    assert_no_group_leakage(fit, calibration)
+    assert_no_group_leakage(fit, test)
+    assert_no_group_leakage(calibration, test)
+    feats = feature_columns(df)
+    x_fit = np.nan_to_num(fit[feats].to_numpy(dtype=float), nan=0.0)
+    x_cal = np.nan_to_num(calibration[feats].to_numpy(dtype=float), nan=0.0)
+    x_test = np.nan_to_num(test[feats].to_numpy(dtype=float), nan=0.0)
+    y_fit = fit["label"].to_numpy(dtype=int)
+    y_cal = calibration["label"].to_numpy(dtype=int)
+    y_test = test["label"].to_numpy(dtype=int)
+    print(
+        f"[grouped] fit={len(fit):,} windows/{len(fit['cow_id'].unique())} cows; "
+        f"calibration={len(calibration):,}; test={len(test):,}",
+        flush=True,
+    )
+    base = make_model().fit(x_fit, y_fit)
+    print("[grouped] base fit complete; calibrating probabilities", flush=True)
+    calibrated = CalibratedClassifierCV(
+        estimator=base, method="sigmoid", cv="prefit"
+    ).fit(x_cal, y_cal)
+    probabilities = _aligned_probabilities(calibrated, x_test)
+    pred = np.array(CLASSES)[probabilities.argmax(axis=1)]
+    names = [BEHAVIOR_NAMES[c] for c in CLASSES]
+    report = classification_report(
+        y_test, pred, labels=CLASSES, target_names=names,
+        output_dict=True, zero_division=0,
+    )
+    metrics = {
+        "protocol": "grouped_train_calibration_test_by_cow",
+        "seed": seed,
+        "fit_cows": sorted(map(str, fit["cow_id"].unique())),
+        "calibration_cows": sorted(map(str, calibration["cow_id"].unique())),
+        "test_cows": sorted(map(str, test["cow_id"].unique())),
+        "n_windows": {"fit": len(fit), "calibration": len(calibration), "test": len(test)},
+        "macro_f1": float(f1_score(y_test, pred, average="macro", labels=CLASSES, zero_division=0)),
+        "accuracy": float((pred == y_test).mean()),
+        "per_class": report,
+        "confusion": confusion_matrix(y_test, pred, labels=CLASSES).tolist(),
+        "class_order": names,
+        "calibration": {
+            "method": "sigmoid",
+            "calibration_cows": sorted(map(str, calibration["cow_id"].unique())),
+            "multiclass_brier_mean": float(np.mean([
+                brier_score_loss((y_test == c).astype(int), probabilities[:, i])
+                for i, c in enumerate(CLASSES)
+            ])),
+        },
+        "features": feats,
+    }
+    out = test[["cow_id", "ts_utc", "label", "label_name"]].copy()
+    out["pred"] = pred
+    out["pred_name"] = pd.Series(pred).map(BEHAVIOR_NAMES).to_numpy()
+    out["pred_prob_calibrated"] = probabilities.max(axis=1)
+    return out, metrics
+
+
 def leave_one_cow_out(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     """Returns per-window out-of-fold predictions and a metrics dict."""
     feats = feature_columns(df)
@@ -50,6 +134,11 @@ def leave_one_cow_out(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     proba = np.zeros((len(y), len(CLASSES)))
     per_cow = {}
     for cow in sorted(set(cows)):
+        print(
+            f"[loco] fitting held-out cow {cow} "
+            f"({int(np.sum(cows == cow)):,} test windows)",
+            flush=True,
+        )
         te = cows == cow
         clf = make_model().fit(X[~te], y[~te])
         p = clf.predict_proba(X[te])
@@ -101,14 +190,53 @@ def write_report(metrics: dict, path: Path) -> None:
     path.write_text("\n".join(lines))
 
 
+def append_grouped_report(metrics: dict, path: Path) -> None:
+    """Document the independent grouped holdout beside the LOCO report."""
+    names = metrics["class_order"]
+    lines = [
+        "",
+        "## Independent grouped train/calibration/test benchmark",
+        "",
+        "This is a fixed cow-disjoint holdout, separate from the primary LOCO score.",
+        "Fit, calibration, and test windows come from disjoint cows; no rows are split",
+        "independently. The classifier uses neck IMU only. The ankle signal remains a",
+        "downstream production override and is not used in this benchmark.",
+        "",
+        f"- Fit cows: {', '.join(metrics['fit_cows'])}",
+        f"- Calibration cows: {', '.join(metrics['calibration_cows'])}",
+        f"- Test cows: {', '.join(metrics['test_cows'])}",
+        f"- Calibrated macro F1: **{metrics['macro_f1']:.3f}**",
+        f"- Calibrated accuracy: **{metrics['accuracy']:.3f}**",
+        f"- Mean one-vs-rest Brier score: **{metrics['calibration']['multiclass_brier_mean']:.4f}**",
+        "",
+        "The seven-state report is intentional: lying, standing, walking, feed-up,",
+        "feed-down, licking, and drinking are all retained so daily state patterns",
+        "can be compared with each cow's baseline. The health pipeline should allow",
+        "normal cow-to-cow and day-to-day variation rather than treating one state",
+        "as universally abnormal.",
+        "",
+        "Probability calibration uses cows outside the fit and test groups. It makes",
+        "`pred_prob_calibrated` interpretable as a confidence signal, but does not",
+        "turn a behavior state into a clinical diagnosis.",
+    ]
+    path.write_text(path.read_text() + "\n".join(lines) + "\n")
+
+
 def main() -> int:
     t0 = time.time()
     df = pd.read_parquet(DATA / "windows_0725.parquet")
     lab = df[df["label"].notna()].reset_index(drop=True)
+    print(f"[training] loaded {len(lab):,} labelled windows from {lab['cow_id'].nunique()} cows", flush=True)
     preds, metrics = leave_one_cow_out(lab)
+    grouped_preds, grouped_metrics = grouped_train_test(lab)
     REPORTS.mkdir(exist_ok=True); CKPT.mkdir(exist_ok=True); DATA.mkdir(exist_ok=True)
     preds.to_parquet(DATA / "loco_predictions_0725.parquet", index=False)
+    grouped_preds.to_parquet(DATA / "grouped_test_predictions_0725.parquet", index=False)
     write_report(metrics, REPORTS / "behavior_eval.md")
+    append_grouped_report(grouped_metrics, REPORTS / "behavior_eval.md")
+    metrics["grouped_train_calibration_test"] = {
+        k: v for k, v in grouped_metrics.items() if k != "features"
+    }
     (REPORTS / "behavior_eval.json").write_text(json.dumps({k: v for k, v in metrics.items() if k != "features"}, indent=2))
     # final model on all labelled windows
     import joblib

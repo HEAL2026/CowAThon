@@ -69,6 +69,27 @@ def _derived(interim: Path, processed: Path) -> None:
                  "note": "continuous lying >= min_duration; location = median of in-pen, in-bounds UWB fixes during the bout"})
     print(f"-> {processed / 'lying_bouts.parquet'}  ({len(lb)} bouts)")
 
+    resting = bouts.resting_areas(
+        lb,
+        min_duration_min=cfg["lying_bouts"]["resting_min_duration_min"],
+        radius_m=1.5,
+    )
+    for c, u in (
+        ("start_utc", "UTC"), ("end_utc", "UTC, exclusive"),
+        ("duration_min", "min"), ("center_x_m", "m"), ("center_y_m", "m"),
+        ("radius_m", "m"),
+    ):
+        ingest.UNITS.setdefault(c, u)
+    write_table(
+        resting, processed, "resting_areas", "event", ["cow_id", "start_utc"],
+        {
+            "min_duration_min": cfg["lying_bouts"]["resting_min_duration_min"],
+            "radius_m": 1.5,
+            "note": "all cows' qualifying lying bouts represented as median-location circles; not synthetic",
+        },
+    )
+    print(f"-> {processed / 'resting_areas.parquet'}  ({len(resting)} areas)")
+
     uwb = pd.read_parquet(interim / "uwb.parquet")
     loc = bouts.location_1min_median(uwb)
     for c in ("x_med_m", "y_med_m", "z_med_m"):
