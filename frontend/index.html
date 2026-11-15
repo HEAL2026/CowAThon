@@ -52,7 +52,7 @@
           <div class="partner-summary">
             <div class="care-team-farmer">
               <span class="field-label">Assigned veterinarian</span>
-              <span class="care-team-val"><span class="online-dot"></span> Dr. Maya Patel <span class="clinic-sub">(Valley Vet)</span> <button class="text-button" id="vet-contact-btn">Message</button></span>
+              <span class="care-team-val"><span class="online-dot"></span> Dr. Gregory House <span class="clinic-sub">(Valley Vet)</span> <button class="text-button" id="vet-contact-btn">Message</button></span>
             </div>
             <div class="partner-farm-vet" hidden>
               <label for="partner-farm-select" class="field-label">Assigned partner farm</label>
@@ -131,39 +131,87 @@
                 </div>
               </div>
               <div id="cow-detail" class="cow-detail" hidden></div>
+              <div class="map-color-key-panel">
+                <div class="color-key-header">
+                  <div class="color-by-segmented" role="radiogroup" aria-label="Color cows by">
+                    <span class="color-by-label">Color dots by:</span>
+                    <label class="color-by-option active" data-mode-opt="status">
+                      <input type="radio" name="color-by" value="status" checked />
+                      <span>Lactation status</span>
+                      <span class="legend-swatch status-swatch"></span>
+                    </label>
+                    <label class="color-by-option" data-mode-opt="health">
+                      <input type="radio" name="color-by" value="health" />
+                      <span>Health index</span>
+                      <span class="gradient-swatch health-gradient"></span>
+                    </label>
+                    <label class="color-by-option" data-mode-opt="behavior">
+                      <input type="radio" name="color-by" value="behavior" />
+                      <span>Behavior anomaly</span>
+                      <span class="gradient-swatch behavior-gradient"></span>
+                    </label>
+                  </div>
+                  <div class="metric-counts-strip">
+                    <span class="metric-chip"><i class="legend-dot healthy"></i> Baseline: <strong id="legend-count-baseline">14</strong></span>
+                    <span class="metric-chip"><i class="legend-dot watch"></i> Under observation: <strong id="legend-count-watch">1</strong></span>
+                    <span class="metric-chip"><i class="legend-dot urgent"></i> Needs attention: <strong id="legend-count-urgent">1</strong></span>
+                  </div>
+                </div>
+                <div class="color-scale-guides">
+                  <div class="color-scale-guide active" data-for="status">
+                    <span class="guide-item"><span class="guide-dot healthy"></span> Green: Within baseline</span>
+                    <span class="guide-item"><span class="guide-dot pregnant"></span> Blue: Pregnant / fresh</span>
+                    <span class="guide-item"><span class="guide-dot estrus"></span> Purple: Estrus</span>
+                    <span class="guide-item"><span class="guide-dot watch"></span> Amber: Elevated risk · watch</span>
+                    <span class="guide-item"><span class="guide-dot urgent"></span> Red: Flagged / needs attention</span>
+                  </div>
+                  <div class="color-scale-guide" data-for="health">
+                    <span class="guide-item"><span class="guide-dot healthy"></span> Green: High vitality (&gt;75)</span>
+                    <span class="guide-item"><span class="guide-dot watch"></span> Amber: Moderate risk (50–75)</span>
+                    <span class="guide-item"><span class="guide-dot urgent"></span> Red: Low vitality / high risk (&lt;50)</span>
+                  </div>
+                  <div class="color-scale-guide" data-for="behavior">
+                    <span class="guide-item"><span class="guide-dot healthy"></span> Green: Baseline activity (exposure &le; 0.3)</span>
+                    <span class="guide-item"><span class="guide-dot watch"></span> Amber: Moderate exposure / idling (0.3–0.6)</span>
+                    <span class="guide-item"><span class="guide-dot urgent"></span> Red: High exposure anomaly (&gt;0.6)</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <aside class="card legend-card">
-              <div class="card-title-row"><h3>Color by</h3><span class="info-icon" title="Color coding details">i</span></div>
-              <div class="color-by-option active" data-mode-opt="status">
-                <label class="radio-row"><input type="radio" name="color-by" value="status" checked /> Lactation status <span class="legend-swatch status-swatch"></span></label>
-                <div class="color-scale-guide" data-for="status">
-                  <div class="guide-item"><span class="guide-dot healthy"></span> Green: Within baseline</div>
-                  <div class="guide-item"><span class="guide-dot pregnant"></span> Blue: Pregnant / fresh</div>
-                  <div class="guide-item"><span class="guide-dot estrus"></span> Purple: Estrus</div>
-                  <div class="guide-item"><span class="guide-dot watch"></span> Amber: Elevated risk · watch</div>
-                  <div class="guide-item"><span class="guide-dot urgent"></span> Red: Flagged / needs attention</div>
+            <aside class="card watchlist-card" id="watchlist-sidebar">
+              <div class="card-title-row">
+                <div>
+                  <p class="eyebrow">Health &amp; Clinical</p>
+                  <h3>Active Watch List</h3>
+                </div>
+                <span class="flag-count" id="watchlist-badge">2 on watch</span>
+              </div>
+              <p class="watchlist-intro muted">Predictive flags &amp; cows under veterinary observation.</p>
+
+              <form id="watchlist-add-form" class="watchlist-quick-add">
+                <input type="text" id="watchlist-cow-input" placeholder="Add cow (e.g. C01)..." aria-label="Cow ID to watch" />
+                <button type="submit" id="watchlist-add-btn" class="primary-button small">+ Watch</button>
+              </form>
+
+              <div id="watchlist-items" class="watchlist-items" aria-label="Watched animal list"></div>
+
+              <div class="watchlist-selected-panel">
+                <div class="selected-header">
+                  <h4 id="selected-cow-title">Select a cow to inspect</h4>
+                  <span class="flag-count" id="flag-count" style="display:none;">1 on watch list</span>
+                </div>
+                <div id="resting-filter-empty" class="resting-filter-empty">
+                  Tap any cow on the map or list to inspect resting history, contacts, or update watch status.
+                </div>
+                <div id="resting-filter-content" hidden>
+                  <div class="resting-actions">
+                    <button id="flag-illness" class="primary-button small">Add to watch list</button>
+                    <button id="filter-resting" class="secondary-button small">Show resting spots</button>
+                  </div>
+                  <div id="resting-spots" class="resting-spots"></div>
+                  <div id="co-resters" class="co-resters"></div>
                 </div>
               </div>
-              <div class="color-by-option" data-mode-opt="health">
-                <label class="radio-row"><input type="radio" name="color-by" value="health" /> Health index <span class="gradient-swatch health-gradient"></span></label>
-                <div class="color-scale-guide" data-for="health">
-                  <div class="guide-item"><span class="guide-dot healthy"></span> Green: High vitality (>75)</div>
-                  <div class="guide-item"><span class="guide-dot watch"></span> Amber: Moderate risk (50–75)</div>
-                  <div class="guide-item"><span class="guide-dot urgent"></span> Red: Low vitality / high risk (<50)</div>
-                </div>
-              </div>
-              <div class="color-by-option" data-mode-opt="behavior">
-                <label class="radio-row"><input type="radio" name="color-by" value="behavior" /> Behavior anomaly <span class="gradient-swatch behavior-gradient"></span></label>
-                <div class="color-scale-guide" data-for="behavior">
-                  <div class="guide-item"><span class="guide-dot healthy"></span> Green: Baseline activity (exposure ≤ 0.3)</div>
-                  <div class="guide-item"><span class="guide-dot watch"></span> Amber: Moderate exposure / idling (0.3–0.6)</div>
-                  <div class="guide-item"><span class="guide-dot urgent"></span> Red: High exposure anomaly (>0.6)</div>
-                </div>
-              </div>
-              <hr />
-              <div class="metric-row"><span><i class="legend-dot healthy"></i> Within baseline</span><strong id="legend-count-baseline">14</strong></div>
-              <div class="metric-row"><span><i class="legend-dot watch"></i> Under observation</span><strong id="legend-count-watch">1</strong></div>
-              <div class="metric-row"><span><i class="legend-dot urgent"></i> Needs attention</span><strong id="legend-count-urgent">1</strong></div>
             </aside>
           </div>
 
@@ -261,21 +309,6 @@
               <span><strong>Statistical Significance:</strong> Permutation test 1,000 resamples (resting p &lt; 0.05)</span>
             </div>
           </div>
-          <div class="resting-filter-card card">
-            <div class="card-title-row">
-              <div><p class="eyebrow">Health watch & shared resting</p><h3 id="selected-cow-title">Select a cow to inspect resting history</h3></div>
-              <span class="flag-count" id="flag-count">1 on watch list</span>
-            </div>
-            <div id="resting-filter-empty" class="resting-filter-empty">Tap any cow dot to add a vet watch note or filter every resting spot for that cow.</div>
-            <div id="resting-filter-content" hidden>
-              <div class="resting-actions">
-                <button id="flag-illness" class="primary-button small">Add to watch list</button>
-                <button id="filter-resting" class="secondary-button small">Show resting spots</button>
-              </div>
-              <div id="resting-spots" class="resting-spots"></div>
-              <div id="co-resters" class="co-resters"></div>
-            </div>
-          </div>
         </section>
 
         <section id="messages-view" class="view-panel" hidden>
@@ -288,19 +321,19 @@
           </div>
           <div class="messages-layout">
             <aside class="card message-threads">
-              <button class="message-thread active" data-thread="fern"><strong>Cow C03 · High mastitis risk</strong><span>Dr. Patel · 12 min ago</span></button>
-              <button class="message-thread" data-thread="bessie"><strong>Cow C01 · Index case candidate</strong><span>Dr. Patel · 45 min ago</span></button>
-              <button class="message-thread" data-thread="luna"><strong>Cow C04 · Estrus window</strong><span>Dr. Patel · 2 hrs ago</span></button>
+              <button class="message-thread active" data-thread="fern"><strong>Cow C03 · High mastitis risk</strong><span>Dr. House · 12 min ago</span></button>
+              <button class="message-thread" data-thread="bessie"><strong>Cow C01 · Index case candidate</strong><span>Dr. House · 45 min ago</span></button>
+              <button class="message-thread" data-thread="luna"><strong>Cow C04 · Estrus window</strong><span>Dr. House · 2 hrs ago</span></button>
               <button class="message-thread" data-thread="daisy"><strong>Cow C02 · Post-calving transition</strong><span>You · yesterday</span></button>
-              <button class="message-thread" data-thread="poppy"><strong>Cow C06 · Stall 6 check</strong><span>Dr. Patel · yesterday</span></button>
+              <button class="message-thread" data-thread="poppy"><strong>Cow C06 · Stall 6 check</strong><span>Dr. House · yesterday</span></button>
               <button class="message-thread" data-thread="mabel"><strong>Cow C05 · Rest anomaly check</strong><span>You · 2 days ago</span></button>
             </aside>
             <section class="card conversation">
-              <div class="conversation-heading"><div><h3 id="conversation-title">Cow C03 · follow-up</h3><span class="muted">Farmer ↔ Dr. Maya Patel</span></div><button id="message-citation" class="secondary-button small">Cite selected</button></div>
+              <div class="conversation-heading"><div><h3 id="conversation-title">Cow C03 · follow-up</h3><span class="muted">Farmer ↔ Dr. Gregory House</span></div><button id="message-citation" class="secondary-button small">Cite selected</button></div>
               <div id="message-list" class="message-list">
-                <article class="message received"><span class="message-author">Dr. Patel</span><p>Cow C03’s risk trend is worth checking before the next milking. Can you look at Rest zone B?</p><button class="citation" data-citation="Cow C03 · elevated risk model alert">Cite this</button></article>
+                <article class="message received"><span class="message-author">Dr. House</span><p>Cow C03’s risk trend is worth checking before the next milking. Can you look at Rest zone B?</p><button class="citation" data-citation="Cow C03 · elevated risk model alert">Cite this</button></article>
                 <article class="message sent"><span class="message-author">You</span><p>I’ll check her and the bedding now.</p></article>
-                <article class="message received"><span class="message-author">Dr. Patel</span><p>Thanks. I’ve attached the herd-health report for our review.</p><button class="citation" data-citation="Herd health report · 10:00 AM">Cite report</button></article>
+                <article class="message received"><span class="message-author">Dr. House</span><p>Thanks. I’ve attached the herd-health report for our review.</p><button class="citation" data-citation="Herd health report · 10:00 AM">Cite report</button></article>
               </div>
               <div id="selected-citation" class="selected-citation" hidden></div>
               <form id="message-form" class="message-form"><input id="message-input" placeholder="Write a message…" aria-label="Write a message" /><button class="primary-button small">Send</button></form>
