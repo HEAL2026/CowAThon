@@ -1,0 +1,334 @@
+"""
+Payload shaping functions for the frontend dashboard.
+Transforms tabular inputs into validated, JSON-serializable structures.
+"""
+
+from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
+import math
+
+
+def generate_barn_overview(
+    cows_data: List[Dict[str, Any]],
+    indoor_thi: float = 72.0,
+    indoor_temp_c: float = 24.5,
+    indoor_humidity_pct: float = 65.0,
+    barn_id: str = "main_barn_01",
+    ts_utc: Optional[str] = None,
+    is_synthetic: bool = False,
+) -> Dict[str, Any]:
+    """
+    Constructs the spatial barn overview payload including cow dots,
+    zone occupancies, and density heatmap grid.
+    """
+    if ts_utc is None:
+        ts_utc = datetime.now(timezone.utc).isoformat()
+
+    cows_payload = []
+    zone_counts: Dict[str, int] = {}
+    zone_idling_totals: Dict[str, float] = {}
+
+    grid_w, grid_h = 20, 10
+    grid = [[0.0 for _ in range(grid_w)] for _ in range(grid_h)]
+
+    for cow in cows_data:
+        cid = str(cow["cow_id"])
+        x = float(cow.get("x_coord", 0.0))
+        y = float(cow.get("y_coord", 0.0))
+        zone = str(cow.get("zone", "cubicle_row_a"))
+        activity = str(cow.get("activity_state", "resting"))
+        risk_status = str(cow.get("risk_status", "within_baseline"))
+        risk_score = float(cow.get("risk_score", 0.1))
+        factors = list(cow.get("factors", []))
+        on_watch_list = bool(cow.get("on_watch_list", False))
+        vet_flagged = bool(cow.get("vet_flagged", False))
+        missing_modalities = list(cow.get("missing_modalities", []))
+
+        zone_counts[zone] = zone_counts.get(zone, 0) + 1
+        idling_m = float(cow.get("idling_minutes", 30.0))
+        zone_idling_totals[zone] = zone_idling_totals.get(zone, 0.0) + idling_m
+
+        cows_payload.append({
+            "cow_id": cid,
+            "x_coord": round(x, 2),
+            "y_coord": round(y, 2),
+            "zone": zone,
+            "activity_state": activity,
+            "risk_status": risk_status,
+            "risk_score": round(risk_score, 3),
+            "factors": factors,
+            "on_watch_list": on_watch_list,
+            "vet_flagged": vet_flagged,
+            "missing_modalities": missing_modalities,
+        })
+
+        # Populate heatmap density grid (clamped to grid boundaries)
+        gx = max(0, min(grid_w - 1, int(x / 1.5)))
+        gy = max(0, min(grid_h - 1, int(y / 1.5)))
+        grid[gy][gx] += 1.0
+
+    # Normalize heatmap density between 0.0 and 1.0
+    max_val = max([max(row) for row in grid]) if grid else 1.0
+    if max_val > 0:
+        grid = [[round(val / max_val, 2) for val in row] for row in grid]
+
+    zones_payload = []
+    zone_capacities = {
+        "cubicle_row_a": 15,
+        "cubicle_row_b": 15,
+        "feed_alley": 25,
+        "holding_pen": 10,
+        "milking_lane": 8,
+    }
+    for zid, count in zone_counts.items():
+        cap = zone_capacities.get(zid, 20)
+        tot_idling = zone_idling_totals.get(zid, 0.0)
+        mean_idling = round(tot_idling / count, 1) if count > 0 else 0.0
+        zone_type = "resting" if "cubicle" in zid else ("feeding" if "feed" in zid else "transit")
+        zones_payload.append({
+            "zone_id": zid,
+            "zone_type": zone_type,
+            "cow_count": count,
+            "capacity": cap,
+            "mean_idling_minutes": mean_idling,
+        })
+
+    return {
+        "ts_utc": ts_utc,
+        "barn_id": barn_id,
+        "indoor_thi": round(indoor_thi, 1),
+        "indoor_temp_c": round(indoor_temp_c, 1),
+        "indoor_humidity_pct": round(indoor_humidity_pct, 1),
+        "is_synthetic": is_synthetic,
+        "cows": cows_payload,
+        "zones": zones_payload,
+        "heatmap_grid": {
+            "resolution_m": 1.5,
+            "width": grid_w,
+            "height": grid_h,
+            "density_matrix": grid,
+        },
+    }
+
+
+def generate_cow_timeseries(
+    cow_id: str,
+    timeseries_points: List[Dict[str, Any]],
+    resting_history: Optional[List[Dict[str, Any]]] = None,
+    co_resting_cows: Optional[List[Dict[str, Any]]] = None,
+    baseline_yield_l: float = 30.0,
+) -> Dict[str, Any]:
+    """
+    Constructs multi-temporal trajectory for a specific animal,
+    preserving imputation flags and resting contact context.
+    """
+    if resting_history is None:
+        resting_history = []
+    if co_resting_cows is None:
+        co_resting_cows = []
+
+    ts_list = []
+    cbt_vals = []
+    milk_vals = []
+
+    for pt in timeseries_points:
+        t_utc = str(pt["ts_utc"])
+        cbt = pt.get("cbt_c")
+        cbt_imp = bool(pt.get("cbt_c_is_imputed", False))
+        imu = pt.get("neck_imu_magnitude_mean")
+        imu_imp = bool(pt.get("neck_imu_magnitude_mean_is_imputed", False))
+        milk = pt.get("daily_milk_yield_l")
+        milk_imp = bool(pt.get("daily_milk_yield_l_is_imputed", False))
+        thi = pt.get("indoor_thi")
+        thi_imp = bool(pt.get("indoor_thi_is_imputed", False))
+
+        if cbt is not None:
+            cbt_vals.append(float(cbt))
+        if milk is not None:
+            milk_vals.append(float(milk))
+
+        ts_list.append({
+            "ts_utc": t_utc,
+            "cbt_c": round(float(cbt), 2) if cbt is not None else None,
+            "cbt_c_is_imputed": cbt_imp,
+            "neck_imu_magnitude_mean": round(float(imu), 3) if imu is not None else None,
+            "neck_imu_magnitude_mean_is_imputed": imu_imp,
+            "daily_milk_yield_l": round(float(milk), 2) if milk is not None else None,
+            "daily_milk_yield_l_is_imputed": milk_imp,
+            "indoor_thi": round(float(thi), 1) if thi is not None else None,
+            "indoor_thi_is_imputed": thi_imp,
+        })
+
+    mean_cbt = round(sum(cbt_vals) / len(cbt_vals), 2) if cbt_vals else 38.6
+    latest_milk = round(milk_vals[-1], 2) if milk_vals else baseline_yield_l
+
+    # Anomaly indicator: CBT elevated over physiological threshold (> 39.2C)
+    cbt_anomaly = mean_cbt > 39.2
+    status = "elevated_risk" if (cbt_anomaly or latest_milk < (baseline_yield_l * 0.85)) else "within_baseline"
+
+    start_utc = ts_list[0]["ts_utc"] if ts_list else datetime.now(timezone.utc).isoformat()
+    end_utc = ts_list[-1]["ts_utc"] if ts_list else start_utc
+
+    return {
+        "cow_id": cow_id,
+        "data_range": {
+            "start_utc": start_utc,
+            "end_utc": end_utc,
+        },
+        "summary": {
+            "baseline_daily_milk_l": round(baseline_yield_l, 2),
+            "current_daily_milk_l": latest_milk,
+            "mean_cbt_c": mean_cbt,
+            "cbt_anomaly_detected": cbt_anomaly,
+            "status": status,
+        },
+        "timeseries": ts_list,
+        "resting_history": resting_history,
+        "co_resting_cows": co_resting_cows,
+    }
+
+
+def generate_milking_stalls(
+    stall_data: Optional[List[Dict[str, Any]]] = None,
+    ts_utc: Optional[str] = None,
+    parlor_id: str = "parlor_alpha",
+    num_stalls: int = 8,
+) -> Dict[str, Any]:
+    """
+    Constructs parlor and stall status payload.
+    """
+    if ts_utc is None:
+        ts_utc = datetime.now(timezone.utc).isoformat()
+
+    stalls_payload = []
+    if stall_data is not None:
+        stalls_payload = stall_data
+    else:
+        # Default baseline parlor state
+        for s in range(1, num_stalls + 1):
+            is_active = s in [1, 2, 4, 7]
+            stalls_payload.append({
+                "stall_number": s,
+                "state": "active" if is_active else "idle",
+                "current_cow_id": f"Cow_{s*2}" if is_active else None,
+                "session_yield_l": round(12.0 + s * 0.8, 1) if is_active else None,
+                "flow_rate_l_min": 2.8 if is_active else None,
+                "last_completed_cycle": {
+                    "cow_id": f"Cow_{s*3}",
+                    "yield_l": 14.5,
+                    "completed_at_utc": ts_utc,
+                    "flagged_risk": (s == 4),
+                },
+            })
+
+    return {
+        "ts_utc": ts_utc,
+        "parlor_id": parlor_id,
+        "stalls": stalls_payload,
+    }
+
+
+def generate_watch_list(
+    flagged_cows: List[Dict[str, Any]],
+    ts_utc: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Constructs the watch list payload stating uncertainty,
+    missing modalities, and non-clinical risk suggestions.
+    """
+    if ts_utc is None:
+        ts_utc = datetime.now(timezone.utc).isoformat()
+
+    items = []
+    for item in flagged_cows:
+        cid = str(item["cow_id"])
+        flag_type = str(item.get("flag_type", "model_suggestion"))
+        reason = str(item.get("watch_reason", "Observed metric deviation"))
+        conf = float(item.get("confidence", 0.75))
+        present = list(item.get("modalities_present", ["neck_imu", "milk_yield"]))
+        missing = list(item.get("modalities_missing", []))
+        impact = str(item.get("missing_modality_impact", "Standard monitoring active"))
+        rec = str(item.get("recommended_action", "Visual check prior to evening milking"))
+
+        items.append({
+            "cow_id": cid,
+            "flag_type": flag_type,
+            "watch_reason": reason,
+            "confidence": round(conf, 2),
+            "modalities_present": present,
+            "modalities_missing": missing,
+            "missing_modality_impact": impact,
+            "recommended_action": rec,
+        })
+
+    return {
+        "ts_utc": ts_utc,
+        "items": items,
+    }
+
+
+def generate_integrations_feasibility(
+    registry_data: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """
+    Constructs system integrations and cost feasibility payload.
+    Provides guidance for small-farm economic adoption.
+    """
+    if registry_data is not None:
+        return {"systems": registry_data}
+
+    # Standard set of systems based on MMCows modalities & market profiles
+    default_systems = [
+        {
+            "adapter_id": "collar_imu_vital",
+            "name": "Neck IMU Activity & Rumination",
+            "attached": True,
+            "cadence": "sub_second_aggregated_1m",
+            "annual_cost_per_head_usd": 35.0,
+            "feasibility_tier": "recommended",
+            "signals": ["activity_index", "rumination_minutes", "head_pitch"],
+            "is_synthetic": True,
+        },
+        {
+            "adapter_id": "parlor_milk_meter",
+            "name": "Automated Milk Flow & Yield Meter",
+            "attached": True,
+            "cadence": "per_milking_cycle",
+            "annual_cost_per_head_usd": 15.0,
+            "feasibility_tier": "essential",
+            "signals": ["daily_yield_l", "flow_rate_max", "conductivity_indicator"],
+            "is_synthetic": True,
+        },
+        {
+            "adapter_id": "indoor_barn_env",
+            "name": "Barn THI & Environmental Station",
+            "attached": True,
+            "cadence": "1_minute",
+            "annual_cost_per_head_usd": 4.5,
+            "feasibility_tier": "essential",
+            "signals": ["indoor_temp_c", "relative_humidity_pct", "derived_thi"],
+            "is_synthetic": True,
+        },
+        {
+            "adapter_id": "bolus_cbt_temp",
+            "name": "Reticular Core Body Temperature Bolus",
+            "attached": False,
+            "cadence": "10_minutes",
+            "annual_cost_per_head_usd": 55.0,
+            "feasibility_tier": "optional_at_scale",
+            "signals": ["core_body_temperature_c", "drinking_events"],
+            "is_synthetic": True,
+        },
+        {
+            "adapter_id": "uwb_spatial_tracking",
+            "name": "Ultra-Wideband Real-Time Barn Tracking",
+            "attached": False,
+            "cadence": "continuous_sub_meter",
+            "annual_cost_per_head_usd": 75.0,
+            "feasibility_tier": "optional_at_scale",
+            "signals": ["x_coord_m", "y_coord_m", "zone_occupancy"],
+            "is_synthetic": True,
+        },
+    ]
+
+    return {"systems": default_systems}
