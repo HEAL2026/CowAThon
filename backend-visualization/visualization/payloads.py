@@ -39,16 +39,26 @@ def generate_barn_overview(
     grid_w, grid_h = 20, 10
     grid = [[0.0 for _ in range(grid_w)] for _ in range(grid_h)]
 
+    has_centered = any(
+        (c.get("uwb_x_m") is not None and float(c.get("uwb_x_m", 0)) < 0) or
+        (c.get("x_coord") is not None and float(c.get("x_coord", 0)) < 0) or
+        (c.get("uwb_y_m") is not None and float(c.get("uwb_y_m", 0)) < 0) or
+        (c.get("y_coord") is not None and float(c.get("y_coord", 0)) < 0)
+        for c in cows_data
+        if c.get("uwb_x_m") is not None or c.get("x_coord") is not None or c.get("uwb_y_m") is not None or c.get("y_coord") is not None
+    )
+
     for cow in cows_data:
         cid = str(cow["cow_id"])
         display_name = str(cow.get("display_name", cid))
+        is_instrumented = bool(cow.get("is_instrumented", cid not in [f"C{i:02d}" for i in range(11, 17)]))
 
         raw_x = cow.get("uwb_x_m", cow.get("x_coord"))
         raw_y = cow.get("uwb_y_m", cow.get("y_coord"))
         has_coords = False
         x, y = 15.0, 7.5
         try:
-            if raw_x is not None and raw_y is not None:
+            if is_instrumented and raw_x is not None and raw_y is not None:
                 fx = float(raw_x)
                 fy = float(raw_y)
                 if not (math.isnan(fx) or math.isnan(fy)):
@@ -68,7 +78,6 @@ def generate_barn_overview(
         missing_modalities = list(cow.get("missing_modalities", []))
         if not has_coords and "uwb" not in missing_modalities:
             missing_modalities.append("uwb")
-        is_instrumented = bool(cow.get("is_instrumented", True))
 
         zone_counts[zone] = zone_counts.get(zone, 0) + 1
         idling_m = float(cow.get("idling_minutes", 30.0))
@@ -93,10 +102,16 @@ def generate_barn_overview(
             "is_instrumented": is_instrumented,
         })
 
-        # Populate heatmap density grid for cows with valid fixes (clamped to grid boundaries)
-        if has_coords:
-            gx = max(0, min(grid_w - 1, int(x / 1.5)))
-            gy = max(0, min(grid_h - 1, int(y / 1.5)))
+        # Populate heatmap density grid for instrumented cows with valid fixes
+        if has_coords and is_instrumented:
+            if has_centered:
+                gx = int(((x - (-12.45)) / 24.9) * grid_w)
+                gy = int(((y - (-9.31)) / 17.7) * grid_h)
+            else:
+                gx = int((x / 30.0) * grid_w)
+                gy = int((y / 15.0) * grid_h)
+            gx = max(0, min(grid_w - 1, gx))
+            gy = max(0, min(grid_h - 1, gy))
             grid[gy][gx] += 1.0
 
     # Normalize heatmap density between 0.0 and 1.0
@@ -139,6 +154,11 @@ def generate_barn_overview(
             "width": grid_w,
             "height": grid_h,
             "density_matrix": grid,
+            "origin": "center" if has_centered else "bottom_left",
+            "x_min_m": -12.45 if has_centered else 0.0,
+            "x_max_m": 12.45 if has_centered else 30.0,
+            "y_min_m": -9.31 if has_centered else 0.0,
+            "y_max_m": 8.39 if has_centered else 15.0,
         },
     }
 
@@ -469,15 +489,53 @@ def generate_pen_map(
     heatmap = [[0.0 for _ in range(grid_w)] for _ in range(grid_h)]
 
     # Populate resting heatmap from lying bouts if available
-    if lying_bouts:
+    if lying_bouts is not None:
+        is_centered_bouts = any(
+            (b.get("x_m") is not None and float(b.get("x_m", 0)) < 0) or
+            (b.get("center_x_m") is not None and float(b.get("center_x_m", 0)) < 0) or
+            (b.get("y_m") is not None and float(b.get("y_m", 0)) < 0) or
+            (b.get("center_y_m") is not None and float(b.get("center_y_m", 0)) < 0)
+            for b in lying_bouts
+            if b.get("x_m") is not None or b.get("center_x_m") is not None or b.get("y_m") is not None or b.get("center_y_m") is not None
+        )
+
         for bout in lying_bouts:
             dur = float(bout.get("duration_min", 20.0))
             if dur >= 20.0:  # Resting occupancy per brief: bouts >= 20 min
-                bx = float(bout.get("x_m", 15.0))
-                by = float(bout.get("y_m", 7.5))
-                gx = max(0, min(grid_w - 1, int(bx)))
-                gy = max(0, min(grid_h - 1, int(by)))
+                cid = str(bout.get("cow_id", "")).upper()
+                if bout.get("is_instrumented") is False or cid in [f"C{i:02d}" for i in range(11, 17)]:
+                    continue
+                raw_bx = bout.get("x_m", bout.get("center_x_m"))
+                raw_by = bout.get("y_m", bout.get("center_y_m"))
+                if raw_bx is None or raw_by is None:
+                    continue  # Exclude untracked cows / bouts without fixes from spatial heatmap
+                try:
+                    bx = float(raw_bx)
+                    by = float(raw_by)
+                    if math.isnan(bx) or math.isnan(by):
+                        continue  # Exclude NaN coordinates
+                except (ValueError, TypeError):
+                    continue
+
+                if is_centered_bouts or bx < 0 or by < 0:
+                    # Centered MMCows bounds: x in [-12.45, 12.45], y in [-9.31, 8.39]
+                    x_span = 24.9
+                    y_span = 17.7
+                    gx = int(((bx - (-12.45)) / x_span) * grid_w)
+                    gy = int(((by - (-9.31)) / y_span) * grid_h)
+                else:
+                    # Positive bounds: x in [0, 30], y in [0, 15]
+                    gx = int((bx / 30.0) * grid_w)
+                    gy = int((by / 15.0) * grid_h)
+
+                gx = max(0, min(grid_w - 1, gx))
+                gy = max(0, min(grid_h - 1, gy))
                 heatmap[gy][gx] = round(heatmap[gy][gx] + min(1.0, dur / 60.0), 2)
+
+        # Normalize density so maximum density does not overflow
+        max_h = max([max(row) for row in heatmap]) if heatmap else 0.0
+        if max_h > 1.0:
+            heatmap = [[round(val / max_h, 2) for val in row] for row in heatmap]
     else:
         # Standard resting zones in cubicle rows A and B
         for y in range(2, 6):
@@ -490,7 +548,21 @@ def generate_pen_map(
     # Default cows if not passed
     cows_payload = []
     if cows_data:
-        cows_payload = cows_data
+        for c in cows_data:
+            c_copy = dict(c)
+            cid = str(c_copy.get("cow_id", "")).upper()
+            if "is_instrumented" not in c_copy:
+                c_copy["is_instrumented"] = cid not in [f"C{i:02d}" for i in range(11, 17)]
+            if not c_copy["is_instrumented"]:
+                # Ensure untracked cows are not clamped to (0,0) or given bogus UWB positions
+                if c_copy.get("uwb_x_m") == 0 and c_copy.get("uwb_y_m") == 0:
+                    c_copy["uwb_x_m"] = None
+                    c_copy["uwb_y_m"] = None
+                mods = list(c_copy.get("missing_modalities", []))
+                if "uwb" not in mods:
+                    mods.append("uwb")
+                c_copy["missing_modalities"] = mods
+            cows_payload.append(c_copy)
     else:
         try:
             if isinstance(ts_utc, str):
@@ -512,6 +584,7 @@ def generate_pen_map(
             is_c01 = (cid == "C01")
             is_c02 = (cid == "C02")
             is_flagged = is_c01
+            is_inst = (i <= 10)
 
             # Base coordinates in cubicles
             base_x = 6.0 + ((i - 1) % 8) * 2.2
@@ -523,16 +596,24 @@ def generate_pen_map(
             dy = math.cos(phase) * 0.9 + math.sin(phase * 0.3) * 0.4
 
             out_of_pen = is_milking_hour and (i % 2 == 0)
-            if out_of_pen:
+            if not is_inst:
+                uwb_x = None
+                uwb_y = None
+                zone = "cubicle_row_a"
+                activity_state = "resting"
+                missing_modalities = ["cbt", "uwb", "neck_imu", "ankle", "pressure"]
+            elif out_of_pen:
                 uwb_x = round(25.0 + (i % 4) * 0.8, 2)
                 uwb_y = round(4.5 + (i % 2) * 1.0, 2)
                 zone = "milking_lane"
                 activity_state = "milking"
+                missing_modalities = []
             else:
                 uwb_x = round(max(2.0, min(28.0, base_x + dx)), 2)
                 uwb_y = round(max(1.5, min(13.5, base_y + dy)), 2)
                 zone = "cubicle_row_a" if uwb_y <= 7.0 else ("cubicle_row_b" if uwb_y >= 9.0 else "feed_alley")
                 activity_state = "resting" if (zone.startswith("cubicle") and math.sin(phase) > -0.2) else "active"
+                missing_modalities = []
 
             exposure = 0.92 if is_c01 else (0.76 if is_c02 else 0.12)
             tier = "priority_watch" if is_c01 else ("moderate_watch" if is_c02 else "baseline")
@@ -548,6 +629,8 @@ def generate_pen_map(
                 "exposure_score": exposure,
                 "exposure_tier": tier,
                 "is_source_candidate": is_c01,
+                "is_instrumented": is_inst,
+                "missing_modalities": missing_modalities,
             })
 
     if implicated_elements is None:
@@ -604,6 +687,13 @@ def generate_pen_map(
         (a.get("center_x_m") is not None and a["center_x_m"] < 0) or
         (a.get("center_y_m") is not None and a["center_y_m"] < 0)
         for a in (resting_areas or [])
+    ) or any(
+        (b.get("x_m") is not None and float(b.get("x_m", 0)) < 0) or
+        (b.get("center_x_m") is not None and float(b.get("center_x_m", 0)) < 0) or
+        (b.get("y_m") is not None and float(b.get("y_m", 0)) < 0) or
+        (b.get("center_y_m") is not None and float(b.get("center_y_m", 0)) < 0)
+        for b in (lying_bouts or [])
+        if b.get("x_m") is not None or b.get("center_x_m") is not None or b.get("y_m") is not None or b.get("center_y_m") is not None
     )
 
     grid_origin = "center" if has_centered_coords else "bottom_left"

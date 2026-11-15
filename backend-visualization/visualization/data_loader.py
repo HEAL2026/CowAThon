@@ -614,6 +614,27 @@ def get_pen_map_data(
         except Exception as e:
             logger.warning("Failed to query joined_1min for cows_data: %s", e)
 
+    # Ensure uninstrumented cohort animals (C11-C16) are represented if missing from location fixes
+    if cows_data is not None:
+        present_cids = {c["cow_id"] for c in cows_data}
+        for uid in COW_IDS:
+            if uid not in present_cids:
+                cows_data.append({
+                    "cow_id": uid,
+                    "display_name": f"Cow {uid}",
+                    "uwb_x_m": None,
+                    "uwb_y_m": None,
+                    "zone": "cubicle_row_a",
+                    "activity_state": "resting",
+                    "out_of_pen": False,
+                    "flag_status": "unflagged",
+                    "exposure_score": 0.05,
+                    "exposure_tier": "baseline",
+                    "is_source_candidate": False,
+                    "is_instrumented": False,
+                    "missing_modalities": ["cbt", "uwb", "neck_imu", "ankle", "pressure"],
+                })
+
     payload = generate_pen_map(
         cows_data=cows_data,
         lying_bouts=bouts,
