@@ -100,7 +100,14 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
     parser.add_argument(
         "--eval-backtrace",
         action="store_true",
-        help="Execute S11 transmission backtrace evaluation benchmark against synthetic labels ground truth.",
+        default=True,
+        help="Execute S11 transmission backtrace evaluation benchmark against synthetic labels ground truth (default: True).",
+    )
+    parser.add_argument(
+        "--no-eval-backtrace",
+        dest="eval_backtrace",
+        action="store_false",
+        help="Skip S11 transmission backtrace evaluation benchmark.",
     )
     parser.add_argument(
         "--export-vis-dir",

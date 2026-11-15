@@ -173,31 +173,40 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
         else:
             rec["rumination_proxy_mean"] = None
 
-        # 4b. Trained Behavior Classifier Durations
+        # 4b. Trained Behavior Classifier Durations (MMCows 8-class vocabulary: 0 unknown, 1 walking, 2 standing, 3 feed_up, 4 feed_down, 5 licking, 6 drinking, 7 lying)
         if b_name_col and group[b_name_col].notna().any():
             b_names = group[b_name_col].astype(str).str.lower()
             rec["clf_lying_time_min"] = int((b_names == "lying").sum())
-            rec["clf_rumination_time_min"] = int((b_names == "ruminating").sum())
-            rec["clf_feeding_time_min"] = int((b_names == "feeding").sum())
             rec["clf_standing_time_min"] = int((b_names == "standing").sum())
             rec["clf_walking_time_min"] = int((b_names == "walking").sum())
+            rec["clf_feed_up_time_min"] = int((b_names == "feed_up").sum())
+            rec["clf_feed_down_time_min"] = int((b_names == "feed_down").sum())
+            rec["clf_feeding_time_min"] = int(np.isin(b_names, ["feed_up", "feed_down"]).sum())
+            rec["clf_drinking_time_min"] = int((b_names == "drinking").sum())
+            rec["clf_licking_time_min"] = int((b_names == "licking").sum())
             if rec.get("lying_time_min") is None:
                 rec["lying_time_min"] = rec["clf_lying_time_min"]
         elif b_code_col and group[b_code_col].notna().any():
             b_codes = group[b_code_col].fillna(0).astype(int)
             rec["clf_lying_time_min"] = int((b_codes == 7).sum())
-            rec["clf_rumination_time_min"] = int((b_codes == 4).sum())
-            rec["clf_feeding_time_min"] = int((b_codes == 1).sum())
             rec["clf_standing_time_min"] = int((b_codes == 2).sum())
-            rec["clf_walking_time_min"] = int((b_codes == 3).sum())
+            rec["clf_walking_time_min"] = int((b_codes == 1).sum())
+            rec["clf_feed_up_time_min"] = int((b_codes == 3).sum())
+            rec["clf_feed_down_time_min"] = int((b_codes == 4).sum())
+            rec["clf_feeding_time_min"] = int(np.isin(b_codes, [3, 4]).sum())
+            rec["clf_drinking_time_min"] = int((b_codes == 6).sum())
+            rec["clf_licking_time_min"] = int((b_codes == 5).sum())
             if rec.get("lying_time_min") is None:
                 rec["lying_time_min"] = rec["clf_lying_time_min"]
         else:
             rec["clf_lying_time_min"] = None
-            rec["clf_rumination_time_min"] = None
-            rec["clf_feeding_time_min"] = None
             rec["clf_standing_time_min"] = None
             rec["clf_walking_time_min"] = None
+            rec["clf_feed_up_time_min"] = None
+            rec["clf_feed_down_time_min"] = None
+            rec["clf_feeding_time_min"] = None
+            rec["clf_drinking_time_min"] = None
+            rec["clf_licking_time_min"] = None
 
         # 5. Cohort metadata (DIM and parity)
         if dim_col and group[dim_col].notna().any():
