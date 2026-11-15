@@ -34,7 +34,7 @@ backend-analysis/
     evaluation.py           # GroupKFold leak-free evaluation harness
     pipeline.py             # End-to-end analysis runner producing exportable payloads
   tests/
-    fixtures.py             # Deterministic synthetic MMCows dataset generator
+    fixtures.py             # Deterministic synthetic MMCows dataset generator (C01–C10)
     test_thermal.py         # Unit tests for thermal strain & THI calculations
     test_behavior.py        # Unit tests for behavior and activity metrics
     test_risk_scorer.py     # Unit tests for risk scoring & missing modality handling
@@ -58,8 +58,8 @@ python3 -m unittest discover tests
 from analysis.pipeline import run_analysis_pipeline
 import pandas as pd
 
-# Load joined data
-df = pd.read_parquet("data/processed/joined_1m.parquet")
+# Load canonical joined data
+df = pd.read_parquet("backend-cleaning/data/processed/joined_1min.parquet")
 
 # Run analysis and export payloads to output directory
 results = run_analysis_pipeline(df, output_dir="data/analysis_export", n_cv_splits=5, seed=0)

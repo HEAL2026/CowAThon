@@ -29,7 +29,7 @@ def run_analysis_pipeline(
     """Execute the full backend analysis pipeline.
 
     Args:
-        df: Input DataFrame with joined observation records.
+        df: Input DataFrame with joined observation records (e.g. joined_1min.parquet).
         output_dir: Optional directory to save output JSON/parquet artifacts.
         n_cv_splits: Number of folds for animal-disjoint cross-validation.
         seed: Random seed for deterministic reproducibility.
@@ -40,14 +40,21 @@ def run_analysis_pipeline(
     df_proc = df.copy()
 
     # 1. Environmental THI
-    if "thi" not in df_proc.columns and "temp_c" in df_proc.columns and "rh_pct" in df_proc.columns:
+    if "indoor_thi" in df_proc.columns:
+        df_proc["thi_category"] = categorize_thi_strain(df_proc["indoor_thi"])
+    elif "thi" in df_proc.columns:
+        df_proc["thi_category"] = categorize_thi_strain(df_proc["thi"])
+    elif "indoor_temp_c" in df_proc.columns and "indoor_rh_pct" in df_proc.columns:
+        df_proc["indoor_thi"] = calculate_thi(df_proc["indoor_temp_c"], df_proc["indoor_rh_pct"])
+        df_proc["thi_category"] = categorize_thi_strain(df_proc["indoor_thi"])
+    elif "temp_c" in df_proc.columns and "rh_pct" in df_proc.columns:
         df_proc["thi"] = calculate_thi(df_proc["temp_c"], df_proc["rh_pct"])
-    if "thi" in df_proc.columns:
         df_proc["thi_category"] = categorize_thi_strain(df_proc["thi"])
 
     # 2. CBT Strain
-    if "cbt" in df_proc.columns:
-        df_proc["cbt_strain_score"] = calculate_cbt_strain_score(df_proc["cbt"])
+    cbt_col = "cbt_c" if "cbt_c" in df_proc.columns else ("cbt" if "cbt" in df_proc.columns else None)
+    if cbt_col:
+        df_proc["cbt_strain_score"] = calculate_cbt_strain_score(df_proc[cbt_col])
 
     # 3. Behavioral IMU Features
     if "activity_index" not in df_proc.columns:
@@ -73,6 +80,10 @@ def run_analysis_pipeline(
         latest_row = group.sort_values("ts_utc").iloc[-1]
         score_info = scorer.score_record(latest_row)
 
+        cbt_val = latest_row.get("cbt_c") if latest_row.get("cbt_c") is not None else latest_row.get("cbt")
+        thi_val = latest_row.get("indoor_thi") if latest_row.get("indoor_thi") is not None else latest_row.get("thi")
+        milk_val = latest_row.get("milk_yield_kg") if latest_row.get("milk_yield_kg") is not None else latest_row.get("milk_yield")
+
         cow_summaries[str(cow_id)] = {
             "cow_id": str(cow_id),
             "latest_ts_utc": str(latest_row.get("ts_utc", "")),
@@ -80,14 +91,15 @@ def run_analysis_pipeline(
             "risk_category": score_info["risk_category"],
             "confidence_score": score_info["confidence_score"],
             "metrics": {
-                "cbt_c": round(float(latest_row["cbt"]), 2) if "cbt" in latest_row and not pd.isna(latest_row["cbt"]) else None,
+                "cbt_c": round(float(cbt_val), 2) if cbt_val is not None and not pd.isna(cbt_val) else None,
                 "cbt_strain_score": round(float(latest_row.get("cbt_strain_score", 0.0)), 1),
-                "ambient_thi": round(float(latest_row["thi"]), 1) if "thi" in latest_row and not pd.isna(latest_row["thi"]) else None,
+                "ambient_thi": round(float(thi_val), 1) if thi_val is not None and not pd.isna(thi_val) else None,
                 "thi_category": str(latest_row.get("thi_category", "unknown")),
                 "activity_index": round(float(latest_row.get("activity_index", 0.0)), 3),
                 "rumination_proxy": round(float(latest_row.get("rumination_proxy", 0.0)), 1),
-                "daily_milk_yield_kg": round(float(latest_row["milk_yield"]), 1) if "milk_yield" in latest_row and not pd.isna(latest_row["milk_yield"]) else None,
+                "daily_milk_yield_kg": round(float(milk_val), 1) if milk_val is not None and not pd.isna(milk_val) else None,
                 "milk_drop_pct": round(float(latest_row.get("milk_drop_pct", 0.0)), 1),
+                "out_of_pen": bool(latest_row.get("out_of_pen", False)),
             },
             "modalities_present": score_info["modalities_present"],
             "missing_modalities": score_info["missing_modalities"],
@@ -118,7 +130,6 @@ def run_analysis_pipeline(
         with open(benchmark_file, "w", encoding="utf-8") as f:
             json.dump(benchmarks, f, indent=2)
 
-        # Export timeseries parquet
         timeseries_file = out_path / "analyzed_timeseries.parquet"
         df_proc.to_parquet(timeseries_file, index=False)
 

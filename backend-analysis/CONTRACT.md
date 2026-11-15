@@ -7,7 +7,23 @@ This document specifies the contracts, input expectations, output schemas, metri
 
 ---
 
-## 1. Core Principles & Non-Clinical Framing
+## 1. Input Data Contract
+
+Analysis consumes the canonical processed joined table produced by `backend-cleaning/`:
+- **File**: `backend-cleaning/data/processed/joined_1min.parquet` (+ `joined_1min.schema.json`)
+- **Cadence**: 1-minute rows, keyed by `cow_id` (`C01`–`C10`, string categorical) + `ts_utc` (tz-aware UTC timestamp).
+- **Core Input Fields**:
+  - `cbt_c`: Core body temperature in °C.
+  - `indoor_temp_c`, `indoor_rh_pct`, `indoor_thi`: Barn-level environmental metrics.
+  - `neck_imu_magnitude_mean`, `neck_imu_magnitude_std`: 1-minute neck IMU acceleration magnitude ($|\vec{a}|$) in $\text{m/s}^2$.
+  - `milk_yield_kg`, `dim`: Daily milk weight in kg and days in milk.
+  - `lying`: Ankle sensor binary indicator ($0$ = standing/walking, $1$ = lying).
+  - `out_of_pen`: Boolean flag denoting scheduled milking excursion trips (04–05h and 15–16h local), where coordinate nulls represent a known state rather than missing sensor data.
+  - `<col>_is_imputed`, `<col>_age_s`: Missingness and staleness tracking flags.
+
+---
+
+## 2. Core Principles & Non-Clinical Framing
 
 1. **Non-Diagnostic Monitoring & Risk Scoring Only**:
    Per the challenge prompt and team agreement, the system produces **monitoring and risk prediction metrics** only. It **never declares or outputs unsupported clinical diagnoses** (such as "mastitis", "ill", or clinical disease entities).
@@ -17,33 +33,13 @@ This document specifies the contracts, input expectations, output schemas, metri
 
 2. **Zero Leakage Evaluation Guarantee**:
    All evaluation metrics and baseline comparisons enforce animal-disjoint group splitting:
-   - Data is partitioned by `cow_id` via `cleaning.splits.group_split` or `cleaning.splits.group_kfold`.
+   - Data is partitioned by `cow_id` via `cleaning.splits.group_kfold(df, by="cow_id", n_splits=5, seed=0)`.
    - Repeated observations for a cow never span train and test sets.
    - Evaluated across $K$-fold animal cross-validation, reporting mean $\pm$ standard deviation.
 
 3. **Explicit Uncertainty & Missing-Modality Handling**:
    - Missing channels degrade confidence gracefully rather than producing errors or silent assumptions.
    - Every risk output carries a `confidence_score` ($0.0 \le c \le 1.0$) and an inventory of `modalities_present` vs `missing_modalities`.
-
----
-
-## 2. Directory Layout & Artifacts
-
-```
-backend-analysis/
-  analysis/                 # Analysis and modeling source
-    env_thermal.py          # THI, thermal load, environmental risk
-    cbt_strain.py           # Core body temperature dynamics & fever/spike detection
-    behavior.py             # IMU kinetic activity, rumination proxy, resting bout analysis
-    risk_scorer.py          # Multimodal watch-list scoring with graceful degradation
-    baselines.py            # Single-sensor baselines vs multimodal benchmark
-    evaluation.py           # Group-aware cross-validation engine
-    pipeline.py             # Full analysis pipeline execution
-  CONTRACT.md               # This contract
-  README.md                 # Usage, architecture, and metric formulas
-  requirements.txt          # Python dependencies
-  tests/                    # Test suite & deterministic fixtures
-```
 
 ---
 
@@ -69,11 +65,11 @@ backend-analysis/
   - If $\text{CBT} > 40.0^\circ\text{C}$: Scaled up to 40 points (elevated thermal strain)
 
 ### 3.3 Behavioral Activity & Rumination Proxy
-- Computed from 1-minute aggregated neck IMU components:
+- Computed from 1-minute aggregated neck IMU components (`neck_imu_magnitude_std`) and lying posture:
   - **Kinetic Activity Index**:
-    $$\text{activity\_index} = \sqrt{\sigma_{\text{acc\_x}}^2 + \sigma_{\text{acc\_y}}^2 + \sigma_{\text{acc\_z}}^2}$$
+    $$\text{activity\_index} = \sigma_{|\vec{a}|}$$
   - **Posture State**:
-    - `resting`: $\text{activity\_index} < \tau_{\text{rest}}$ (low kinetic motion)
+    - `resting`: $\text{activity\_index} < \tau_{\text{rest}}$ or `lying == 1`
     - `active`: $\text{activity\_index} \ge \tau_{\text{rest}}$
   - **Rumination Proxy ($0 - 100$)**:
     Quantifies characteristic rhythmic jaw movements during resting windows. Drops during severe heat distress or physiological disruption.
@@ -83,13 +79,8 @@ Composite weighted score reflecting multi-system deviation:
 $$\text{watch\_risk\_score} = S_{\text{thermal}} + S_{\text{behavior}} + S_{\text{production}} + S_{\text{movement}}$$
 - **Thermal component ($S_{\text{thermal}}$, max 40)**: From CBT elevation and THI exposure.
 - **Behavioral component ($S_{\text{behavior}}$, max 30)**: From rumination drop, abnormal lethargy, or restless agitation.
-- **Production component ($S_{\text{production}}$, max 20)**: From sudden milk yield deviation below 3-day baseline.
-- **Movement / Spatial component ($S_{\text{movement}}$, max 10)**: Prolonged displacement from comfort/ventilation zones.
-
-**Watch-List Risk Categories**:
-- `baseline` ($0 - 39$): Within normal physiological parameters.
-- `moderate_watch` ($40 - 69$): Monitored deviation; recommend closer observation.
-- `priority_watch` ($70 - 100$): Marked multi-system strain; prompt inspection recommended.
+- **Production component ($S_{\text{production}}$, max 20)**: From sudden milk yield deviation below rolling baseline.
+- **Movement / Spatial component ($S_{\text{movement}}$, max 10)**: Prolonged displacement from comfort/ventilation zones, respecting `out_of_pen` milking trips.
 
 ---
 
@@ -99,8 +90,8 @@ $$\text{watch\_risk\_score} = S_{\text{thermal}} + S_{\text{behavior}} + S_{\tex
 Dictionary keyed by `cow_id`:
 ```json
 {
-  "cow_id": "cow_01",
-  "latest_ts_utc": "2026-07-25T14:30:00Z",
+  "cow_id": "C01",
+  "latest_ts_utc": "2023-07-25T14:30:00Z",
   "watch_risk_score": 74.5,
   "risk_category": "priority_watch",
   "confidence_score": 0.92,
@@ -112,19 +103,20 @@ Dictionary keyed by `cow_id`:
     "activity_index": 0.12,
     "rumination_proxy": 32.0,
     "daily_milk_yield_kg": 28.4,
-    "milk_drop_pct": 14.2
+    "milk_drop_pct": 14.2,
+    "out_of_pen": false
   },
-  "modalities_present": ["cbt", "indoor_env", "neck_imu", "milk_yield"],
+  "modalities_present": ["cbt", "indoor_env", "neck_imu", "milk_yield", "uwb"],
   "missing_modalities": [],
   "contributing_factors": [
-    "CBT elevated +0.85C above baseline",
-    "THI in moderate heat strain zone (74.1)",
-    "Rumination proxy depressed 35% below expected"
+    "CBT elevated (39.85°C)",
+    "THI indicates heat stress (74.1)",
+    "Rumination proxy depressed (32.0 / 100)"
   ],
   "recommended_actions": [
     "Verify barn fan and misting operation in resting stalls",
     "Inspect water availability and intake",
-    "Queue for veterinary health check at next milking"
+    "Queue for closer observation at next milking"
   ],
   "is_model_suggestion": true
 }
@@ -149,7 +141,7 @@ Results of animal-disjoint group cross-validation comparing single-sensor baseli
       "f1_std": 0.061
     },
     "cbt_threshold_baseline": {
-      "description": "Single-sensor physiological rule: Alert when CBT >= 39.3C",
+      "description": "Single-sensor physiological rule: Alert when CBT >= 39.3°C",
       "roc_auc_mean": 0.724,
       "roc_auc_std": 0.039,
       "balanced_accuracy_mean": 0.701,
