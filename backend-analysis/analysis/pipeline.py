@@ -21,7 +21,6 @@ from .cbt_strain import calculate_cbt_strain_score, detect_temperature_spikes
 from .behavior import (
     calculate_activity_index,
     classify_posture_state,
-    calculate_rumination_proxy,
     validate_behavior_against_ground_truth,
     detect_stationary_hardware_candidate,
 )
@@ -156,9 +155,6 @@ def run_analysis_pipeline(
             behavior_name_col=b_name_col,
         )
 
-    if "rumination_proxy" not in df_proc.columns or b_col is not None:
-        df_proc["rumination_proxy"] = calculate_rumination_proxy(df_proc)
-
     # 4. Multimodal Risk Scoring
     scorer = MultimodalRiskScorer()
     scored_records = [scorer.score_record(row) for _, row in df_proc.iterrows()]
@@ -227,7 +223,6 @@ def run_analysis_pipeline(
                 "thi_category": str(latest_row.get("thi_category", "unknown")),
                 "activity_index": round(float(latest_row.get("activity_index", 0.0)), 3),
                 "posture_state": str(latest_row.get("posture_state", "unknown")),
-                "rumination_proxy": round(float(latest_row.get("rumination_proxy", 0.0)), 1),
                 "daily_milk_yield_kg": round(float(milk_val), 1) if milk_val is not None and not pd.isna(milk_val) else None,
                 "milk_drop_pct": round(float(latest_row.get("milk_drop_pct", 0.0)), 1),
                 "out_of_pen": bool(latest_row.get("out_of_pen", False)),

@@ -19,7 +19,6 @@ from .env_thermal import calculate_thi, categorize_thi_strain
 from .cbt_strain import calculate_cbt_strain_score
 from .behavior import (
     calculate_activity_index,
-    calculate_rumination_proxy,
     calculate_behavior_anomaly_score,
 )
 
@@ -84,25 +83,29 @@ class MultimodalRiskScorer:
 
         # 2. Behavioral anomaly component (0 - 30)
         act_val = row.get("neck_imu_magnitude_std") if row.get("neck_imu_magnitude_std") is not None else row.get("activity_index")
-        rum_val = row.get("rumination_proxy")
-
         if act_val is None and "acc_x_std" in row:
             act_val = float(np.sqrt(row["acc_x_std"]**2 + row["acc_y_std"]**2 + row["acc_z_std"]**2))
 
         if act_val is not None and not pd.isna(act_val):
             modalities_present.append("neck_imu")
-            if rum_val is None or pd.isna(rum_val):
-                rum_val = 100.0 * np.exp(-((act_val - 0.12) ** 2) / (2 * (0.04**2)))
-
             behavior_score = 0.0
-            if rum_val < 40.0:
-                deficit = (40.0 - rum_val) / 40.0
-                behavior_score += deficit * 20.0
-                contributing_factors.append(f"Rumination proxy depressed ({rum_val:.1f} / 100)")
-            # In live cattle, sustained movement < 0.10 m/s² indicates extreme lethargy
-            if act_val < 0.10:
-                behavior_score += 10.0
-                contributing_factors.append("Prolonged lethargy / immobility")
+
+            is_lying = bool(row.get("lying", 0) == 1)
+            b_name = str(row.get("behavior_name", "")).lower()
+            if b_name == "lying":
+                is_lying = True
+
+            # Hypoactivity / depression outside recumbency (up to behavior_weight)
+            if not is_lying and act_val < 0.15:
+                hypo_def = min(self.behavior_weight, (0.15 - act_val) / 0.15 * self.behavior_weight)
+                behavior_score += hypo_def
+                contributing_factors.append(f"Pronounced lethargy / hypoactivity ({act_val:.2f} m/s²)")
+
+            # Kinetic agitation / restlessness (up to behavior_weight)
+            if act_val > 0.70:
+                hyper_def = min(self.behavior_weight, (act_val - 0.70) / 0.80 * self.behavior_weight)
+                behavior_score += hyper_def
+                contributing_factors.append(f"Acute kinetic agitation / restlessness ({act_val:.2f} m/s²)")
 
             total_score += min(self.behavior_weight, behavior_score)
         else:

@@ -140,100 +140,43 @@ def classify_posture_state(
     return pd.Series(states, name="posture_state")
 
 
-def calculate_rumination_proxy(
-    df: pd.DataFrame,
-    activity_col: str = "activity_index",
-    lying_col: str = "lying",
-    behavior_col: str = "behavior",
-    behavior_name_col: str = "behavior_name",
-    prob_col: str = "prob",
-) -> pd.Series:
-    """Estimate rumination index (0 - 100) from neck-mounted IMU patterns and behavior predictions.
-
-    Rumination occurs predominantly during resting/lying windows in the 0.08 - 0.22 m/s² band.
-    Standing rumination is also physiological and preserved (standing does not suppress score).
-
-    When trained classifier predictions are available (MMCows 8-class vocabulary):
-    - Conflicting locomotive and oral behaviors ('walking', 'feed_up', 'feed_down', 'licking', 'drinking')
-      strongly suppress the rumination proxy (x 0.15). Standing is neutral.
-    - Posture concordance combines ankle lying sensor and collar classifier:
-      * Both agree on lying: x 1.15 boost
-      * Single sensor indicates lying: x 1.05 boost
-      * Upright / standing (neither lying): x 0.90
-    """
-    if activity_col in df.columns:
-        act = df[activity_col]
-    else:
-        act = calculate_activity_index(df)
-
-    in_resting_zone = (act >= 0.06) & (act < 0.22)
-    rhythm_score = np.exp(-((act - 0.12) ** 2) / (2 * (0.04**2))) * 100.0
-    rumination_score = np.where(in_resting_zone, rhythm_score, 0.0)
-
-    # 1. Posture determination (ankle sensor and/or classifier)
-    has_ankle = lying_col in df.columns
-    ankle_lying = (df[lying_col].fillna(0).astype(int) == 1).values if has_ankle else None
-
-    has_clf = False
-    clf_lying = None
-    is_active_conflict = None
-
-    if behavior_name_col in df.columns and df[behavior_name_col].notna().any():
-        has_clf = True
-        b_name = df[behavior_name_col].fillna("").astype(str).str.lower().values
-        clf_lying = (b_name == "lying")
-        # Walking, feeding (head up/down), licking, drinking preclude rumination; standing is neutral
-        is_active_conflict = np.isin(b_name, ["walking", "feed_up", "feed_down", "licking", "drinking"])
-    elif behavior_col in df.columns and df[behavior_col].notna().any():
-        has_clf = True
-        b_code = df[behavior_col].fillna(0).astype(int).values
-        clf_lying = (b_code == 7)
-        # 1: walking, 3: feed_up, 4: feed_down, 5: licking, 6: drinking preclude rumination; 2: standing is neutral
-        is_active_conflict = np.isin(b_code, [1, 3, 4, 5, 6])
-
-    # Explicit, non-compounding posture modulation
-    if has_ankle and has_clf and ankle_lying is not None and clf_lying is not None:
-        posture_mult = np.where(
-            ankle_lying & clf_lying,
-            1.15,
-            np.where(ankle_lying | clf_lying, 1.05, 0.90),
-        )
-        rumination_score = rumination_score * posture_mult
-    elif has_ankle and ankle_lying is not None:
-        rumination_score = np.where(ankle_lying, rumination_score * 1.10, rumination_score * 0.90)
-    elif has_clf and clf_lying is not None:
-        rumination_score = np.where(clf_lying, rumination_score * 1.10, rumination_score * 0.90)
-
-    # 2. Active behavior conflict suppression
-    if is_active_conflict is not None:
-        rumination_score = np.where(is_active_conflict, rumination_score * 0.15, rumination_score)
-
-    return pd.Series(
-        np.clip(rumination_score, 0.0, 100.0),
-        index=df.index,
-        name="rumination_proxy",
-    )
-
-
 def calculate_behavior_anomaly_score(
     df: pd.DataFrame,
     activity_col: str = "activity_index",
-    rumination_col: str = "rumination_proxy",
+    lying_col: str = "lying",
+    behavior_name_col: str = "behavior_name",
     max_points: float = 30.0,
 ) -> pd.Series:
-    """Calculate behavioral anomaly score (0 - 30 points)."""
+    """Calculate minute-level behavioral strain/anomaly score (0 - 30 points).
+
+    Derived strictly from empirical sensor channels without ungrounded synthetic proxies:
+    - Kinetic lethargy / depression (up to 15 points): profound hypoactivity (activity_index < 0.12 m/s²)
+      while in upright/standing posture outside normal resting recumbency.
+    - Kinetic agitation / restlessness (up to 15 points): acute movement spikes (activity_index > 0.70 m/s²)
+      characteristic of physiological discomfort or systemic distress.
+    """
     score = np.zeros(len(df), dtype=float)
 
-    if rumination_col in df.columns:
-        rum = df[rumination_col].values
-        deficit = np.clip((40.0 - rum) / 40.0, 0.0, 1.0)
-        score += deficit * 20.0
-
     if activity_col in df.columns:
-        act = df[activity_col].values
-        # Immobility during expected daytime activity
-        immobility = np.clip((0.10 - act) / 0.10, 0.0, 1.0)
-        score += immobility * 10.0
+        act = np.asarray(df[activity_col].fillna(0.30), dtype=float)
+
+        # Recumbency mask (ankle sensor lying or collar classified lying)
+        is_lying = (
+            (df[lying_col].fillna(0).astype(int) == 1).values
+            if lying_col in df.columns
+            else np.zeros(len(df), dtype=bool)
+        )
+        if behavior_name_col in df.columns and df[behavior_name_col].notna().any():
+            b_name = df[behavior_name_col].fillna("").astype(str).str.lower().values
+            is_lying = is_lying | (b_name == "lying")
+
+        # 1. Hypoactivity / depression: anomalous low kinetic variance outside recumbent rest
+        hypo = np.where(~is_lying & (act < 0.12), np.clip((0.12 - act) / 0.12, 0.0, 1.0), 0.0)
+        score += hypo * 15.0
+
+        # 2. Hyperactivity / distress agitation: elevated kinetic variance
+        hyper = np.clip((act - 0.70) / (1.50 - 0.70), 0.0, 1.0)
+        score += hyper * 15.0
 
     return pd.Series(
         np.clip(score, 0.0, max_points),

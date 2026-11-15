@@ -18,7 +18,6 @@ class TestRiskScorer(unittest.TestCase):
             "cbt_c": 38.7,
             "indoor_thi": 64.0,
             "neck_imu_magnitude_std": 0.40,
-            "rumination_proxy": 85.0,
             "milk_drop_pct": 0.5,
             "idling_fraction": 0.3,
         }
@@ -34,8 +33,8 @@ class TestRiskScorer(unittest.TestCase):
             "ts_utc": "2023-07-25T10:00:00Z",
             "cbt_c": 40.2, # Elevated fever / heat strain
             "indoor_thi": 76.0, # High environmental THI
-            "neck_imu_magnitude_std": 0.08, # Lethargy
-            "rumination_proxy": 15.0, # Depressed rumination
+            "neck_imu_magnitude_std": 0.04, # Pronounced lethargy
+            "lying": 0,
             "milk_drop_pct": 18.0, # Significant milk drop
             "idling_fraction": 0.8,
         }
@@ -53,7 +52,6 @@ class TestRiskScorer(unittest.TestCase):
             "cbt_c": None,
             "indoor_thi": 75.0,
             "neck_imu_magnitude_std": 0.35,
-            "rumination_proxy": 45.0,
             "milk_drop_pct": 2.0,
         }
         res = self.scorer.score_record(record)

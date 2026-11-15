@@ -69,27 +69,30 @@ Analysis consumes the canonical processed joined table produced by `backend-clea
   - If $39.2^\circ\text{C} < \text{CBT} \le 40.0^\circ\text{C}$: Linear scale from 0 to 30 points
   - If $\text{CBT} > 40.0^\circ\text{C}$: Scaled up to 40 points (elevated thermal strain)
 
-### 3.3 Behavioral Activity & Rumination Proxy
-- Computed from 1-minute aggregated neck IMU components (`neck_imu_magnitude_std`) and lying posture:
+### 3.3 Behavioral Activity & Posture Metrics
+- Computed from 1-minute aggregated neck IMU components (`neck_imu_magnitude_std`), ankle lying sensor (`lying`), and trained Random Forest behavior classifier predictions (`behavior`, `behavior_name`, `prob`) from `model/behavior`:
   - **Kinetic Activity Index**:
     $$\text{activity\_index} = \sigma_{|\vec{a}|}$$
   - **Posture State**:
-    - `resting`: $\text{activity\_index} < \tau_{\text{rest}}$ or `lying == 1`
-    - `active`: $\text{activity\_index} \ge \tau_{\text{rest}}$
-  - **Trained Behavior Classifier Integration (`model/behavior`)**:
-    When behavior classifier columns (`behavior`, `behavior_name`, `prob`) from `behavior_minute.parquet` are present (MMCows 8-class vocabulary: 0 unknown, 1 walking, 2 standing, 3 feed_up, 4 feed_down, 5 licking, 6 drinking, 7 lying):
-    - **State Grouping**: Resting state maps strictly to `lying` (7). Active states map to `walking` (1), `standing` (2), `feed_up` (3), `feed_down` (4), `licking` (5), and `drinking` (6). Classifier predictions take precedence over IMU threshold heuristics.
-    - **Rumination Modulation**: MMCows contains no labelled rumination class; rumination remains IMU-rhythm based. Locomotive and oral behaviors (`walking`, `feed_up`, `feed_down`, `licking`, `drinking`) strongly suppress the rumination proxy ($0.15 \times$), while `standing` remains neutral to preserve standing rumination. Posture concordance applies explicit weights: dual sensor agreement on lying ($\text{ankle} \land \text{collar}$) yields $1.15 \times$, single sensor lying yields $1.05 \times$, and upright standing yields $0.90 \times$.
-    - **Daily Durations (`cow_day_features.parquet`)**: Aggregates daily minutes spent in classifier states: `clf_lying_time_min`, `clf_standing_time_min`, `clf_walking_time_min`, `clf_feed_up_time_min`, `clf_feed_down_time_min`, `clf_feeding_time_min` (sum of feed_up + feed_down), `clf_drinking_time_min`, and `clf_licking_time_min`. If classifier columns are absent, these fields degrade gracefully to `None` preserving backward compatibility.
-    - **Ground Truth Validation**: Pristine `behavior_mode` in 2023-07-25 ground-truth windows remains unaltered as the validation target, computing `behavior_classifier_ground_truth_concordance` (overall accuracy, lying F1 score).
-  - **Rumination Proxy ($0 - 100$)**:
-    Quantifies characteristic rhythmic jaw movements during resting windows. Drops during severe heat distress or physiological disruption.
+    - `resting`: $\text{activity\_index} < \tau_{\text{rest}}$ or `lying == 1` or classified `lying` (code 7)
+    - `active`: $\text{activity\_index} \ge \tau_{\text{rest}}$ or classified active states (1 walking, 2 standing, 3 feed_up, 4 feed_down, 5 licking, 6 drinking)
+  - **Trained Behavior Classifier Durations (`cow_day_features.parquet`)**:
+    Aggregates verified daily durations across the MMCows 8-class vocabulary:
+    - `clf_lying_time_min`: Total daily recumbent rest duration.
+    - `clf_standing_time_min`: Total daily upright standing duration.
+    - `clf_walking_time_min`: Total daily walking locomotion duration.
+    - `clf_feed_up_time_min` / `clf_feed_down_time_min`: Total daily head-up / head-down bunk visits.
+    - `clf_feeding_time_min`: Total daily feeding duration (sum of feed_up + feed_down).
+    - `clf_drinking_time_min` / `clf_licking_time_min`: Total daily hydration and grooming duration.
+    If classifier columns are absent, these fields degrade gracefully to `None` preserving backward compatibility.
+  - **Ground Truth Validation**: Pristine `behavior_mode` in 2023-07-25 ground-truth windows remains unaltered as the validation target, computing `behavior_classifier_ground_truth_concordance` (overall accuracy, lying F1 score).
+  - **No Synthetic Rumination**: MMCows contains no ground-truth annotations for rumination; ungrounded synthetic rumination proxies are explicitly deprecated in favor of verified lying and feeding duration deviations.
 
 ### 3.4 Multimodal Watch-List Risk Score ($0 - 100$)
 Composite weighted score reflecting multi-system deviation:
 $$\text{watch\_risk\_score} = S_{\text{thermal}} + S_{\text{behavior}} + S_{\text{production}} + S_{\text{movement}}$$
 - **Thermal component ($S_{\text{thermal}}$, max 40)**: From CBT elevation and THI exposure.
-- **Behavioral component ($S_{\text{behavior}}$, max 30)**: From rumination drop, abnormal lethargy, or restless agitation.
+- **Behavioral component ($S_{\text{behavior}}$, max 30)**: From profound kinetic lethargy, acute restlessness/agitation, and recumbent rest deficits.
 - **Production component ($S_{\text{production}}$, max 20)**: From sudden milk yield deviation below rolling baseline.
 - **Movement / Spatial component ($S_{\text{movement}}$, max 10)**: Prolonged displacement from comfort/ventilation zones, respecting `out_of_pen` milking trips.
 
@@ -129,7 +132,6 @@ Dictionary keyed by `cow_id`:
     "thi_category": "moderate_strain",
     "activity_index": 0.12,
     "posture_state": "resting",
-    "rumination_proxy": 32.0,
     "daily_milk_yield_kg": 28.4,
     "milk_drop_pct": 14.2,
     "out_of_pen": false,
@@ -139,8 +141,7 @@ Dictionary keyed by `cow_id`:
   "missing_modalities": [],
   "contributing_factors": [
     "CBT elevated (39.85°C)",
-    "THI indicates heat stress (74.1)",
-    "Rumination proxy depressed (32.0 / 100)"
+    "THI indicates heat stress (74.1)"
   ],
   "recommended_actions": [
     "Verify barn fan and misting operation in resting stalls",

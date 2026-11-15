@@ -6,7 +6,6 @@ import pandas as pd
 from analysis.behavior import (
     calculate_activity_index,
     classify_posture_state,
-    calculate_rumination_proxy,
     calculate_behavior_anomaly_score,
     validate_behavior_against_ground_truth,
     detect_stationary_hardware_candidate,
@@ -85,55 +84,31 @@ class TestBehavior(unittest.TestCase):
         is_cow_hw = detect_stationary_hardware_candidate(df_cow)
         self.assertFalse(is_cow_hw.any())
 
-    def test_rumination_proxy(self):
-        # Rumination peaks in live resting band near 0.12 m/s²
-        df = pd.DataFrame({"activity_index": [0.12, 0.65]})
-        rum = calculate_rumination_proxy(df)
-        self.assertAlmostEqual(rum.iloc[0], 100.0, delta=2.0)
-        self.assertAlmostEqual(rum.iloc[1], 0.0, delta=0.1)
-
-    def test_rumination_proxy_with_classifier(self):
-        # Conflicting active locomotive/oral behaviors (feed_down, feed_up, walking, drinking, licking) suppress rumination
-        df_active = pd.DataFrame({
-            "activity_index": [0.12],  # In resting band, but behavior classifier identifies feed_down
-            "behavior_name": ["feed_down"],
-        })
-        rum_suppressed = calculate_rumination_proxy(df_active)
-        self.assertLess(rum_suppressed.iloc[0], 25.0)
-
-        # Standing rumination is preserved: standing does not suppress score
-        df_standing = pd.DataFrame({
-            "activity_index": [0.12],  # In rhythmic rumination band
-            "behavior_name": ["standing"],
-        })
-        rum_standing = calculate_rumination_proxy(df_standing)
-        self.assertGreaterEqual(rum_standing.iloc[0], 85.0)
-
-        # Classified lying state supports the resting rumination window
-        df_lying = pd.DataFrame({
-            "activity_index": [0.12],  # In optimal resting rumination band
-            "behavior_name": ["lying"],
-        })
-        rum_lying = calculate_rumination_proxy(df_lying)
-        self.assertGreaterEqual(rum_lying.iloc[0], 95.0)
-
-        # Dual sensor concordance (ankle lying + classifier lying) applies explicit 1.15x boost
-        df_concordant = pd.DataFrame({
-            "activity_index": [0.12],
-            "lying": [1],
-            "behavior_name": ["lying"],
-        })
-        rum_dual = calculate_rumination_proxy(df_concordant)
-        self.assertAlmostEqual(rum_dual.iloc[0], 100.0, delta=1.0)
-
     def test_behavior_anomaly_score(self):
-        df = pd.DataFrame({
-            "rumination_proxy": [10.0, 80.0],
+        # 1. Hypoactivity while upright (standing with activity_index = 0.04) -> anomalous lethargy
+        df_hypo = pd.DataFrame({
             "activity_index": [0.04, 0.35],
+            "lying": [0, 0],
         })
-        anom = calculate_behavior_anomaly_score(df)
-        self.assertGreater(anom.iloc[0], 20.0)
-        self.assertAlmostEqual(anom.iloc[1], 0.0, delta=1.0)
+        anom_hypo = calculate_behavior_anomaly_score(df_hypo)
+        self.assertGreater(anom_hypo.iloc[0], 5.0)
+        self.assertAlmostEqual(anom_hypo.iloc[1], 0.0, delta=1.0)
+
+        # 2. Low activity while lying down (recumbent rest) -> normal physiological rest (not anomalous)
+        df_rest = pd.DataFrame({
+            "activity_index": [0.04],
+            "lying": [1],
+        })
+        anom_rest = calculate_behavior_anomaly_score(df_rest)
+        self.assertEqual(anom_rest.iloc[0], 0.0)
+
+        # 3. Hyperactivity / acute distress agitation (activity_index = 1.10) -> anomalous restlessness
+        df_hyper = pd.DataFrame({
+            "activity_index": [1.10],
+            "lying": [0],
+        })
+        anom_hyper = calculate_behavior_anomaly_score(df_hyper)
+        self.assertGreater(anom_hyper.iloc[0], 5.0)
 
     def test_validate_behavior_against_ground_truth(self):
         df_unlabeled = pd.DataFrame({"activity_index": [0.10, 0.40]})
