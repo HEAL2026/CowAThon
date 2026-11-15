@@ -1,79 +1,81 @@
-# APIs
+# APIs: Modular Farm-System Integration Layer
 
 Owner: @uiobio (Lei)
 
-Owns the **integration layer**: the API functions that connect the dashboard to
-external farm monitoring and management systems, and the mocks that stand in
-for them.
+Provides the **integration layer** that connects the dashboard to external dairy farm
+monitoring and management systems, alongside realistic offline mocks and small-farm
+economic feasibility profiles.
 
-> Run this folder from a **separate agent session** from `frontend/`. One
-> session per folder keeps the two tracks parallel and keeps the board posts
-> readable. Lei sets that session up when he picks this up — see
-> [AGENTS.md](../AGENTS.md) for the per-session checklist (`gh auth login`,
-> `BOARD_ISSUE`, `tools/board unread`, a background `tools/board wait`).
+For full schema definitions, field shapes, units, and signatures, see
+[CONTRACT.md](CONTRACT.md).
+
+---
 
 ## Why this folder exists
 
-Small farms cannot afford every monitoring system on the market, and the ones
-they can afford differ farm to farm. So the dashboard has to let an operator
-**attach or detach an integration** without a rebuild: enable the two systems
-the farm actually pays for, leave the rest off, and still get a coherent
-dashboard. That means every system sits behind one common interface, with its
-own adapter in this folder.
+Small and medium dairy farms cannot afford every sensor platform on the market, and
+available technologies differ farm to farm. The dashboard enables operators to
+**modularly attach or detach integrations** (wearables, parlor meters, weather, RTLS)
+without system rebuilds, maintaining graceful degradation when signals are absent.
 
-## Boundary
+## Key Features
 
-In scope here:
+- **Unified Adapter Interface (`apis.BaseAdapter`)**: Standardized interface for querying
+  windowed telemetry keyed on `cow_id` (`Cxx`) and tz-aware UTC `ts_utc`.
+- **System Registry (`apis.IntegrationRegistry`)**: Discovery, dynamic attachment toggling,
+  health state tracking, and multi-system queries.
+- **Economic Feasibility Profiles**: Annual cost per head, initial hardware overhead,
+  feasibility tiers (`recommended`, `optional`, `high_cost_specialized`), and small-farm
+  ROI guidance matching `backend-visualization/CONTRACT.md §3.5`.
+- **Realistic Offline Mock Adapters**: First-class synthetic mocks simulating DeLaval milking
+  parlors, SmaXtec rumen boluses, Munters barn climate, Nedap leg pedometers, Ubisense UWB,
+  Nedap/Allflex collar IMU, Tomorrow.io weather, and VAS PULSE herd management.
+- **Contract Conformance**: Strictly avoids duplicate cleaning or silent imputation; carries
+  `*_is_imputed` flags, and labels all synthetic records with `is_synthetic = True`.
 
-- One **adapter per external system** (herd management, milk metering, feed,
-  weather, wearables/collars, barn environment, …), each behind the same
-  interface.
-- A **registry** the dashboard reads to know which integrations exist, which
-  are attached, and what each one provides.
-- **Mock adapters** that serve realistic fixture data for any system we cannot
-  hit live, so the whole dashboard is demoable offline.
-- Auth, retry, rate-limit, and pagination handling per adapter; its own config
-  and secrets handling (secrets never committed).
-- **Capability and cost metadata** per adapter — what signals it provides, at
-  what cadence, and the rough cost/feasibility note that lets the dashboard
-  tell a small farmer whether it is worth attaching.
+---
 
-Not in scope, and owned elsewhere:
+## Directory Structure
 
-- Rendering, dashboard layout, and which integrations a given user has toggled
-  on — `frontend/`.
-- Ingestion, validation, normalization, time alignment, and missing-value
-  policy — `backend-cleaning/`
-  ([CONTRACT.md](../backend-cleaning/CONTRACT.md)). Adapters here fetch and
-  shape payloads; they do not become a second cleaning pipeline.
-- Statistical analysis and documented metrics — `backend-analysis/`.
-- Visualization-ready payload shaping — `backend-visualization/`.
-- Model training and inference — `model/`.
+```
+apis/
+  __init__.py           # Package exports (BaseAdapter, IntegrationRegistry, etc.)
+  __main__.py           # CLI interface (list, export-feasibility, fetch)
+  base.py               # Core interfaces, health states, and ObservationRecord
+  registry.py           # Registry implementation and create_default_registry()
+  fixtures.py           # Synthetic fixture generator and export helpers
+  CONTRACT.md           # Formal I/O contract, signal shapes, and SI units
+  adapters/             # System adapters
+    __init__.py
+    milking.py          # DeLaval automated milking parlor
+    bolus.py            # SmaXtec reticulorumen CBT bolus
+    climate.py          # Munters FarmConnect barn climate & THI (barn-level)
+    pedometer.py        # Nedap SmartTag leg / pedometer lying states
+    location.py         # Ubisense UWB indoor positioning & out_of_pen state
+    collar.py           # Nedap / Allflex collar IMU activity & pressure
+    weather.py          # Tomorrow.io / Davis weather station (farm-level)
+    herd.py             # VAS PULSE / DairyComp 305 herd management
+  tests/                # Full unit test suite (19/19 passing)
+    __init__.py
+    test_base.py
+    test_registry.py
+    test_adapters.py
+```
 
-## Shape of an adapter (proposal, Lei's call)
+---
 
-The two things the rest of the repo needs to rely on are that every adapter
-looks the same, and that a detached adapter degrades gracefully instead of
-breaking a view:
+## Usage
 
-- **Describe itself** — id, display name, the signals it provides, cadence,
-  and a cost/feasibility note.
-- **Report health** — configured, reachable, authenticated, or unavailable,
-  so the dashboard can show a detached or failing integration as missing data
-  rather than an error.
-- **Fetch a window** — given a time range (and `cow_id` where the system is
-  per-animal), return records keyed the way `backend-cleaning/` expects:
-  `cow_id` + `ts_utc`.
+```bash
+# Run unit tests
+python -m unittest discover -s apis/tests
 
-Everything else — language, file layout, async or sync, how the registry is
-declared — is Lei's design decision. Fill it in here, and post on the board
-when the interface is settled, because `frontend/` and `backend-cleaning/`
-both consume it.
+# List all integrations, status, and feasibility
+python -m apis list
 
-## Mocks
+# Export feasibility JSON payload
+python -m apis export-feasibility
 
-Mock adapters are first-class, not throwaway: they are what the demo runs on.
-Keep fixtures small, committed, and obviously synthetic, and keep a mock
-behind the same interface as the real adapter so swapping one for the other
-changes no caller. Never present mock output as real farm data in the UI —
-label it.
+# Fetch window records from DeLaval milking parlor mock
+python -m apis fetch --adapter milking_parlor_delaval --cow-ids C01 C02
+```
