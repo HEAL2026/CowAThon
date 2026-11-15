@@ -307,7 +307,6 @@ function attachCowDot(dot) {
     detail.textContent = `${dot.dataset.cow} · ${state.modelWatchList.has(dot.dataset.cow) ? "Elevated risk · model" : state.manualWatchList.has(dot.dataset.cow) ? "Vet watch list" : "Within baseline"}${noteSuffix}`;
     detail.hidden = false;
     renderRestingFilter();
-    renderWatchListSidebar();
   });
 }
 
@@ -447,9 +446,6 @@ function updateColorScaleGuides() {
     const input = opt.querySelector('input[name="color-by"]');
     opt.classList.toggle("active", Boolean(input && input.checked));
   });
-  document.querySelectorAll(".color-scale-guide").forEach((guide) => {
-    guide.classList.toggle("active", guide.dataset.for === state.colorByMode);
-  });
 }
 
 function renderHeatmap(heatmapData) {
@@ -529,8 +525,6 @@ function renderPenMap(payload) {
   polygon.classList.toggle("api-risk-overlay", records.some((record) => record.flag_status === "flagged" || Number(record.exposure_score || 0) > 0.35));
   renderRestingOverlays(payload);
   updateLegendCounts();
-  updateColorScaleGuides();
-  renderWatchListSidebar();
   renderHeatmap(payload?.grid?.heatmap);
 }
 
@@ -809,7 +803,7 @@ function renderAlerts() {
     title: `${cowName} has a sharp health change (Mastitis Risk ${riskScore}%)`,
     desc: `${cowName} rested in Rest Zone B for 42 minutes (longer than usual) with an extended idling bout. Feel her rear udder for warmth or swelling, and milk her last.`,
     time: "12 min ago",
-    badge: "Sent to Dr. House",
+    badge: "Sent to Dr. Patel",
     actionLabel: "Find cow on map",
     actionTarget: "barn",
     cowId: cowId,
@@ -825,7 +819,7 @@ function renderAlerts() {
         <p>${item.desc}</p>
         <div class="alert-actions">
           <button class="primary-button small alert-act-btn" data-target="${item.actionTarget}" data-cow="${item.cowId || ''}" data-stall="">${item.actionLabel}</button>
-          <button class="secondary-button small alert-assign-btn" data-cow-id="${item.cowId || ''}" data-cow-name="${item.cowName || ''}">Notify Dr. House</button>
+          <button class="secondary-button small alert-assign-btn" data-cow-id="${item.cowId || ''}" data-cow-name="${item.cowName || ''}">Notify Dr. Patel</button>
           <button class="text-button alert-ack-btn">Acknowledge</button>
         </div>
       </div>
@@ -843,7 +837,7 @@ function renderAlerts() {
       }
       const input = document.querySelector("#message-input");
       if (input) {
-        input.value = `Dr. House: Notifying you regarding ${btn.dataset.cowName || "Cow C03"} alert. Reviewing CMT & bedding protocol.`;
+        input.value = `Dr. Patel: Notifying you regarding ${btn.dataset.cowName || "Cow C03"} alert. Reviewing CMT & bedding protocol.`;
         input.focus();
       }
     });
@@ -1089,8 +1083,6 @@ function applyRolePresentation() {
   if (vetPanel) vetPanel.hidden = !isVet;
 
   // In farmer mode, hide complex color-by options to avoid quantitative clutter
-  const colorBySegmented = document.querySelector(".color-by-segmented");
-  if (colorBySegmented) colorBySegmented.style.display = isVet ? "" : "none";
   document.querySelectorAll(".color-by-option").forEach((opt) => {
     opt.style.display = isVet ? "" : "none";
   });
@@ -1154,130 +1146,9 @@ document.querySelectorAll('input[name="color-by"]').forEach((input) => {
   });
 });
 
-function getActiveWatchListItems() {
-  const items = [];
-  // 1. Primary acute predictive alert: Cow C03
-  items.push({
-    id: "C03",
-    name: "Cow C03",
-    type: "urgent",
-    tag: "Mastitis risk 85%",
-    desc: "Rest Zone B · 42m idle · Clinical suspect",
-    isModel: true,
-  });
-
-  // 2. Attribution index contact: Cow C01
-  items.push({
-    id: "C01",
-    name: "Cow C01",
-    type: "watch",
-    tag: "Index candidate",
-    desc: "Rest Zone B · Shared cubicle contact",
-    isModel: true,
-  });
-
-  // 3. User manual additions or group flags
-  state.manualWatchList.forEach((cow) => {
-    const raw = cow.trim();
-    if (raw === "Cow C03" || raw === "Cow C01" || raw === "C03" || raw === "C01") return;
-    const cid = raw.replace(/^Cow\s+/i, "");
-    items.push({
-      id: cid,
-      name: raw.startsWith("Cow") ? raw : `Cow ${raw}`,
-      type: "manual",
-      tag: "Clinical watch",
-      desc: "Under veterinary observation",
-      isModel: false,
-    });
-  });
-
-  return items;
-}
-
 function isOnWatchList(cow) {
-  if (!cow) return false;
-  const canonical = cow.trim();
-  const shortId = canonical.replace(/^Cow\s+/i, "");
-  if (state.manualWatchList.has(canonical) || state.manualWatchList.has(shortId)) return true;
-  if (state.modelWatchList.has(canonical) || state.modelWatchList.has(shortId)) return true;
-  const items = getActiveWatchListItems();
-  return items.some((item) => item.name.toLowerCase() === canonical.toLowerCase() || item.id.toLowerCase() === shortId.toLowerCase());
-}
-
-function renderWatchListSidebar() {
-  const container = document.querySelector("#watchlist-items");
-  const badge = document.querySelector("#watchlist-badge");
-  const flagCount = document.querySelector("#flag-count");
-  if (!container) return;
-
-  const watched = getActiveWatchListItems();
-  const totalCount = watched.length;
-
-  if (badge) badge.textContent = `${totalCount} on watch`;
-  if (flagCount) flagCount.textContent = `${totalCount} on watch list`;
-
-  container.innerHTML = watched.map((cow) => `
-    <div class="watchlist-item ${cow.type} ${state.selectedCow === cow.name ? "selected" : ""}" data-cow="${cow.name}">
-      <div class="watchlist-item-main">
-        <div class="watchlist-cow-name">
-          <strong>${cow.name}</strong>
-          <span class="watchlist-tag ${cow.type}">${cow.tag}</span>
-        </div>
-        <div class="watchlist-meta">${cow.desc}</div>
-      </div>
-      <div class="watchlist-actions">
-        <button class="watchlist-locate-btn" type="button" data-cow="${cow.name}" title="Locate ${cow.name} on map">Locate</button>
-        ${!cow.isModel ? `<button class="watchlist-remove-btn" type="button" data-cow="${cow.name}" title="Remove ${cow.name} from watch list">✕</button>` : ""}
-      </div>
-    </div>
-  `).join("");
-
-  container.querySelectorAll(".watchlist-locate-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const cowName = btn.dataset.cow;
-      const dot = document.querySelector(`.cow-dot[data-cow="${cowName}"]`);
-      if (dot) {
-        dot.click();
-        if (typeof dot.scrollIntoView === "function") {
-          dot.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        }
-      } else {
-        state.selectedCow = cowName;
-        renderRestingFilter();
-        renderWatchListSidebar();
-      }
-    });
-  });
-
-  container.querySelectorAll(".watchlist-remove-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const cowName = btn.dataset.cow;
-      state.manualWatchList.delete(cowName);
-      state.manualWatchList.delete(cowName.replace(/^Cow\s+/i, ""));
-      const dot = document.querySelector(`.cow-dot[data-cow="${cowName}"]`);
-      if (dot) dot.classList.remove("manual-watch");
-      renderWatchListSidebar();
-      renderRestingFilter();
-      updateLegendCounts();
-    });
-  });
-
-  container.querySelectorAll(".watchlist-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      const cowName = item.dataset.cow;
-      const dot = document.querySelector(`.cow-dot[data-cow="${cowName}"]`);
-      if (dot) {
-        dot.click();
-      } else {
-        state.selectedCow = cowName;
-        renderRestingFilter();
-        renderWatchListSidebar();
-      }
-    });
-  });
-}
+    return state.modelWatchList.has(cow) || state.manualWatchList.has(cow);
+  }
 
 function renderRestingFilter() {
   const content = document.querySelector("#resting-filter-content");
@@ -1299,87 +1170,38 @@ function renderRestingFilter() {
   const coResters = [...document.querySelectorAll(`.cow-dot[data-rest-zone="${zone}"]`)]
     .map((dot) => dot.dataset.cow)
     .filter((name) => name !== state.selectedCow);
-  if (title) title.textContent = state.selectedCow;
-  if (empty) empty.hidden = true;
-  if (content) content.hidden = false;
-  const flagBtn = document.querySelector("#flag-illness");
-  if (flagBtn) {
-    flagBtn.style.display = "";
-    flagBtn.textContent = isOnWatchList(state.selectedCow) ? "Remove from watch list" : "Add to watch list";
-  }
-
-  const spotsEl = document.querySelector("#resting-spots");
-  const coEl = document.querySelector("#co-resters");
+  title.textContent = state.selectedCow;
+  empty.hidden = true;
+  content.hidden = false;
+  document.querySelector("#flag-illness").textContent = isOnWatchList(state.selectedCow) ? "Remove from watch list" : "Add to watch list";
 
   if (rec && !rec.is_instrumented && rec.factors?.includes("Uninstrumented cohort animal")) {
-    if (spotsEl) spotsEl.innerHTML = '<span class="resting-spot">Uninstrumented cohort animal · No active sensor telemetry</span>';
-    if (coEl) coEl.innerHTML = '<strong>Cohort animal</strong><p class="muted">Part of the uninstrumented 16-cow pen cohort.</p>';
+    document.querySelector("#resting-spots").innerHTML = '<span class="resting-spot">Uninstrumented cohort animal · No active sensor telemetry</span>';
+    document.querySelector("#co-resters").innerHTML = '<strong>Cohort animal</strong><p class="muted">Part of the uninstrumented 16-cow pen cohort.</p>';
   } else if (rec?.out_of_pen) {
-    if (spotsEl) spotsEl.innerHTML = '<span class="resting-spot">Out of pen · Milking / handling activity</span>';
-    if (coEl) coEl.innerHTML = '<strong>Out of pen</strong><p class="muted">Currently outside the pen grid.</p>';
+    document.querySelector("#resting-spots").innerHTML = '<span class="resting-spot">Out of pen · Milking / handling activity</span>';
+    document.querySelector("#co-resters").innerHTML = '<strong>Out of pen</strong><p class="muted">Currently outside the pen grid.</p>';
   } else {
-    if (spotsEl) spotsEl.innerHTML = state.restingFilter
+    document.querySelector("#resting-spots").innerHTML = state.restingFilter
       ? `<span class="resting-spot">${zoneLabel} · 10:42 AM</span><span class="resting-spot">${zoneLabel} · 7:18 AM</span><span class="resting-spot">Rest zone A · yesterday</span>`
       : `<span class="resting-spot">Last seen: ${zoneLabel}</span><span class="resting-spot">3 recorded spots</span>`;
-    if (coEl) coEl.innerHTML = `<strong>${coResters.length} other cows shared this resting area</strong><ul>${coResters.map((name) => `<li>${name} <span class="shared-label">shared resting area</span></li>`).join("")}</ul>`;
+    document.querySelector("#co-resters").innerHTML = `<strong>${coResters.length} other cows shared this resting area</strong><ul>${coResters.map((name) => `<li>${name} <span class="shared-label">shared resting area</span></li>`).join("")}</ul>`;
   }
 
   document.querySelectorAll(".cow-dot").forEach((dot) => {
     dot.classList.toggle("shared-resting", state.restingFilter && dot.dataset.restZone === zone && dot.dataset.cow !== state.selectedCow);
   });
-  const watched = getActiveWatchListItems();
-  const flagCount = document.querySelector("#flag-count");
-  if (flagCount) flagCount.textContent = `${watched.length} on watch list`;
-  const badge = document.querySelector("#watchlist-badge");
-  if (badge) badge.textContent = `${watched.length} on watch`;
+  document.querySelector("#flag-count").textContent = `${state.modelWatchList.size + state.manualWatchList.size} on watch list`;
 }
 
-document.querySelector("#flag-illness")?.addEventListener("click", () => {
+document.querySelector("#flag-illness").addEventListener("click", () => {
   if (!state.selectedCow) return;
-  const canonical = state.selectedCow.trim();
-  const shortId = canonical.replace(/^Cow\s+/i, "");
-  if (state.manualWatchList.has(canonical) || state.manualWatchList.has(shortId)) {
-    state.manualWatchList.delete(canonical);
-    state.manualWatchList.delete(shortId);
-  } else {
-    state.manualWatchList.add(canonical);
-  }
+  if (state.manualWatchList.has(state.selectedCow)) state.manualWatchList.delete(state.selectedCow);
+  else state.manualWatchList.add(state.selectedCow);
   const selected = document.querySelector(`[data-cow="${state.selectedCow}"]`);
-  if (selected) selected.classList.toggle("manual-watch", state.manualWatchList.has(canonical));
+  selected.classList.toggle("manual-watch", state.manualWatchList.has(state.selectedCow));
   renderRestingFilter();
-  renderWatchListSidebar();
-  updateLegendCounts();
 });
-
-const watchlistAddForm = document.querySelector("#watchlist-add-form");
-if (watchlistAddForm) {
-  watchlistAddForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const input = document.querySelector("#watchlist-cow-input");
-    if (!input) return;
-    const val = input.value.trim();
-    if (!val) return;
-    const query = val.toLowerCase();
-    const dot = [...document.querySelectorAll(".cow-dot")].find((item) =>
-      item.dataset.cow?.toLowerCase().includes(query) || item.dataset.cowId?.toLowerCase() === query
-    );
-    const cowName = dot ? dot.dataset.cow : (val.toUpperCase().startsWith("C") && !val.includes(" ") ? `Cow ${val.toUpperCase()}` : (val.toLowerCase().startsWith("cow ") ? val : `Cow ${val}`));
-    state.manualWatchList.add(cowName);
-    if (dot) {
-      dot.classList.add("manual-watch");
-      dot.click();
-      if (typeof dot.scrollIntoView === "function") {
-        dot.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
-    } else {
-      state.selectedCow = cowName;
-      renderRestingFilter();
-    }
-    input.value = "";
-    renderWatchListSidebar();
-    updateLegendCounts();
-  });
-}
 
 document.querySelector("#filter-resting").addEventListener("click", () => {
   state.restingFilter = !state.restingFilter;
@@ -1555,11 +1377,11 @@ document.querySelectorAll(".suggestion").forEach((button) => {
 const cowMessageThreads = {
   fern: {
     title: "Cow C03 · High mastitis risk",
-    subtitle: "Farmer ↔ Dr. Gregory House",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
     cowId: "C03",
     messages: [
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Cow C03 showed an 85% mastitis probability score after 42 min idle in Rest zone B. Have you run a CMT (California Mastitis Test) on her quarters yet?",
         citation: "Cow C03 · Mastitis risk 85% alert",
@@ -1570,7 +1392,7 @@ const cowMessageThreads = {
         text: "Checking her right now. Right-rear quarter looks slightly warm and swollen. Running CMT test paddle.",
       },
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "CMT score >= 2 indicates environmental Strep/E. coli. If positive, withhold milk and start intramammary antibiotic protocol per North Barn protocol.",
         citation: "Clinical protocol: Environmental mastitis Rx",
@@ -1579,11 +1401,11 @@ const cowMessageThreads = {
   },
   bessie: {
     title: "Cow C01 · Index case candidate",
-    subtitle: "Farmer ↔ Dr. Gregory House",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
     cowId: "C01",
     messages: [
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Permutation analysis flagged Cow C01 as the primary index case candidate (shared cubicle B4 contact with Cow C03). Any clinical signs during morning milking?",
         citation: "Attribution model: Primary index candidate C01",
@@ -1594,7 +1416,7 @@ const cowMessageThreads = {
         text: "She passed milking inspection at 5:30 AM without obvious clots, but conductivity was borderline 6.2 mS/cm. I stripped all 4 teats into the cup.",
       },
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Good catch. Keep her on close watch for the next 48 hrs and ensure cubicle B4 bedding is completely shoveled out and limed.",
         citation: "Bedding sanitation protocol · Rest Zone B",
@@ -1603,11 +1425,11 @@ const cowMessageThreads = {
   },
   luna: {
     title: "Cow C04 · Estrus window",
-    subtitle: "Farmer ↔ Dr. Gregory House",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
     cowId: "C04",
     messages: [
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Activity monitor detected +62% nighttime step activity and restlessness for Cow C04. Estrus confidence is at 94%.",
         citation: "Estrus alert · Cow C04 (+62% mobility)",
@@ -1618,7 +1440,7 @@ const cowMessageThreads = {
         text: "Confirmed standing heat in the loafing lane around 8:00 AM. Insemination scheduled for 4:00 PM today.",
       },
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Perfect timing for the AM/PM rule. Her feeding and idling shifted slightly during standing heat, which is normal. Let me know when AI is completed.",
       },
@@ -1626,7 +1448,7 @@ const cowMessageThreads = {
   },
   daisy: {
     title: "Cow C02 · Post-calving transition",
-    subtitle: "Farmer ↔ Dr. Gregory House",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
     cowId: "C02",
     messages: [
       {
@@ -1635,7 +1457,7 @@ const cowMessageThreads = {
         text: "Cow C02 is day 5 post-calving. Morning yield in Stall 2 was 34.6 L, resting pattern steady at 480 min/day.",
       },
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Great transition. Fresh cow ketone strip test was negative (0.4 mmol/L BHB). Keep her on the fresh group transition ration.",
         citation: "Fresh cow health log · Day 5 check",
@@ -1649,11 +1471,11 @@ const cowMessageThreads = {
   },
   poppy: {
     title: "Cow C06 · Stall 6 check",
-    subtitle: "Farmer ↔ Dr. Gregory House",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
     cowId: "C06",
     messages: [
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Cow C06 milked in Stall 6 immediately after the alert. Sensor recorded minor electrical conductivity deviation (6.4 mS/cm). Any sign of cluster cross-contamination?",
         citation: "Milking parlor alert · Stall 6 conductivity",
@@ -1664,7 +1486,7 @@ const cowMessageThreads = {
         text: "Cluster #6 was automatically flushed and sanitized before the next cow entered. Cow C06's milk filters came back clean.",
       },
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Excellent preventative hygiene. Let's monitor her next two milking sessions to ensure conductivity normalizes below 5.8.",
       },
@@ -1672,7 +1494,7 @@ const cowMessageThreads = {
   },
   mabel: {
     title: "Cow C05 · Rest anomaly check",
-    subtitle: "Farmer ↔ Dr. Gregory House",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
     cowId: "C05",
     messages: [
       {
@@ -1681,7 +1503,7 @@ const cowMessageThreads = {
         text: "Cow C05 spent 4.2 hrs resting away from herd in Zone A outer cubicles. Locomotion score looks normal (score 1), but she was slow to rise.",
       },
       {
-        author: "Dr. House",
+        author: "Dr. Patel",
         type: "received",
         text: "Check her right front hoof for any solar ulcer or bruising before turn-out tomorrow. Vitality score is 74/100.",
         citation: "Herd vitality report · Cow C05",
@@ -1891,7 +1713,7 @@ if (farmerBtn3) {
 const exportClinicalBtn = document.querySelector("#export-clinical-report-btn");
 if (exportClinicalBtn) {
   exportClinicalBtn.addEventListener("click", () => {
-    const reportText = `BOVIAL CLINICAL CASE SUMMARY\nFarm: North Barn Dairy (Mike Johnson)\nDate: ${state.currentTsUtc || "Aug 4, 11:59 AM UTC"}\nPrimary Veterinarian: Dr. Gregory House\n\nDIFFERENTIAL ATTRIBUTION:\n- Most Supported Route: Environmental Bedding Transmission (Likelihood 84%)\n- Resting Route Permutation p-value: 0.024 (Statistically Significant)\n- Milking Machine Permutation p-value: 0.412 (Non-significant)\n- Suspected Pathogens: E. coli, Streptococcus uberis, S. dysgalactiae\n\nPATIENT INVENTORY:\n- Primary Index Case: Cow C01\n- Acute Clinical Suspect: Cow C03 - Mastitis Risk 85%\n- Rest Zone Contacts: Cow C01, Cow C03, Cow C04\n\nRECOMMENDED INTERVENTIONS:\n1. Complete California Mastitis Test (CMT) on Cow C03 and Cow C01.\n2. Initiate intramammary antimicrobial therapy if CMT score >= 2.\n3. Sanitize and renew organic bedding in Rest Zone B cubicles 1-8.\n4. Milk suspect cows last in milking sequence.`;
+    const reportText = `BOVIAL CLINICAL CASE SUMMARY\nFarm: North Barn Dairy (Mike Johnson)\nDate: ${state.currentTsUtc || "Aug 4, 11:59 AM UTC"}\nPrimary Veterinarian: Dr. Maya Patel\n\nDIFFERENTIAL ATTRIBUTION:\n- Most Supported Route: Environmental Bedding Transmission (Likelihood 84%)\n- Resting Route Permutation p-value: 0.024 (Statistically Significant)\n- Milking Machine Permutation p-value: 0.412 (Non-significant)\n- Suspected Pathogens: E. coli, Streptococcus uberis, S. dysgalactiae\n\nPATIENT INVENTORY:\n- Primary Index Case: Cow C01\n- Acute Clinical Suspect: Cow C03 - Mastitis Risk 85%\n- Rest Zone Contacts: Cow C01, Cow C03, Cow C04\n\nRECOMMENDED INTERVENTIONS:\n1. Complete California Mastitis Test (CMT) on Cow C03 and Cow C01.\n2. Initiate intramammary antimicrobial therapy if CMT score >= 2.\n3. Sanitize and renew organic bedding in Rest Zone B cubicles 1-8.\n4. Milk suspect cows last in milking sequence.`;
     navigator.clipboard?.writeText?.(reportText);
     exportClinicalBtn.textContent = "Copied to clipboard ✓";
     setTimeout(() => { exportClinicalBtn.textContent = "Export clinical summary ↗"; }, 2500);
@@ -2052,7 +1874,6 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
 
 applyRolePresentation();
 updateColorScaleGuides();
-renderWatchListSidebar();
 renderMessageThread("fern");
 showView("barn");
 if (timeLabel) timeLabel.textContent = formatDisplayTime(state.currentTsUtc);
