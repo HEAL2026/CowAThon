@@ -23,7 +23,8 @@ labels its local synthetic readings as `Demo data` until API adapters are wired.
 Mock data is intentionally local to `app.js`; replace it with backend contracts
 without moving cleaning or analysis logic into the frontend.
 
-The visualization API defaults to `http://127.0.0.1:8000`; the interactive ICAR
-API used for backtrace actions defaults to `http://127.0.0.1:8001`. Override
-them with `HERDWISE_API_BASE` and `HERDWISE_INTERACTIVE_API_BASE`, or the
-`api` and `interactiveApi` query parameters.
+The visualization API and interactive backtrace API default to
+`http://127.0.0.1:8000`. Override them with `HERDWISE_API_BASE` and
+`HERDWISE_INTERACTIVE_API_BASE`, or the `api` and `interactiveApi` query
+parameters. The standalone ICAR API remains available on port 8001 when
+needed.

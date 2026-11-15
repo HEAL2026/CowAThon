@@ -27,7 +27,7 @@ const interactiveApiBase = (
   window.HERDWISE_INTERACTIVE_API_BASE
   || queryParams.get("interactiveApi")
   || configuredApiBase
-  || "http://127.0.0.1:8001"
+  || apiBase
 ).replace(/\/$/, "");
 
 async function fetchApi(path, options = {}) {
