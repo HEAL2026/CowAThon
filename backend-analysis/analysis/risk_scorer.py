@@ -92,14 +92,15 @@ class MultimodalRiskScorer:
         if act_val is not None and not pd.isna(act_val):
             modalities_present.append("neck_imu")
             if rum_val is None or pd.isna(rum_val):
-                rum_val = 100.0 * np.exp(-((act_val - 0.035) ** 2) / (2 * (0.02**2)))
+                rum_val = 100.0 * np.exp(-((act_val - 0.12) ** 2) / (2 * (0.04**2)))
 
             behavior_score = 0.0
             if rum_val < 40.0:
                 deficit = (40.0 - rum_val) / 40.0
                 behavior_score += deficit * 20.0
                 contributing_factors.append(f"Rumination proxy depressed ({rum_val:.1f} / 100)")
-            if act_val < 0.015:
+            # In live cattle, sustained movement < 0.10 m/s² indicates extreme lethargy
+            if act_val < 0.10:
                 behavior_score += 10.0
                 contributing_factors.append("Prolonged lethargy / immobility")
 
@@ -127,7 +128,6 @@ class MultimodalRiskScorer:
         uwb_present = (row.get("uwb_x_m") is not None and not pd.isna(row.get("uwb_x_m"))) or idling_fraction is not None
 
         if out_of_pen:
-            # Cow is on scheduled milking trip: expected absence, not missingness
             modalities_present.append("uwb")
         elif uwb_present:
             modalities_present.append("uwb")

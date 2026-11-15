@@ -1,11 +1,12 @@
 """Behavioral metrics, kinetic activity indexing, and rumination estimation.
 
-Uses 1-minute aggregated IMU features (neck_imu_magnitude_std or 3-axis stds) to compute:
-- Kinetic activity index
-- Posture / activity state (stationary_hardware vs resting vs active)
-- Rumination proxy from characteristic low-amplitude cyclical neck motion
-- Behavioral anomaly score (0 - 30 points)
-- Empirical ground-truth concordance evaluation on labeled MMCows windows (2023-07-25)
+Calibrated against empirical MMCows sensor distributions:
+- Live cows: |accel| std p25 = 0.28, p50 = 0.45, p75 = 0.64 m/s²
+- Stationary tags (T13/T14 on posts): |accel| std p25 = 0.08, p50 = 0.095, p75 = 0.18 m/s²
+- Position std: stationary tags = 0.13-0.25 m vs cows = multiple meters
+
+Uses multi-modal evidence (modality absence + spatial variance + IMU levels)
+to avoid false classification of stationary reference hardware.
 """
 
 from __future__ import annotations
@@ -40,24 +41,71 @@ def calculate_activity_index(
     return pd.Series(activity_index, index=df.index, name="activity_index")
 
 
+def detect_stationary_hardware_candidate(
+    df: pd.DataFrame,
+    group_col: str = "cow_id",
+    activity_col: str = "neck_imu_magnitude_std",
+    uwb_x_col: str = "uwb_x_m",
+    uwb_y_col: str = "uwb_y_m",
+    animal_modalities: tuple[str, ...] = ("cbt_c", "cbt", "lying", "milk_yield_kg", "milk_yield"),
+) -> pd.Series:
+    """Detect stationary hardware reference tags (e.g. T13/T14).
+
+    Identified via structural modality absence (no CBT, lying, or milk records)
+    combined with negligible spatial excursion (UWB position std < 0.35m)
+    and low median IMU variance (< 0.15 m/s²).
+    """
+    is_hardware = pd.Series(False, index=df.index, name="is_stationary_hardware")
+
+    present_animal_cols = [c for c in animal_modalities if c in df.columns and df[c].notna().any()]
+
+    for cow_id, group in df.groupby(group_col):
+        has_animal_data = False
+        for col in present_animal_cols:
+            if group[col].notna().any():
+                has_animal_data = True
+                break
+
+        if has_animal_data:
+            continue
+
+        low_position_var = True
+        if uwb_x_col in group.columns and uwb_y_col in group.columns:
+            valid_uwb = group.dropna(subset=[uwb_x_col, uwb_y_col])
+            if len(valid_uwb) >= 5:
+                pos_std = np.sqrt(valid_uwb[uwb_x_col].std()**2 + valid_uwb[uwb_y_col].std()**2)
+                low_position_var = pos_std < 0.35
+
+        act_series = group[activity_col] if activity_col in group.columns else None
+        low_imu_var = True
+        if act_series is not None and act_series.notna().any():
+            low_imu_var = act_series.median() < 0.15
+
+        if low_position_var and low_imu_var:
+            is_hardware.loc[group.index] = True
+
+    return is_hardware
+
+
 def classify_posture_state(
     activity_index: pd.Series | np.ndarray,
-    resting_threshold: float = 0.08,
-    stationary_hardware_threshold: float = 0.005,
+    resting_threshold: float = 0.20,
+    is_stationary_hardware: pd.Series | np.ndarray | None = None,
 ) -> pd.Series:
     """Classify posture / movement state into 'stationary_hardware', 'resting', or 'active'.
 
-    Live cattle exhibit basal physiological motion (breathing, rumination, twitches)
-    producing kinetic variance typically between 0.015 and 0.07.
-    A stationary hardware reference tag (e.g. T13/T14 on a wooden post) produces
-    negligible kinetic variation (< 0.005 m/s^2), which is classified as
-    'stationary_hardware' rather than misclassified as a live resting cow.
+    Live cattle kinetic variance distributions:
+    - Deep rest / lying: ~0.06 - 0.20 m/s²
+    - Active walking / feeding: > 0.20 m/s² (p50 = 0.45 m/s²)
     """
-    arr = np.asarray(activity_index)
+    arr = np.asarray(activity_index, dtype=float)
     states = np.empty(arr.shape, dtype=object)
-    states[arr < stationary_hardware_threshold] = "stationary_hardware"
-    states[(arr >= stationary_hardware_threshold) & (arr < resting_threshold)] = "resting"
+    states[arr < resting_threshold] = "resting"
     states[arr >= resting_threshold] = "active"
+
+    if is_stationary_hardware is not None:
+        hw_mask = np.asarray(is_stationary_hardware, dtype=bool)
+        states[hw_mask] = "stationary_hardware"
 
     if isinstance(activity_index, pd.Series):
         return pd.Series(states, index=activity_index.index, name="posture_state")
@@ -71,24 +119,21 @@ def calculate_rumination_proxy(
 ) -> pd.Series:
     """Estimate rumination index (0 - 100) from neck-mounted IMU patterns and lying state.
 
-    Rumination is characterized by rhythmic, low-to-moderate acceleration
-    predominantly during resting/lying states.
-    Drops significantly during acute distress, heat exhaustion, or ruminal disruption.
+    Rumination occurs predominantly during resting/lying windows in the 0.08 - 0.22 m/s² band.
     """
     if activity_col in df.columns:
         act = df[activity_col]
     else:
         act = calculate_activity_index(df)
 
-    # In live resting cattle: between 0.015 and 0.08
-    in_resting_zone = (act >= 0.015) & (act < 0.08)
-    rhythm_score = np.exp(-((act - 0.035) ** 2) / (2 * (0.02**2))) * 100.0
+    in_resting_zone = (act >= 0.06) & (act < 0.22)
+    rhythm_score = np.exp(-((act - 0.12) ** 2) / (2 * (0.04**2))) * 100.0
     rumination_score = np.where(in_resting_zone, rhythm_score, 0.0)
 
-    # If ankle lying sensor is available, boost confidence when lying down
+    # Ankle lying sensor concordance
     if lying_col in df.columns:
         is_lying = df[lying_col].fillna(0).astype(int) == 1
-        rumination_score = np.where(is_lying, rumination_score * 1.05, rumination_score * 0.95)
+        rumination_score = np.where(is_lying, rumination_score * 1.10, rumination_score * 0.90)
 
     return pd.Series(
         np.clip(rumination_score, 0.0, 100.0),
@@ -113,11 +158,8 @@ def calculate_behavior_anomaly_score(
 
     if activity_col in df.columns:
         act = df[activity_col].values
-        # Moderate lethargy in live cows (between 0.005 and 0.015)
-        immobility = np.clip((0.015 - act) / 0.015, 0.0, 1.0)
-        # Exclude inanimate hardware (< 0.005)
-        live_immobility = np.where(act >= 0.005, immobility, 0.0)
-        score += live_immobility * 10.0
+        immobility = np.clip((0.10 - act) / 0.10, 0.0, 1.0)
+        score += immobility * 10.0
 
     return pd.Series(
         np.clip(score, 0.0, max_points),

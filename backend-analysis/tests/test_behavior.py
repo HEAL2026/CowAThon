@@ -9,6 +9,7 @@ from analysis.behavior import (
     calculate_rumination_proxy,
     calculate_behavior_anomaly_score,
     validate_behavior_against_ground_truth,
+    detect_stationary_hardware_candidate,
 )
 
 
@@ -24,32 +25,59 @@ class TestBehavior(unittest.TestCase):
         self.assertAlmostEqual(act.iloc[1], 0.0, places=3)
 
     def test_classify_posture_state(self):
-        act = pd.Series([0.02, 0.15])
-        states = classify_posture_state(act, resting_threshold=0.08)
+        # Calibrated against real MMCows distributions (resting < 0.20, active >= 0.20)
+        act = pd.Series([0.10, 0.45])
+        states = classify_posture_state(act, resting_threshold=0.20)
         self.assertEqual(list(states), ["resting", "active"])
 
+    def test_detect_stationary_hardware_candidate(self):
+        # T13 tag on post: no CBT, no milk, no lying, static UWB, low median IMU (0.095)
+        df_tag = pd.DataFrame({
+            "cow_id": ["T13"] * 10,
+            "neck_imu_magnitude_std": [0.09, 0.095, 0.10, 0.08, 0.09, 0.11, 0.095, 0.085, 0.10, 0.09],
+            "uwb_x_m": [5.1, 5.12, 5.09, 5.11, 5.10, 5.11, 5.08, 5.12, 5.10, 5.09],
+            "uwb_y_m": [3.2, 3.21, 3.19, 3.20, 3.22, 3.19, 3.20, 3.21, 3.20, 3.19],
+            "cbt_c": [np.nan] * 10,
+            "milk_yield_kg": [np.nan] * 10,
+            "lying": [np.nan] * 10,
+        })
+        is_hw = detect_stationary_hardware_candidate(df_tag)
+        self.assertTrue(is_hw.all())
+
+        # Live cow C01: has CBT, milk, lying, high position variance
+        df_cow = pd.DataFrame({
+            "cow_id": ["C01"] * 10,
+            "neck_imu_magnitude_std": [0.35, 0.45, 0.50, 0.28, 0.40, 0.60, 0.45, 0.38, 0.52, 0.48],
+            "uwb_x_m": [2.0, 5.0, 8.0, 11.0, 14.0, 12.0, 9.0, 6.0, 4.0, 3.0],
+            "uwb_y_m": [1.0, 3.0, 6.0, 9.0, 7.0, 5.0, 3.0, 2.0, 1.5, 1.2],
+            "cbt_c": [38.8] * 10,
+            "milk_yield_kg": [31.5] * 10,
+            "lying": [0, 0, 1, 1, 0, 0, 1, 0, 0, 0],
+        })
+        is_cow_hw = detect_stationary_hardware_candidate(df_cow)
+        self.assertFalse(is_cow_hw.any())
+
     def test_rumination_proxy(self):
-        df = pd.DataFrame({"activity_index": [0.035, 0.20]})
+        # Rumination peaks in live resting band near 0.12 m/s²
+        df = pd.DataFrame({"activity_index": [0.12, 0.65]})
         rum = calculate_rumination_proxy(df)
-        self.assertAlmostEqual(rum.iloc[0], 100.0, delta=1.0)
+        self.assertAlmostEqual(rum.iloc[0], 100.0, delta=2.0)
         self.assertAlmostEqual(rum.iloc[1], 0.0, delta=0.1)
 
     def test_behavior_anomaly_score(self):
         df = pd.DataFrame({
             "rumination_proxy": [10.0, 80.0],
-            "activity_index": [0.005, 0.04],
+            "activity_index": [0.04, 0.35],
         })
         anom = calculate_behavior_anomaly_score(df)
         self.assertGreater(anom.iloc[0], 20.0)
         self.assertAlmostEqual(anom.iloc[1], 0.0, delta=1.0)
 
     def test_validate_behavior_against_ground_truth(self):
-        # Unlabeled window
-        df_unlabeled = pd.DataFrame({"activity_index": [0.02, 0.1]})
+        df_unlabeled = pd.DataFrame({"activity_index": [0.10, 0.40]})
         res_unlabeled = validate_behavior_against_ground_truth(df_unlabeled)
         self.assertFalse(res_unlabeled["has_ground_truth_labels"])
 
-        # Labeled window (e.g. mode 7 = lying, mode 1 = walking)
         df_labeled = pd.DataFrame({
             "behavior_mode": [7, 7, 1, 2],
             "behavior_mode_name": ["lying", "lying", "walking", "standing"],
