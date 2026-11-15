@@ -250,3 +250,49 @@ Provides commercial equipment replay feeds and interactive state endpoints match
 | `/flags` | POST | `{"animal_id": "C02", "flag_type": "manual", "reason": "...", "flagged_by": "vet"}` | Add new manual or automated watch flag. |
 | `/backtrace` | POST | `{"animal_id": "C02", "lookback_days": 7}` | Execute outbreak transmission backtrace (evaluates resting cubicle co-resters vs milking stall sequence). |
 
+---
+
+## 7. Frontend / Backend Integration Specification & Contract Alignment
+
+This section formalizes the integration contract between the `apis/` layer, `backend-visualization/` HTTP server (port 8000), `apis/icar/server.py` (port 8001), and `frontend/app.js`.
+
+### 7.1 Dashboard Screen Bindings
+
+| Screen / Endpoint | Bound Fields | Explicitly Ignored Fields | Semantics & UI Handling |
+|---|---|---|---|
+| **Pen Map**<br>`GET /api/pen-map` | `grid.width_m`, `grid.height_m`<br>`cows[cow_id, display_name, uwb_x_m, uwb_y_m, zone, flag_status, exposure_score, is_source_candidate]`<br>`resting_areas[center_x_m, center_y_m, radius_m, zone_id, until_bedding_change_utc]`<br>`contact_cows` | `grid.cell_size_m`<br>`grid.heatmap`<br>`cows.activity_state`<br>`cows.out_of_pen`<br>`cows.exposure_tier`<br>`contact_events` | UWB coordinates positioned via `(x / width_m) * 100%` and `(y / height_m) * 100%`. Flags trigger red dot highlights; exposure > 0.35 triggers orange amber aura; resting contacts show dashed perimeter. |
+| **Herd Health**<br>`GET /api/herd-health` | `cows[cow_id, health_index, mastitis_risk, baseline_tier]` | `cows.risk_components`<br>`cows.health_breakdown`<br>`cows.baseline_confidence`<br>`cows.active_flag`<br>`group_trends` | Sorted ascending by `health_index`. Top 8 cows rendered with progress bars and risk badges. Clicking cow row focuses and highlights dot on Pen Map. |
+| **Attribution**<br>`GET /api/attribution` | `likely_route`<br>`p_values[resting_permutation_p, milking_permutation_p]`<br>`transmission_source[identifier, primary_index_cow]`<br>`resting_areas`<br>`recommended_actions` | `route_probabilities`<br>`pathogen_group_likelihood`<br>`lookback_hours`<br>`is_model_suggestion` | Supports canonical 4-route vocabulary (`"resting_area"`, `"milking_equipment"`, `"both"`, `"no_common_route"`). Renders permutation p-values, real resting circle coordinates, primary index source, and top 3 recommended interventions. |
+| **Impact**<br>`GET /api/impact` | `total_affected_cows`<br>`flagged_early_count`<br>`mean_lead_time_hours`<br>`estimated_milk_saved_kg` | `cohort_size`<br>`early_detection_rate_pct`<br>`transmission_prevented_cases_est` | Renders headline 4-stat metric grid (affected count, early detection count, mean lead time hours, milk saved in kg). |
+| **Interactive Backtrace**<br>`POST /backtrace` | `summary`<br>`likely_route`<br>`p_values`<br>`implicated_resting_areas`<br>`resting_areas`<br>`implicated_circles`<br>`contact_cows`<br>`transmission_source`<br>`recommended_actions`<br>`impact` | N/A | Request sends `{ flags: [{ cow_id: "Cxx" }], lookback_hours: int }` or `{ target_cows: ["Cxx"], lookback_days: int }`. Normalizer binds attribution route, resting circle overlays, and impact cards synchronously. |
+
+### 7.2 Refresh Cadence & Query Parameter Handling
+
+1. **Cadence**: Single as-of snapshot on initial page load (`Promise.all([fetchApi('/api/pen-map'), ...])`). Avoids continuous client-side polling overhead during static reviews.
+2. **Date / Pen Filtering**: When the user interacts with the time slider or pen filter, requests include standard query parameters:
+   - `ts_utc`: ISO 8601 UTC timestamp (e.g. `?ts_utc=2023-07-28T14:00:00Z`).
+   - `pen_id`: String identifier (e.g. `&pen_id=pen_01`).
+3. **HTTP Server Contract**: The backend server must parse query parameters and pass them through to underlying payload generators (`generate_pen_map_payload(ts_utc, pen_id)`, etc.).
+
+### 7.3 Coordinate System & Spatial Layout
+
+- **Geometry**: Real-world UWB coordinates in metres (`uwb_x_m`, `uwb_y_m`) defined against a bounding grid (`grid.width_m` = 30.0, `grid.height_m` = 15.0).
+- **Frontend Normalization**: Dot and resting circle percentages are computed relative to grid extents:
+  $$\text{left} = \frac{x - \text{radius}}{\text{width\_m}} \times 100\%$$
+  $$\text{top} = \frac{y - \text{radius}}{\text{height\_m}} \times 100\%$$
+- **Resting Circles**: Default 1.5 m radius circles around real resting cubicles, bounded by bedding change timestamps (`until_bedding_change_utc`), eliminating synthetic grid-cell naming.
+
+### 7.4 Data Provenance & Synthetic Badge Semantics
+
+Every payload carries a top-level `is_synthetic: bool` indicator reflecting whether data originates from real telemetry (`backend-cleaning/data/processed/joined_1min.parquet`) or mock fallback fixtures:
+
+- **`all(is_synthetic == False)`**: UI displays green **"Live data"** badge and status **"API connected"**.
+- **`all(is_synthetic == True)`**: UI displays **"Demo data"** badge and status **"Demo service"**.
+- **Mixed**: UI displays **"Mixed data"** badge (e.g., real pen-map and herd-health alongside synthetic watch-list fixtures before `analysis.run` is generated).
+
+### 7.5 Port Topology
+
+- **Port 8000 (Default)**: `backend-visualization/visualization/server.py` serving GET endpoints (`/api/pen-map`, `/api/herd-health`, `/api/attribution`, `/api/impact`, `/api/integrations`, etc.) and `POST /backtrace`.
+- **Port 8001 (Optional)**: `apis/icar/server.py` standalone ICAR ADE server supporting official ICAR ADE telemetry feeds (`/animals`, `/locations`, `/imu`, `/behaviors`, `/milkvisits`, etc.), state store (`/manual`, `/flags`), and backtrace delegation.
+
+
