@@ -7,6 +7,7 @@ const state = {
   restingFilter: false,
   modelWatchList: new Set(["Fern 221"]),
   manualWatchList: new Set(),
+  groupFlags: new Map(),
   cowRecords: new Map(),
   s12: {
     penMap: null,
@@ -28,6 +29,18 @@ async function fetchApi(path, options = {}) {
   });
   if (!response.ok) throw new Error(`${path} returned ${response.status}`);
   return response.json();
+}
+
+function renderFlagGroup() {
+  const target = document.querySelector("#flag-group");
+  const entries = [...state.groupFlags.entries()];
+  target.innerHTML = entries.length
+    ? entries.map(([cowId, label]) => `<button type="button" class="flag-chip" data-cow-id="${cowId}">${label} ×</button>`).join("")
+    : '<span class="muted">No cows in the backtrace group yet.</span>';
+  target.querySelectorAll(".flag-chip").forEach((chip) => chip.addEventListener("click", () => {
+    state.groupFlags.delete(chip.dataset.cowId);
+    renderFlagGroup();
+  }));
 }
 
 function setDataStatus(message, tone = "") {
@@ -90,7 +103,42 @@ function renderPenMap(payload) {
   records.forEach((record, index) => ensureCowDot(record, index));
   const polygon = document.querySelector(".barn-polygon");
   polygon.classList.toggle("api-risk-overlay", records.some((record) => record.flag_status === "flagged" || Number(record.exposure_score || 0) > 0.35));
-  if (payload?.implicated_elements?.grid_cells?.length) polygon.classList.add("implicated-cells");
+  renderRestingOverlays(payload);
+}
+
+function renderRestingOverlays(payload) {
+  const target = document.querySelector("#resting-overlays");
+  if (!target) return;
+  const hasOverlayData = Object.prototype.hasOwnProperty.call(payload || {}, "resting_areas")
+    || Object.prototype.hasOwnProperty.call(payload?.implicated_elements || {}, "resting_areas");
+  if (!hasOverlayData) return;
+  target.replaceChildren();
+  document.querySelectorAll(".cow-dot.resting-contact").forEach((dot) => dot.classList.remove("resting-contact"));
+  const areas = payload?.resting_areas || payload?.implicated_elements?.resting_areas || [];
+  const width = Number(payload?.grid?.width_m || state.s12.penMap?.grid?.width_m || 30);
+  const height = Number(payload?.grid?.height_m || state.s12.penMap?.grid?.height_m || 15);
+  areas.forEach((area, index) => {
+    const x = Number(area.center_x_m ?? area.x_m ?? area.x ?? 0);
+    const y = Number(area.center_y_m ?? area.y_m ?? area.y ?? 0);
+    const radius = Number(area.radius_m ?? area.radius ?? 1.5);
+    const circle = document.createElement("div");
+    circle.className = "resting-circle";
+    circle.style.left = `${Math.max(0, ((x - radius) / width) * 100)}%`;
+    circle.style.top = `${Math.max(0, ((y - radius) / height) * 100)}%`;
+    circle.style.width = `${(radius * 2 / width) * 100}%`;
+    circle.style.height = `${(radius * 2 / height) * 100}%`;
+    circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius`;
+    target.append(circle);
+  });
+  const contacts = new Set(
+    (payload?.contact_cows || payload?.contact_cow_ids || areas.flatMap((area) => area.contact_cow_ids || area.contact_cows || []))
+      .map((cow) => typeof cow === "string" ? cow : cow.cow_id)
+      .filter(Boolean)
+  );
+  contacts.forEach((cowId) => {
+    const dot = findCowDot(cowId);
+    if (dot) dot.classList.add("resting-contact");
+  });
 }
 
 function routeLabel(route) {
@@ -122,14 +170,25 @@ function renderHerdHealth(payload) {
 
 function renderAttribution(payload) {
   state.s12.attribution = payload;
+  renderRestingOverlays(payload);
   const source = payload?.transmission_source || {};
   const pValues = payload?.p_values || {};
   const actions = payload?.recommended_actions || [];
+  const restingAreas = payload?.resting_areas || payload?.transmission_source?.resting_areas || [];
+  const restingSummary = restingAreas.length
+    ? `<div class="source-note"><strong>Real resting areas:</strong> ${restingAreas.map((area) => area.zone_id || area.cell_id || "area").join(", ")} · 1.5 m contact radius, bounded by bedding changes.</div>`
+    : "";
+  const sourceSummary = restingAreas.length
+    ? `<div class="source-note"><strong>Source candidate:</strong> ${source.identifier || "Real resting area"}${source.primary_index_cow ? ` · ${source.primary_index_cow}` : ""}</div>`
+    : payload?.likely_route === "resting_area" || payload?.likely_route === "resting_cubicle_route"
+      ? '<div class="source-note"><strong>Source candidate:</strong> Real-coordinate resting area data is pending.</div>'
+      : `<div class="source-note"><strong>Source candidate:</strong> ${source.identifier || "Not identified"}${source.primary_index_cow ? ` · ${source.primary_index_cow}` : ""}</div>`;
   document.querySelector("#attribution-panel").innerHTML = `
     <div class="route-callout"><span>Most supported route</span><strong>${routeLabel(payload?.likely_route)}</strong></div>
     <div class="metric-row"><span>Resting route p-value</span><strong>${pValues.resting_permutation_p ?? "—"}</strong></div>
     <div class="metric-row"><span>Milking route p-value</span><strong>${pValues.milking_permutation_p ?? "—"}</strong></div>
-    <div class="source-note"><strong>Source candidate:</strong> ${source.identifier || "Not identified"}${source.primary_index_cow ? ` · ${source.primary_index_cow}` : ""}</div>
+    ${sourceSummary}
+    ${restingSummary}
     <p class="muted">Pathogen group is shown as a likelihood only. This is a model suggestion, not a diagnosis.</p>
     ${actions.length ? `<ul class="action-list">${actions.slice(0, 3).map((action) => `<li>${action}</li>`).join("")}</ul>` : ""}
   `;
@@ -285,32 +344,38 @@ document.querySelector("#manual-flag-form").addEventListener("submit", (event) =
   }
   state.selectedCow = dot.dataset.cow;
   state.manualWatchList.add(dot.dataset.cow);
+  state.groupFlags.set(dot.dataset.cowId || dot.dataset.cow, dot.dataset.cow);
   dot.classList.add("manual-watch");
   dot.click();
+  renderFlagGroup();
   document.querySelector("#backtrace-status").textContent = `${dot.dataset.cow} added to the vet watch list${reason ? ` · ${reason}` : ""}.`;
   input.value = dot.dataset.cowId || dot.dataset.cow;
 });
 
 document.querySelector("#run-backtrace").addEventListener("click", async () => {
   const status = document.querySelector("#backtrace-status");
-  const cow = state.selectedCow || document.querySelector("#manual-flag-cow").value.trim();
-  if (!cow) {
-    status.textContent = "Select or flag a cow before running the backtrace.";
+  const selectedCow = state.selectedCow || document.querySelector("#manual-flag-cow").value.trim();
+  if (!selectedCow && !state.groupFlags.size) {
+    status.textContent = "Add at least one cow before running the backtrace.";
     return;
   }
-  const dot = [...document.querySelectorAll(".cow-dot")].find((item) => item.dataset.cow === cow);
-  const cowId = dot?.dataset.cowId || cow;
+  if (!state.groupFlags.size) {
+    const dot = [...document.querySelectorAll(".cow-dot")].find((item) => item.dataset.cow === selectedCow);
+    state.groupFlags.set(dot?.dataset.cowId || selectedCow, selectedCow);
+    renderFlagGroup();
+  }
   status.textContent = "Running a 72-hour backtrace…";
   try {
     const result = await fetchApi("/backtrace", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        flags: [{ cow_id: cowId, timestamp: new Date().toISOString(), source: "manual" }],
+        flags: [...state.groupFlags].map(([cowId]) => ({ cow_id: cowId, timestamp: new Date().toISOString(), source: "manual" })),
         lookback_hours: 72,
       }),
     });
     renderAttribution(result);
+    renderRestingOverlays(result);
     if (result.impact) renderImpact(result.impact);
     status.textContent = `Backtrace complete · ${routeLabel(result.likely_route)} most supported.`;
   } catch (error) {

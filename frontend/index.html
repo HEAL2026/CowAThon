@@ -99,6 +99,7 @@
                 <div class="rest-zone zone-a">Rest zone A</div>
                 <div class="rest-zone zone-b">Rest zone B</div>
                 <div class="water-zone">Water</div>
+                <div id="resting-overlays" class="resting-overlays" aria-label="Real-coordinate resting exposure areas"></div>
                 <div class="cow-dot cow-a" data-cow="Bessie 142" data-cow-id="C01" data-rest-zone="zone-a" title="Bessie 142 · Within baseline"></div>
                 <div class="cow-dot cow-b" data-cow="Daisy 108" data-cow-id="C02" data-rest-zone="zone-a" title="Daisy 108 · Pregnant"></div>
                 <div class="cow-dot cow-c model-watch" data-cow="Fern 221" data-cow-id="C03" data-rest-zone="zone-b" title="Fern 221 · Elevated risk · model"></div>
@@ -145,9 +146,10 @@
               <form id="manual-flag-form" class="manual-flag-form">
                 <label><span class="field-label">Cow</span><input id="manual-flag-cow" placeholder="Cow ID or name" autocomplete="off" /></label>
                 <label><span class="field-label">Reason</span><input id="manual-flag-reason" placeholder="Observed change (optional)" /></label>
-                <button class="secondary-button small" type="submit">Add flag</button>
+                <button class="secondary-button small" type="submit">Add to group</button>
                 <button id="run-backtrace" class="primary-button small" type="button">Run backtrace</button>
               </form>
+              <div id="flag-group" class="flag-group" aria-live="polite"><span class="muted">No cows in the backtrace group yet.</span></div>
               <p id="backtrace-status" class="s12-status" aria-live="polite">Flag a cow, then run a 72-hour route review.</p>
             </div>
             <div class="s12-grid">
