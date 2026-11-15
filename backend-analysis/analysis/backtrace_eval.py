@@ -193,7 +193,7 @@ def evaluate_backtrace_against_synthetic(
     """
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    # 1. Resolve synthetic labels DataFrame if provided or on disk
+    # 1. Resolve synthetic labels DataFrame if explicitly provided
     labels_df: pd.DataFrame | None = None
     if isinstance(synthetic_labels, pd.DataFrame):
         labels_df = synthetic_labels.copy()
@@ -201,27 +201,6 @@ def evaluate_backtrace_against_synthetic(
         p = Path(synthetic_labels)
         if p.is_file():
             labels_df = pd.read_parquet(p)
-
-    # If labels_df still not provided, search default synthetic data directory
-    if labels_df is None:
-        cand_paths = [
-            Path("backend-cleaning/data/synthetic/synthetic_labels.parquet"),
-            Path("../backend-cleaning/data/synthetic/synthetic_labels.parquet"),
-            Path(__file__).resolve().parents[2] / "backend-cleaning" / "data" / "synthetic" / "synthetic_labels.parquet",
-        ]
-        for cp in cand_paths:
-            if cp.is_file():
-                labels_df = pd.read_parquet(cp)
-                synth_dir = cp.parent
-                if lying_bouts_df is None and (synth_dir / "lying_bouts.parquet").is_file():
-                    lying_bouts_df = pd.read_parquet(synth_dir / "lying_bouts.parquet")
-                if milking_log_df is None and (synth_dir / "milking_log.parquet").is_file():
-                    milking_log_df = pd.read_parquet(synth_dir / "milking_log.parquet")
-                if bedding_df is None and (synth_dir / "bedding_synthetic.parquet").is_file():
-                    bedding_df = pd.read_parquet(synth_dir / "bedding_synthetic.parquet")
-                if sanitation_df is None and (synth_dir / "sanitation.parquet").is_file():
-                    sanitation_df = pd.read_parquet(synth_dir / "sanitation.parquet")
-                break
 
     episode_evaluations: list[dict[str, Any]] = []
 

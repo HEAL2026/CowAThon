@@ -47,7 +47,7 @@ def calculate_resting_exposure(
         and contact_events (list). `implicated_cells` remains as a deprecated
         compatibility summary and is not used for attribution.
     """
-    flag_set = set(flagged_cows) if flagged_cows else set()
+    flag_set = {c if isinstance(c, str) else str(c.get("cow_id", "")) for c in flagged_cows} if flagged_cows else set()
     if radius_m <= 0:
         raise ValueError(f"radius_m must be positive, got {radius_m}")
     if len(lying_bouts_df) == 0:

@@ -56,8 +56,14 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
     lying_col = "lying" if "lying" in df_proc.columns else None
     dim_col = "dim" if "dim" in df_proc.columns else None
     parity_col = "parity" if "parity" in df_proc.columns else None
-    cond_col = "conductivity" if "conductivity" in df_proc.columns else None
-    scc_col = "scc" if "scc" in df_proc.columns else None
+    cond_col = "conductivity" if "conductivity" in df_proc.columns else (
+        "cond_max" if "cond_max" in df_proc.columns else None
+    )
+    scc_col = "scc" if "scc" in df_proc.columns else (
+        "scc_kcells_ml" if "scc_kcells_ml" in df_proc.columns else (
+            "scc_mean" if "scc_mean" in df_proc.columns else None
+        )
+    )
     resp_col = "respiration_rate_bpm" if "respiration_rate_bpm" in df_proc.columns else (
         "respiration_rate" if "respiration_rate" in df_proc.columns else None
     )
@@ -76,8 +82,12 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
     lact_col = "milk_lactose_pct" if "milk_lactose_pct" in df_proc.columns else (
         "lactose_pct" if "lactose_pct" in df_proc.columns else None
     )
-    b_name_col = "behavior_name" if "behavior_name" in df_proc.columns else None
-    b_code_col = "behavior" if "behavior" in df_proc.columns else None
+    b_name_col = "behavior_name" if "behavior_name" in df_proc.columns else (
+        "behavior_mode_name" if "behavior_mode_name" in df_proc.columns else None
+    )
+    b_code_col = "behavior" if "behavior" in df_proc.columns else (
+        "behavior_mode" if "behavior_mode" in df_proc.columns else None
+    )
 
     # Group by cow_id and date
     records = []
@@ -114,10 +124,14 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
             rec["thi_mean"] = round(float(thi_s.mean()), 1)
             rec["thi_max"] = round(float(thi_s.max()), 1)
             rec["thi_hours_above_68"] = round(float((thi_s >= 68.0).sum() / 60.0), 2)
+            rec["thi_hours_above_72"] = round(float((thi_s >= 72.0).sum() / 60.0), 2)
+            rec["heat_confounded"] = bool(rec["thi_hours_above_72"] > 0.0 or (rec["thi_mean"] is not None and rec["thi_mean"] >= 72.0))
         else:
             rec["thi_mean"] = None
             rec["thi_max"] = None
             rec["thi_hours_above_68"] = 0.0
+            rec["thi_hours_above_72"] = 0.0
+            rec["heat_confounded"] = False
 
         # 2. Production Metrics
         if milk_col and group[milk_col].notna().any():
