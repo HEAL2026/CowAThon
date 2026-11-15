@@ -68,6 +68,36 @@ def location_1min_median(uwb: pd.DataFrame) -> pd.DataFrame:
     return out.reset_index()
 
 
+def resting_areas(
+    bouts: pd.DataFrame,
+    min_duration_min: int = 20,
+    radius_m: float = 1.5,
+) -> pd.DataFrame:
+    """Mark every cow's qualifying resting bout as a spatial area.
+
+    The center is the bout's median in-pen UWB location. Downstream tracing
+    uses this center and radius rather than a synthetic/grid cell label.
+    """
+    required = {"cow_id", "start_utc", "end_utc", "duration_min", "x_m", "y_m"}
+    missing = required - set(bouts.columns)
+    if missing:
+        raise KeyError(f"lying bouts lacks {sorted(missing)}")
+    if radius_m <= 0:
+        raise ValueError(f"radius_m must be positive, got {radius_m}")
+    out = bouts.loc[
+        (bouts["duration_min"] >= min_duration_min)
+        & bouts["x_m"].notna()
+        & bouts["y_m"].notna()
+    ].copy()
+    out = out.rename(columns={"x_m": "center_x_m", "y_m": "center_y_m"})
+    out["radius_m"] = float(radius_m)
+    columns = [
+        "cow_id", "start_utc", "end_utc", "duration_min",
+        "center_x_m", "center_y_m", "radius_m",
+    ]
+    return out[columns].sort_values(["cow_id", "start_utc"]).reset_index(drop=True)
+
+
 def mark_gaps(joined: pd.DataFrame, channels: dict[str, int], mark_after_min: int = 5) -> pd.DataFrame:
     """For each native per-cow channel, add `<col>_gap_min`: length of the
     run of missing minutes the row sits in, when that run exceeds the

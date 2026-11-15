@@ -13,7 +13,7 @@ the pipeline is rules, statistics or unsupervised.
 ```bash
 cd model && python3 -m pip install -r requirements.txt
 python3 behavior/features.py     # 10 s windows x IMU features for 2023-07-25, labelled   (~2 min)
-python3 behavior/train.py        # RandomForest, leave-one-cow-out, report + checkpoint     (~5 min)
+python3 behavior/train.py        # LOCO + grouped holdout/calibration, report + checkpoint (~5 min)
 python3 behavior/apply.py        # all 14 days -> behavior_minute                            (~15 min)
 ```
 
@@ -32,12 +32,62 @@ python3 behavior/apply.py        # all 14 days -> behavior_minute               
 - **Evaluation**: **leave‑one‑cow‑out** over the 10 cows — the score is for an
   unseen animal, never for rows of a cow the model has seen. Per‑class F1,
   confusion matrix and per‑cow table in [`reports/behavior_eval.md`](reports/behavior_eval.md).
+- **Grouped holdout**: training also runs a deterministic cow-disjoint
+  fit/calibration/test split. Test cows are selected first; the remaining cows
+  are split into fitting and probability-calibration groups. No cow appears in
+  more than one group. Leave-one-cow-out remains the primary estimate across
+  all animals.
+- **Probability calibration**: sigmoid calibration is fit only on calibration
+  cows and reported with a multiclass Brier score. Calibrated confidence is
+  separate from the predicted state and is not a diagnosis.
 - **Output**: `behavior_minute` (cow_id, ts_utc, behavior, prob) for all 14
   days; the ankle `lying` channel **overrides** the classifier where they
   disagree (brief S4). `checkpoints/behavior_rf.joblib` is gitignored.
 
 Rare classes (`licking`, `drinking`, `walking`, each < 1.5 % of windows) are
 reported honestly and mapped to `other` for daily features downstream.
+
+### State overview and tolerance
+
+The model is deliberately not reduced to binary lying. The seven states
+(`lying`, `standing`, `walking`, `feed_up`, `feed_down`, `licking`, and
+`drinking`) remain available for the cow's activity overview. A normal cow may
+spend different amounts of time in each state, so downstream interpretation
+should compare each cow with its own history and cohort baseline, use daily
+state proportions/bouts, and tolerate ordinary variation. A state prediction
+is evidence for monitoring, not a claim that the cow is unwell.
+
+The neck-only classifier is evaluated directly. The ankle channel is not a
+separate model benchmark: it is retained only as the existing production
+override at minute resolution, where available.
+
+### How cow-disjoint evaluation differs from raw data
+
+Raw MMCows data has many time windows from each cow. A row-level split would
+put windows from the same animal into both train and test, allowing collar
+orientation, body shape, and other animal-specific signatures to inflate the
+score. Cow-disjoint evaluation instead partitions the animal IDs first:
+
+```text
+all labelled windows
+  ├─ test cows          -> never used for fitting or calibration
+  └─ remaining cows
+       ├─ calibration cows -> only used to calibrate probabilities
+       └─ fit cows         -> used to fit the Random Forest
+```
+
+Every window from one cow stays in exactly one partition. This changes the
+question from “can the model recognize more windows from familiar cows?” to
+“does it generalize to a cow it has never observed?” The raw rows and their
+timestamps remain intact; only their use in evaluation is partitioned.
+
+### Feed-intake timing
+
+When optional `dmi_kg` is available, the analysis layer retains two- and
+three-day lagged DMI features because intake changes can affect milk production
+after approximately 2–3 days. Same-day intake is not treated as the only
+explanation for same-day milk changes. The model and health pipeline continue
+without DMI when it is unavailable.
 
 ## Boundary
 
@@ -68,6 +118,14 @@ folder does not re‑ingest or re‑time‑align anything.
 
 Challenge data is never committed here. Checkpoints and prediction dumps are
 gitignored — they are build artifacts, not source.
+
+An optional external milk/physiology example is documented in
+[`backend-cleaning/README.md`](../backend-cleaning/README.md): Mendeley Data
+[954f6g36sb/2](https://data.mendeley.com/datasets/954f6g36sb/2), DOI
+`10.17632/954f6g36sb.2`, CC BY 4.0. It can supply normalized milk features
+for calibration or an explicitly mapped evaluation cohort, but it is never
+required for cow-health evaluation. Missing milk features remain missing and
+reduced modality coverage must be reported when the file is unavailable.
 
 ## Two rules that are not negotiable
 

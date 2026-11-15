@@ -456,8 +456,8 @@ def backtrace(
         for u in res_milking["implicated_units"]:
             implicated.append(u["unit_id"])
     else:
-        for c in res_resting["implicated_cells"][:1]:
-            implicated.append(c["cell_id"])
+        for area in res_resting.get("implicated_resting_areas", [])[:1]:
+            implicated.append(area["area_id"])
         for u in res_milking["implicated_units"][:1]:
             implicated.append(u["unit_id"])
 

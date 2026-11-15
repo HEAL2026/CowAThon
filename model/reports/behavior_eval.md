@@ -50,3 +50,27 @@ RandomForest (300 trees, balanced subsample), 27 IMU features. Seed 0.
 - `licking`, `drinking`, `walking` have < 1.5 % of windows each; low F1 there is expected and is why the
   pipeline maps them to `other` for daily features (brief S4).
 - Lying from the ankle sensor overrides the classifier wherever they disagree (brief S4).
+
+## Independent grouped train/calibration/test benchmark
+
+This is a fixed cow-disjoint holdout, separate from the primary LOCO score.
+Fit, calibration, and test windows come from disjoint cows; no rows are split
+independently. The classifier uses neck IMU only. The ankle signal remains a
+downstream production override and is not used in this benchmark.
+
+- Fit cows: C02, C03, C04, C06, C09, C10
+- Calibration cows: C01, C08
+- Test cows: C05, C07
+- Calibrated macro F1: **0.595**
+- Calibrated accuracy: **0.766**
+- Mean one-vs-rest Brier score: **0.0474**
+
+The seven-state report is intentional: lying, standing, walking, feed-up,
+feed-down, licking, and drinking are all retained so daily state patterns
+can be compared with each cow's baseline. The health pipeline should allow
+normal cow-to-cow and day-to-day variation rather than treating one state
+as universally abnormal.
+
+Probability calibration uses cows outside the fit and test groups. It makes
+`pred_prob_calibrated` interpretable as a confidence signal, but does not
+turn a behavior state into a clinical diagnosis.

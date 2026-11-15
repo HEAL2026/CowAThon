@@ -54,6 +54,29 @@ python3 -m unittest discover tests
 
 ## Executing the Pipeline
 
+### Real-coordinate resting exposure
+
+Resting-route backtrace consumes the cleaning artifact
+`backend-cleaning/data/processed/resting_areas.parquet`. Each qualifying
+resting bout is represented by the real median UWB position of that bout and a
+1.5 m radius. A flagged cow's bout becomes a source area; later resting bouts
+whose centers fall within the circle are contact events. Contacts are bounded
+by bedding-change timestamps, so a bedding change after source deposition
+terminates that source area's exposure window. The output uses
+`implicated_resting_areas` and `contact_events`; the former synthetic/grid-cell
+field `implicated_cells` is retained only as an empty compatibility field.
+Source coordinates and contact distances are included for visualization and
+auditing. This is an epidemiological monitoring suggestion, not a diagnosis.
+
+### Feed-intake timing
+
+When `dmi_kg` is available, cow-day features retain `dmi_kg_lag_2d`,
+`dmi_kg_lag_3d`, and their available mean. These features reflect that feed
+intake changes can affect milk production after roughly 2–3 days. Same-day DMI
+is not treated as the only explanation for same-day milk changes. If DMI is
+absent, these fields remain missing and the MMCows-only pipeline continues
+without fabricated intake values.
+
 ### Via CLI Runner (Recommended)
 
 Run against canonical `joined_1min.parquet` if present on disk, or fall back automatically to deterministic synthetic MMCows fixtures (`is_synthetic=True`):

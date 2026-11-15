@@ -185,5 +185,171 @@
       "macro_f1": 0.5826525231364877,
       "accuracy": 0.7966101694915254
     }
+  },
+  "grouped_train_calibration_test": {
+    "protocol": "grouped_train_calibration_test_by_cow",
+    "seed": 0,
+    "fit_cows": [
+      "C02",
+      "C03",
+      "C04",
+      "C06",
+      "C09",
+      "C10"
+    ],
+    "calibration_cows": [
+      "C01",
+      "C08"
+    ],
+    "test_cows": [
+      "C05",
+      "C07"
+    ],
+    "n_windows": {
+      "fit": 42565,
+      "calibration": 14197,
+      "test": 14174
+    },
+    "macro_f1": 0.5954720899446599,
+    "accuracy": 0.7660505150275152,
+    "per_class": {
+      "walking": {
+        "precision": 0.3163841807909605,
+        "recall": 0.23728813559322035,
+        "f1-score": 0.2711864406779661,
+        "support": 236.0
+      },
+      "standing": {
+        "precision": 0.5690886182276355,
+        "recall": 0.8284928156527056,
+        "f1-score": 0.6747167932279348,
+        "support": 3271.0
+      },
+      "feed_up": {
+        "precision": 0.5365296803652968,
+        "recall": 0.17153284671532848,
+        "f1-score": 0.25995575221238937,
+        "support": 1370.0
+      },
+      "feed_down": {
+        "precision": 0.7370892018779343,
+        "recall": 0.7755822159491884,
+        "f1-score": 0.7558459422283357,
+        "support": 1417.0
+      },
+      "licking": {
+        "precision": 0.991869918699187,
+        "recall": 0.7625,
+        "f1-score": 0.8621908127208481,
+        "support": 160.0
+      },
+      "drinking": {
+        "precision": 0.4090909090909091,
+        "recall": 0.4883720930232558,
+        "f1-score": 0.4452296819787986,
+        "support": 129.0
+      },
+      "lying": {
+        "precision": 0.9351259069568929,
+        "recall": 0.8658938216308787,
+        "f1-score": 0.8991792065663474,
+        "support": 7591.0
+      },
+      "accuracy": 0.7660505150275152,
+      "macro avg": {
+        "precision": 0.6421683451441166,
+        "recall": 0.589951704080654,
+        "f1-score": 0.5954720899446599,
+        "support": 14174.0
+      },
+      "weighted avg": {
+        "precision": 0.7778798696222042,
+        "recall": 0.7660505150275152,
+        "f1-score": 0.7562597874539894,
+        "support": 14174.0
+      }
+    },
+    "confusion": [
+      [
+        56,
+        152,
+        4,
+        15,
+        0,
+        4,
+        5
+      ],
+      [
+        91,
+        2710,
+        35,
+        104,
+        1,
+        69,
+        261
+      ],
+      [
+        13,
+        682,
+        235,
+        250,
+        0,
+        7,
+        183
+      ],
+      [
+        3,
+        155,
+        151,
+        1099,
+        0,
+        2,
+        7
+      ],
+      [
+        0,
+        17,
+        0,
+        20,
+        122,
+        1,
+        0
+      ],
+      [
+        4,
+        62,
+        0,
+        0,
+        0,
+        63,
+        0
+      ],
+      [
+        10,
+        984,
+        13,
+        3,
+        0,
+        8,
+        6573
+      ]
+    ],
+    "class_order": [
+      "walking",
+      "standing",
+      "feed_up",
+      "feed_down",
+      "licking",
+      "drinking",
+      "lying"
+    ],
+    "calibration": {
+      "method": "sigmoid",
+      "calibration_cows": [
+        "C01",
+        "C08"
+      ],
+      "multiclass_brier_mean": 0.04742555719111489
+    }
   }
 }

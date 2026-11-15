@@ -7,6 +7,7 @@ Aggregates 1-minute time series into standardized cow-day summary records:
 - Behavior: rumination_proxy_mean, activity_index_mean, activity_index_std
 - Feeding proxy: feeding_time_min / active feeding zone
 - Optional clinical/lab indicators: conductivity_max, scc_mean
+- Optional feed intake: dmi_kg and 2–3 day lagged DMI features for production
 """
 
 from __future__ import annotations
@@ -237,4 +238,13 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
 
         records.append(rec)
 
-    return pd.DataFrame(records)
+    result = pd.DataFrame(records)
+    if "dmi_kg" in result.columns and len(result):
+        result = result.sort_values(["cow_id", "date"]).reset_index(drop=True)
+        grouped = result.groupby("cow_id", sort=False)["dmi_kg"]
+        result["dmi_kg_lag_2d"] = grouped.shift(2)
+        result["dmi_kg_lag_3d"] = grouped.shift(3)
+        result["dmi_kg_lagged_mean"] = result[
+            ["dmi_kg_lag_2d", "dmi_kg_lag_3d"]
+        ].mean(axis=1, skipna=True)
+    return result

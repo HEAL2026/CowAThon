@@ -42,8 +42,26 @@ class TestS8S11Backtrace(unittest.TestCase):
         self.assertGreater(res["cow_exposure"]["C01"], 0.0)
         self.assertEqual(res["cow_exposure"]["C03"], 0.0)
         self.assertEqual(res["cow_exposure"]["C04"], 0.0)
-        self.assertEqual(len(res["implicated_cells"]), 1)
-        self.assertEqual(res["implicated_cells"][0]["cell_id"], "cell_X2_Y1")
+        self.assertEqual(len(res["implicated_resting_areas"]), 1)
+        area = res["implicated_resting_areas"][0]
+        self.assertEqual(area["source_cow"], "C02")
+        self.assertEqual(area["radius_m"], 1.5)
+        self.assertEqual(res["implicated_cells"], [])
+        self.assertLessEqual(res["contact_events"][0]["distance_m"], 1.5)
+
+    def test_resting_radius_uses_flagged_coordinates_not_grid_cells(self):
+        bouts_df = pd.DataFrame([
+            {"cow_id": "C02", "start_utc": "2023-07-25 10:00:00+00:00", "end_utc": "2023-07-25 11:00:00+00:00", "duration_min": 60, "x_m": 5.1, "y_m": 3.1},
+            {"cow_id": "C01", "start_utc": "2023-07-25 12:00:00+00:00", "end_utc": "2023-07-25 13:00:00+00:00", "duration_min": 60, "x_m": 6.4, "y_m": 3.1},
+            {"cow_id": "C03", "start_utc": "2023-07-25 12:00:00+00:00", "end_utc": "2023-07-25 13:00:00+00:00", "duration_min": 60, "x_m": 7.0, "y_m": 3.1},
+        ])
+        res = calculate_resting_exposure(
+            lying_bouts_df=bouts_df,
+            flagged_cows={"C02"},
+            lookback_hours=72,
+        )
+        self.assertEqual([e["exposed_cow"] for e in res["contact_events"]], ["C01"])
+        self.assertEqual(res["contact_events"][0]["source_cow"], "C02")
 
         # Real-coordinate 1.5m resting circle validation
         self.assertIn("implicated_resting_areas", res)
