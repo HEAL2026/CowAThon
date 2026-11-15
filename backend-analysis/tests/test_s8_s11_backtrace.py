@@ -45,6 +45,17 @@ class TestS8S11Backtrace(unittest.TestCase):
         self.assertEqual(len(res["implicated_cells"]), 1)
         self.assertEqual(res["implicated_cells"][0]["cell_id"], "cell_X2_Y1")
 
+        # Real-coordinate 1.5m resting circle validation
+        self.assertIn("implicated_resting_areas", res)
+        self.assertEqual(len(res["implicated_resting_areas"]), 1)
+        circle = res["implicated_resting_areas"][0]
+        self.assertEqual(circle["center_x_m"], 5.1)
+        self.assertEqual(circle["center_y_m"], 3.1)
+        self.assertEqual(circle["radius_m"], 1.5)
+        self.assertEqual(circle["target_cow_id"], "C02")
+        self.assertEqual(circle["until_bedding_change_utc"], "2023-07-25T15:00:00Z")
+        self.assertEqual(circle["contact_cows"], ["C01"])
+
     def test_milking_exposure_with_sanitization(self):
         # Milking visits:
         # C02 (flagged) milks on STALL-01 at 09:00
@@ -146,11 +157,38 @@ class TestS8S11Backtrace(unittest.TestCase):
         self.assertIn("p_values", res)
         self.assertIn("pathogen_group_likelihood", res)
         self.assertIn("implicated_units_or_cells", res)
+        self.assertIn("implicated_resting_areas", res)
+        self.assertIn("implicated_circles", res)
         self.assertIn("implicated_resources", res)
+        self.assertIn("resting_areas", res["implicated_resources"])
         self.assertIn("exposed_cows", res)
         self.assertIn("high_risk_contacts", res)
         self.assertIn("recommended_actions", res)
         self.assertTrue(res["is_model_suggestion"])
+
+    def test_backtrace_resting_route_emits_15m_circle(self):
+        bouts, milk, bed, san = generate_synthetic_backtrace_fixtures(scenario="resting")
+        res = backtrace(
+            flags=[{"cow_id": "C02"}, {"cow_id": "C01"}],
+            lookback_hours=72,
+            lying_bouts_df=bouts,
+            milking_log_df=milk,
+            bedding_df=bed,
+            sanitation_df=san,
+            n_permutations=100,
+            seed=42,
+        )
+        self.assertEqual(res["likely_route"], "resting_area")
+        self.assertGreaterEqual(len(res["implicated_resting_areas"]), 1)
+        first_circle = res["implicated_resting_areas"][0]
+        self.assertEqual(first_circle["radius_m"], 1.5)
+        self.assertEqual(first_circle["target_cow_id"], "C02")
+        self.assertEqual(first_circle["center_x_m"], 5.15)
+        self.assertEqual(first_circle["center_y_m"], 3.05)
+        self.assertIn("until_bedding_change_utc", first_circle)
+        self.assertIn("C01", first_circle["contact_cows"])
+        self.assertTrue(res["implicated_resources"]["primary_unit_or_cell"].startswith("Resting Circle"))
+        self.assertIn("cell_X", " ".join(res["implicated_units_or_cells"]))
 
 
 if __name__ == "__main__":

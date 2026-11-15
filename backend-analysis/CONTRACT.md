@@ -254,9 +254,12 @@ Returned by `analysis.backtrace(flags, lookback_hours=72)` and consumed by `apis
     "note": "Significant un-sanitized serial milking stall contacts; typical of contagious pathogens (e.g. Staph aureus)"
   },
   "implicated_units_or_cells": ["STALL-01"],
+  "implicated_resting_areas": [],
+  "implicated_circles": [],
   "implicated_resources": {
     "primary_unit_or_cell": "STALL-01",
-    "all": ["STALL-01"]
+    "all": ["STALL-01"],
+    "resting_areas": []
   },
   "exposed_cows": [
     {

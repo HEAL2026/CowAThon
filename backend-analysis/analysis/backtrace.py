@@ -446,8 +446,9 @@ def backtrace(
         reference_time=ref_t,
     )
 
-    # Synthesize implicated units/cells
+    # Synthesize implicated units/cells and real 1.5m resting circles
     implicated = []
+    implicated_resting_areas = res_resting.get("implicated_resting_areas", [])
     if perm_res["likely_route"] in ("resting_area", "resting_environment"):
         for c in res_resting["implicated_cells"]:
             implicated.append(c["cell_id"])
@@ -460,11 +461,17 @@ def backtrace(
         for u in res_milking["implicated_units"][:1]:
             implicated.append(u["unit_id"])
 
+    # Determine primary resource label (1.5m spatial circle for resting route)
+    if perm_res["likely_route"] in ("resting_area", "resting_environment") and implicated_resting_areas:
+        primary_resource_label = f"Resting Circle (x={implicated_resting_areas[0]['center_x_m']}m, y={implicated_resting_areas[0]['center_y_m']}m, r=1.5m)"
+    else:
+        primary_resource_label = implicated[0] if implicated else None
+
     # Action recommendations
     if perm_res["likely_route"] in ("resting_area", "resting_environment"):
         actions = [
-            "Deep rake and renew organic bedding in implicated cubicle zones",
-            "Verify stall curb cleanliness and apply dry lime/disinfectant bedding powder",
+            "Deep clean and apply lime/disinfectant bedding powder to implicated 1.5m resting circles; replace organic bedding",
+            "Verify stall curb cleanliness and ensure proper bedding drainage",
             "Inspect resting area ventilation and stall drying fans",
         ]
     elif perm_res["likely_route"] == "milking_equipment":
@@ -497,9 +504,12 @@ def backtrace(
         },
         "pathogen_group_likelihood": perm_res["pathogen_group_likelihood"],
         "implicated_units_or_cells": implicated,
+        "implicated_resting_areas": implicated_resting_areas,
+        "implicated_circles": implicated_resting_areas,
         "implicated_resources": {
-            "primary_unit_or_cell": implicated[0] if implicated else None,
+            "primary_unit_or_cell": primary_resource_label,
             "all": implicated,
+            "resting_areas": implicated_resting_areas,
         },
         "exposed_cows": res_comb["exposed_cows"],
         "high_risk_contacts": [{"cow_id": c["cow_id"], **c} for c in res_comb["exposed_cows"]],
