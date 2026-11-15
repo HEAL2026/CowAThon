@@ -463,12 +463,14 @@ function renderRestingOverlays(payload) {
     circle.style.top = `${Math.max(0, topPct)}%`;
     circle.style.width = `${Math.max(1, widthPct)}%`;
     circle.style.height = `${Math.max(1, heightPct)}%`;
+    const isSynthetic = area.is_synthetic ?? payload?.is_synthetic ?? true;
+    const provenanceLabel = isSynthetic ? "Synthetic model fixture" : "Empirical attribution";
     const cutoff = area.until_bedding_change_utc ? ` · until bedding change ${area.until_bedding_change_utc}` : "";
-    circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius · Model-estimated mastitis exposure area (not a diagnosis)${cutoff}`;
+    circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius · Provenance: ${provenanceLabel} · Epidemiological estimate (not a clinical diagnosis)${cutoff}`;
 
     const labelTag = document.createElement("span");
     labelTag.className = "resting-circle-tag";
-    labelTag.textContent = "Shared resting risk area";
+    labelTag.textContent = `Shared resting risk area (${isSynthetic ? "Synthetic fixture" : "Empirical"} · Non-clinical)`;
     circle.append(labelTag);
 
     target.append(circle);
@@ -987,7 +989,7 @@ document.querySelectorAll(".mode-button").forEach((button) => {
     if (gradientKey) gradientKey.hidden = (state.mode !== "heatmap");
     document.querySelector(".map-legend").innerHTML = state.mode === "heatmap"
       ? '<span class="map-legend-heatmap">Idle density: <span class="guide-dot healthy"></span> &lt;30m <span class="guide-dot watch"></span> 30–60m <span class="guide-dot urgent"></span> &gt;60m</span>'
-      : `<span class="legend-item"><i class="legend-dot healthy"></i> Cow location</span><span class="legend-item" id="legend-resting-oval" ${state.overlay ? "" : "hidden"}><span class="legend-oval-dot"></span> Red oval: Shared resting risk area</span>`;
+      : `<span class="legend-item"><i class="legend-dot healthy"></i> Cow location</span><span class="legend-item" id="legend-resting-oval" ${state.overlay ? "" : "hidden"}><span class="legend-oval-dot"></span> Red oval: Shared resting risk area (Model estimate · Non-clinical)</span>`;
     renderHeatmap(state.s12.penMap?.grid?.heatmap);
   });
 });
