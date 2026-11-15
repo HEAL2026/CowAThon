@@ -10,6 +10,10 @@ from .cow_day_features import aggregate_cow_day_features
 from .tiered_baselines import compute_tiered_baselines
 from .health_index import compute_health_index
 from .mastitis_risk import evaluate_acute_mastitis_risk
+from .exposure_resting import calculate_resting_exposure
+from .exposure_milking import calculate_milking_exposure
+from .exposure_combined import calculate_combined_exposure
+from .backtrace import backtrace, run_permutation_attribution_test
 
 __all__ = [
     "calculate_thi",
@@ -27,4 +31,9 @@ __all__ = [
     "compute_tiered_baselines",
     "compute_health_index",
     "evaluate_acute_mastitis_risk",
+    "calculate_resting_exposure",
+    "calculate_milking_exposure",
+    "calculate_combined_exposure",
+    "backtrace",
+    "run_permutation_attribution_test",
 ]

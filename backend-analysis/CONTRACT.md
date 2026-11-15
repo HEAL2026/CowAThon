@@ -167,7 +167,7 @@ List of triggered auto-flags when `acute_mastitis_risk >= 70.0`:
 ]
 ```
 
-### 4.2 Benchmark Results Schema (`benchmark_results.json`)
+### 4.3 Benchmark Results Schema (`benchmark_results.json`)
 Results of animal-disjoint group cross-validation comparing single-sensor baselines against the multimodal predictor.
 The `evaluation_protocol` explicitly distinguishes `group_kfold_K (n=N)`, `leave_one_animal_out (n=N)`, or `insufficient_animals_for_cv (n=N)`:
 ```json
@@ -209,5 +209,45 @@ The `evaluation_protocol` explicitly distinguishes `group_kfold_K (n=N)`, `leave
   },
   "multimodal_lift_over_env_baseline_auc": 0.275,
   "multimodal_lift_over_cbt_baseline_auc": 0.163
+}
+```
+
+### 4.4 Backtrace Result Schema (`backtrace()` / `POST /backtrace`)
+Returned by `analysis.backtrace(flags, lookback_hours=72)` and consumed by `apis/` and dashboard attribution panels:
+```json
+{
+  "investigation_id": "trace_20230725_143000",
+  "generated_at_utc": "2023-07-25T14:30:00Z",
+  "lookback_hours": 72,
+  "flagged_cows": ["C02", "C01"],
+  "likely_route": "milking_equipment",
+  "p_values": {
+    "resting_route": 0.35,
+    "milking_equipment": 0.025
+  },
+  "pathogen_group_likelihood": {
+    "contagious_milking_associated": 0.85,
+    "environmental_bedding_associated": 0.15,
+    "note": "Significant un-sanitized serial milking stall contacts; typical of contagious pathogens (e.g. Staph aureus)"
+  },
+  "implicated_units_or_cells": ["STALL-01"],
+  "exposed_cows": [
+    {
+      "cow_id": "C03",
+      "combined_exposure_score": 0.72,
+      "resting_exposure_score": 0.10,
+      "milking_exposure_score": 0.69,
+      "primary_route": "milking_equipment",
+      "contact_adjusted_risk": 46.8,
+      "recommended_preventative_action": "Sanitize teat cluster before attaching; inspect teat end condition"
+    }
+  ],
+  "recommended_actions": [
+    "Inspect teat cup liner condition and vacuum stability on implicated milking units",
+    "Enforce automatic cluster backflush / hot water acid disinfection between milkings",
+    "Enforce strict individual teat drying towels and pre-milking teat dip contact time"
+  ],
+  "is_model_suggestion": true,
+  "is_synthetic": false
 }
 ```
