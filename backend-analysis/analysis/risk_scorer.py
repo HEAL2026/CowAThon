@@ -3,8 +3,8 @@
 Combines four physiological and behavioral signal components:
 1. Thermal Strain (0 - 40 pts): CBT elevation & ambient THI exposure
 2. Behavioral Anomaly (0 - 30 pts): Rumination depression & activity abnormalities
-3. Production Deficit (0 - 20 pts): Daily milk yield drop relative to 3-day mean
-4. Movement & Spatial Strain (0 - 10 pts): Idling/crowding latency
+3. Production Deficit (0 - 20 pts): Daily milk yield drop relative to rolling baseline
+4. Movement & Spatial Strain (0 - 10 pts): Idling/crowding latency (aware of out_of_pen state)
 
 Strictly non-diagnostic: outputs risk category (baseline / moderate_watch / priority_watch)
 and actionable management suggestions.
@@ -50,11 +50,14 @@ class MultimodalRiskScorer:
         confidence = 1.0
 
         # 1. Thermal strain component (0 - 40)
-        cbt_val = row.get("cbt")
-        thi_val = row.get("thi")
+        cbt_val = row.get("cbt_c") if row.get("cbt_c") is not None else row.get("cbt")
+        thi_val = row.get("indoor_thi") if row.get("indoor_thi") is not None else row.get("thi")
 
-        if thi_val is None and row.get("temp_c") is not None and row.get("rh_pct") is not None:
-            thi_val = calculate_thi(row["temp_c"], row["rh_pct"])
+        if thi_val is None:
+            temp = row.get("indoor_temp_c") if row.get("indoor_temp_c") is not None else row.get("temp_c")
+            rh = row.get("indoor_rh_pct") if row.get("indoor_rh_pct") is not None else row.get("rh_pct")
+            if temp is not None and rh is not None:
+                thi_val = calculate_thi(temp, rh)
 
         thermal_score = 0.0
         if cbt_val is not None and not pd.isna(cbt_val):
@@ -80,7 +83,7 @@ class MultimodalRiskScorer:
         total_score += min(self.cbt_weight, thermal_score)
 
         # 2. Behavioral anomaly component (0 - 30)
-        act_val = row.get("activity_index")
+        act_val = row.get("neck_imu_magnitude_std") if row.get("neck_imu_magnitude_std") is not None else row.get("activity_index")
         rum_val = row.get("rumination_proxy")
 
         if act_val is None and "acc_x_std" in row:
@@ -107,9 +110,10 @@ class MultimodalRiskScorer:
 
         # 3. Production deficit component (0 - 20)
         milk_drop_pct = row.get("milk_drop_pct")
-        if milk_drop_pct is not None and not pd.isna(milk_drop_pct):
+        milk_val = row.get("milk_yield_kg") if row.get("milk_yield_kg") is not None else row.get("milk_yield")
+        if (milk_drop_pct is not None and not pd.isna(milk_drop_pct)) or (milk_val is not None and not pd.isna(milk_val)):
             modalities_present.append("milk_yield")
-            if milk_drop_pct > 5.0:
+            if milk_drop_pct is not None and milk_drop_pct > 5.0:
                 drop_score = min(self.production_weight, (milk_drop_pct - 5.0) * 1.0)
                 total_score += drop_score
                 contributing_factors.append(f"Milk yield depressed {milk_drop_pct:.1f}% below rolling baseline")
@@ -118,10 +122,16 @@ class MultimodalRiskScorer:
             confidence -= 0.15
 
         # 4. Movement / Spatial strain component (0 - 10)
+        out_of_pen = bool(row.get("out_of_pen", False))
         idling_fraction = row.get("idling_fraction")
-        if idling_fraction is not None and not pd.isna(idling_fraction):
+        uwb_present = (row.get("uwb_x_m") is not None and not pd.isna(row.get("uwb_x_m"))) or idling_fraction is not None
+
+        if out_of_pen:
+            # Cow is on scheduled milking trip: expected absence, not missingness
             modalities_present.append("uwb")
-            if idling_fraction > 0.6:
+        elif uwb_present:
+            modalities_present.append("uwb")
+            if idling_fraction is not None and idling_fraction > 0.6:
                 total_score += min(self.movement_weight, (idling_fraction - 0.6) * 20.0)
                 contributing_factors.append("Extended idling in high-density barn zone")
         else:

@@ -63,7 +63,7 @@ def categorize_thi_strain(
 
 def calculate_thermal_load(
     df: pd.DataFrame,
-    thi_col: str = "thi",
+    thi_col: str | None = None,
     time_col: str = "ts_utc",
     group_col: str = "cow_id",
     threshold: float = 68.0,
@@ -73,7 +73,7 @@ def calculate_thermal_load(
 
     Args:
         df: Input DataFrame containing time and THI columns.
-        thi_col: Column name containing THI.
+        thi_col: Column name containing THI (defaults to 'indoor_thi' or 'thi').
         time_col: Timestamp column.
         group_col: Animal or group grouping column.
         threshold: Heat stress threshold (default 68.0).
@@ -82,8 +82,13 @@ def calculate_thermal_load(
     Returns:
         pd.Series containing degree-hours thermal load.
     """
-    if thi_col not in df.columns:
-        raise KeyError(f"THI column {thi_col!r} not found in DataFrame.")
+    if thi_col is None:
+        if "indoor_thi" in df.columns:
+            thi_col = "indoor_thi"
+        elif "thi" in df.columns:
+            thi_col = "thi"
+        else:
+            raise KeyError("Neither 'indoor_thi' nor 'thi' found in DataFrame.")
 
     thi_excess = (df[thi_col] - threshold).clip(lower=0.0)
     df_temp = df.copy()

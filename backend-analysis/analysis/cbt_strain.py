@@ -36,13 +36,11 @@ def calculate_cbt_strain_score(
     arr = np.asarray(cbt_c, dtype=float)
     score = np.zeros_like(arr, dtype=float)
 
-    # Mild to severe window (39.2 to 40.0) -> maps to 0 to 30 points
     mask_mild = (arr > mild_threshold_c) & (arr <= severe_threshold_c)
     score[mask_mild] = (arr[mask_mild] - mild_threshold_c) / (
         severe_threshold_c - mild_threshold_c
     ) * 30.0
 
-    # Severe window (> 40.0) -> maps 30.0 to 40.0 points (clamped at 41.0°C)
     mask_severe = arr > severe_threshold_c
     excess_above_severe = np.clip((arr[mask_severe] - severe_threshold_c) / 1.0, 0.0, 1.0)
     score[mask_severe] = 30.0 + excess_above_severe * 10.0
@@ -56,7 +54,7 @@ def calculate_cbt_strain_score(
 
 def detect_temperature_spikes(
     df: pd.DataFrame,
-    cbt_col: str = "cbt",
+    cbt_col: str | None = None,
     time_col: str = "ts_utc",
     group_col: str = "cow_id",
     spike_threshold_c: float = 39.5,
@@ -66,7 +64,7 @@ def detect_temperature_spikes(
 
     Args:
         df: DataFrame containing temperature, animal ID, and timestamps.
-        cbt_col: Column containing core body temperature.
+        cbt_col: Column containing core body temperature ('cbt_c' or 'cbt').
         time_col: Timestamp column.
         group_col: Cow identifier.
         spike_threshold_c: Temperature threshold for spike event.
@@ -75,17 +73,24 @@ def detect_temperature_spikes(
     Returns:
         DataFrame summarizing spike events with start, end, duration, and peak CBT.
     """
-    if cbt_col not in df.columns or group_col not in df.columns:
+    if cbt_col is None:
+        if "cbt_c" in df.columns:
+            cbt_col = "cbt_c"
+        elif "cbt" in df.columns:
+            cbt_col = "cbt"
+        else:
+            return pd.DataFrame(columns=[group_col, "start_time", "end_time", "duration_min", "peak_cbt"])
+
+    if group_col not in df.columns:
         return pd.DataFrame(columns=[group_col, "start_time", "end_time", "duration_min", "peak_cbt"])
 
     episodes = []
     for cow_id, group in df.groupby(group_col):
         g = group.sort_values(time_col).copy()
         is_high = g[cbt_col] >= spike_threshold_c
-        # Group contiguous blocks of True
         blocks = (~is_high).cumsum()[is_high]
         for _, block in g[is_high].groupby(blocks):
-            duration = len(block) # Assuming 1-minute cadence rows
+            duration = len(block)
             if duration >= min_duration_minutes:
                 episodes.append({
                     group_col: cow_id,

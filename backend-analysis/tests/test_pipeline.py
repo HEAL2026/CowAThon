@@ -30,7 +30,7 @@ class TestPipelineIntegration(unittest.TestCase):
             self.assertIn("analyzed_df", result)
 
             self.assertEqual(len(result["cow_summaries"]), 10)
-            cow_01 = result["cow_summaries"]["cow_01"]
+            cow_01 = result["cow_summaries"]["C01"]
             self.assertIn("watch_risk_score", cow_01)
             self.assertIn("risk_category", cow_01)
             self.assertIn("confidence_score", cow_01)
@@ -61,7 +61,7 @@ class TestPipelineIntegration(unittest.TestCase):
             # Validate Parquet file loads cleanly
             df_loaded = pd.read_parquet(timeseries_file)
             self.assertIn("watch_risk_score", df_loaded.columns)
-            self.assertIn("thi", df_loaded.columns)
+            self.assertIn("indoor_thi", df_loaded.columns)
             self.assertIn("activity_index", df_loaded.columns)
 
 
