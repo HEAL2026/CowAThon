@@ -20,10 +20,27 @@ const state = {
 const timeLabel = document.querySelector("#time-label");
 const slider = document.querySelector("#time-slider");
 const views = ["barn", "milking", "alerts", "messages"];
-const apiBase = (window.HERDWISE_API_BASE || new URLSearchParams(window.location.search).get("api") || "http://127.0.0.1:8000").replace(/\/$/, "");
+const queryParams = new URLSearchParams(window.location.search);
+const configuredApiBase = window.HERDWISE_API_BASE || queryParams.get("api");
+const apiBase = (configuredApiBase || "http://127.0.0.1:8000").replace(/\/$/, "");
+const interactiveApiBase = (
+  window.HERDWISE_INTERACTIVE_API_BASE
+  || queryParams.get("interactiveApi")
+  || configuredApiBase
+  || "http://127.0.0.1:8001"
+).replace(/\/$/, "");
 
 async function fetchApi(path, options = {}) {
   const response = await fetch(`${apiBase}${path}`, {
+    ...options,
+    headers: { Accept: "application/json", ...(options.headers || {}) },
+  });
+  if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+  return response.json();
+}
+
+async function fetchInteractiveApi(path, options = {}) {
+  const response = await fetch(`${interactiveApiBase}${path}`, {
     ...options,
     headers: { Accept: "application/json", ...(options.headers || {}) },
   });
@@ -112,6 +129,7 @@ function renderRestingOverlays(payload) {
   const hasOverlayData = Object.prototype.hasOwnProperty.call(payload || {}, "resting_areas")
     || Object.prototype.hasOwnProperty.call(payload || {}, "implicated_resting_areas")
     || Object.prototype.hasOwnProperty.call(payload || {}, "implicated_circles")
+    || Object.prototype.hasOwnProperty.call(payload || {}, "implicatedRestingCircles")
     || Object.prototype.hasOwnProperty.call(payload?.implicated_elements || {}, "resting_areas");
   if (!hasOverlayData) return;
   target.replaceChildren();
@@ -119,6 +137,7 @@ function renderRestingOverlays(payload) {
   const areas = payload?.resting_areas
     || payload?.implicated_resting_areas
     || payload?.implicated_circles
+    || payload?.implicatedRestingCircles
     || payload?.implicated_elements?.resting_areas
     || [];
   const width = Number(payload?.grid?.width_m || state.s12.penMap?.grid?.width_m || 30);
@@ -151,7 +170,9 @@ function renderRestingOverlays(payload) {
 function routeLabel(route) {
   return {
     resting_area: "Resting area",
+    resting_environment: "Resting area",
     milking_equipment: "Milking equipment",
+    milking_machine: "Milking equipment",
     both: "Both routes",
     no_common_route: "No common route",
     resting_cubicle_route: "Resting area",
@@ -175,6 +196,45 @@ function renderHerdHealth(payload) {
   }));
 }
 
+function normalizeBacktraceResult(result) {
+  const summary = result?.summary || result || {};
+  const analysis = summary.analysisResult || {};
+  const circles = summary.implicatedRestingCircles
+    || summary.implicated_resting_areas
+    || summary.implicated_circles
+    || analysis.implicated_resting_areas
+    || analysis.implicated_circles
+    || [];
+  const contacts = summary.primaryContactCows
+    || summary.contact_cows
+    || analysis.high_risk_contacts?.map((contact) => contact.cow_id).filter(Boolean)
+    || [];
+  const route = summary.likely_route || summary.likelyRoute || analysis.likely_route;
+  const pValue = summary.routeConfidencePValue
+    ?? analysis.route_p_values?.resting_p_value
+    ?? analysis.p_values?.resting_route;
+
+  return {
+    ...result,
+    ...summary,
+    likely_route: route,
+    p_values: summary.p_values || analysis.p_values || {
+      resting_route: pValue,
+      milking_equipment: pValue,
+    },
+    transmission_source: {
+      ...(summary.transmission_source || {}),
+      identifier: summary.implicatedResource || summary.transmission_source?.identifier,
+      resting_areas: circles,
+    },
+    implicated_resting_areas: circles,
+    implicated_circles: circles,
+    contact_cows: contacts,
+    recommended_actions: summary.recommended_actions
+      || (summary.recommendedIntervention ? [summary.recommendedIntervention] : []),
+  };
+}
+
 function renderAttribution(payload) {
   state.s12.attribution = payload;
   renderRestingOverlays(payload);
@@ -184,6 +244,7 @@ function renderAttribution(payload) {
   const restingAreas = payload?.resting_areas
     || payload?.implicated_resting_areas
     || payload?.implicated_circles
+    || payload?.implicatedRestingCircles
     || payload?.transmission_source?.resting_areas
     || [];
   const restingSummary = restingAreas.length
@@ -396,18 +457,19 @@ document.querySelector("#run-backtrace").addEventListener("click", async () => {
   }
   status.textContent = "Running a 72-hour backtrace…";
   try {
-    const result = await fetchApi("/backtrace", {
+    const result = await fetchInteractiveApi("/backtrace", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        flags: [...state.groupFlags].map(([cowId]) => ({ cow_id: cowId, timestamp: new Date().toISOString(), source: "manual" })),
-        lookback_hours: 72,
+        animal_ids: [...state.groupFlags.keys()],
+        lookback_days: 3,
       }),
     });
-    renderAttribution(result);
-    renderRestingOverlays(result);
-    if (result.impact) renderImpact(result.impact);
-    status.textContent = `Backtrace complete · ${routeLabel(result.likely_route)} most supported.`;
+    const backtrace = normalizeBacktraceResult(result);
+    renderAttribution(backtrace);
+    renderRestingOverlays(backtrace);
+    if (backtrace.impact) renderImpact(backtrace.impact);
+    status.textContent = `Backtrace complete · ${routeLabel(backtrace.likely_route)} most supported.`;
   } catch (error) {
     status.textContent = "Backtrace service unavailable. The last visualization result remains displayed.";
   }
