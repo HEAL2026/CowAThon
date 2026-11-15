@@ -2,7 +2,7 @@
 
 Uses 1-minute aggregated IMU features (neck_imu_magnitude_std or 3-axis stds) to compute:
 - Kinetic activity index
-- Posture / activity state (resting vs active)
+- Posture / activity state (stationary_hardware vs resting vs active)
 - Rumination proxy from characteristic low-amplitude cyclical neck motion
 - Behavioral anomaly score (0 - 30 points)
 - Empirical ground-truth concordance evaluation on labeled MMCows windows (2023-07-25)
@@ -43,10 +43,22 @@ def calculate_activity_index(
 def classify_posture_state(
     activity_index: pd.Series | np.ndarray,
     resting_threshold: float = 0.08,
+    stationary_hardware_threshold: float = 0.005,
 ) -> pd.Series:
-    """Classify posture / movement state into 'resting' or 'active'."""
+    """Classify posture / movement state into 'stationary_hardware', 'resting', or 'active'.
+
+    Live cattle exhibit basal physiological motion (breathing, rumination, twitches)
+    producing kinetic variance typically between 0.015 and 0.07.
+    A stationary hardware reference tag (e.g. T13/T14 on a wooden post) produces
+    negligible kinetic variation (< 0.005 m/s^2), which is classified as
+    'stationary_hardware' rather than misclassified as a live resting cow.
+    """
     arr = np.asarray(activity_index)
-    states = np.where(arr < resting_threshold, "resting", "active")
+    states = np.empty(arr.shape, dtype=object)
+    states[arr < stationary_hardware_threshold] = "stationary_hardware"
+    states[(arr >= stationary_hardware_threshold) & (arr < resting_threshold)] = "resting"
+    states[arr >= resting_threshold] = "active"
+
     if isinstance(activity_index, pd.Series):
         return pd.Series(states, index=activity_index.index, name="posture_state")
     return pd.Series(states, name="posture_state")
@@ -68,7 +80,8 @@ def calculate_rumination_proxy(
     else:
         act = calculate_activity_index(df)
 
-    in_resting_zone = act < 0.08
+    # In live resting cattle: between 0.015 and 0.08
+    in_resting_zone = (act >= 0.015) & (act < 0.08)
     rhythm_score = np.exp(-((act - 0.035) ** 2) / (2 * (0.02**2))) * 100.0
     rumination_score = np.where(in_resting_zone, rhythm_score, 0.0)
 
@@ -100,8 +113,11 @@ def calculate_behavior_anomaly_score(
 
     if activity_col in df.columns:
         act = df[activity_col].values
+        # Moderate lethargy in live cows (between 0.005 and 0.015)
         immobility = np.clip((0.015 - act) / 0.015, 0.0, 1.0)
-        score += immobility * 10.0
+        # Exclude inanimate hardware (< 0.005)
+        live_immobility = np.where(act >= 0.005, immobility, 0.0)
+        score += live_immobility * 10.0
 
     return pd.Series(
         np.clip(score, 0.0, max_points),
@@ -137,7 +153,6 @@ def validate_behavior_against_ground_truth(
             "note": "No ground-truth behavior annotations present in this window (annotations available for 2023-07-25).",
         }
 
-    # Filter to annotated rows
     mask = pd.Series(False, index=df.index)
     if behavior_mode_col in df.columns:
         mask = mask | (df[behavior_mode_col].notna() & (df[behavior_mode_col] != 0))
@@ -150,7 +165,6 @@ def validate_behavior_against_ground_truth(
     if len(labeled_df) == 0:
         return {"has_ground_truth_labels": False, "n_labeled_rows": 0}
 
-    # Ground truth binary lying
     is_gt_lying = pd.Series(False, index=labeled_df.index)
     if behavior_mode_col in labeled_df.columns:
         is_gt_lying = is_gt_lying | (labeled_df[behavior_mode_col] == 7)
@@ -161,20 +175,17 @@ def validate_behavior_against_ground_truth(
 
     gt_arr = is_gt_lying.astype(int).values
 
-    # Sensor / model predictions
     results: dict[str, Any] = {
         "has_ground_truth_labels": True,
         "n_labeled_rows": len(labeled_df),
         "gt_lying_rate": round(float(np.mean(gt_arr)), 3),
     }
 
-    # 1. Ankle sensor agreement (lying column vs vision ground truth)
     if ankle_lying_col in labeled_df.columns and labeled_df[ankle_lying_col].notna().any():
         ankle_pred = labeled_df[ankle_lying_col].fillna(0).astype(int).values
         ankle_acc = float(np.mean(ankle_pred == gt_arr))
         results["ankle_sensor_ground_truth_concordance"] = round(ankle_acc, 3)
 
-    # 2. IMU posture classification agreement
     if posture_col in labeled_df.columns:
         pred_resting = (labeled_df[posture_col] == "resting").astype(int).values
         acc = float(np.mean(pred_resting == gt_arr))

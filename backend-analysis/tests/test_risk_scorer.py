@@ -3,6 +3,7 @@
 import unittest
 import pandas as pd
 from analysis.risk_scorer import MultimodalRiskScorer
+from analysis.behavior import classify_posture_state
 
 
 class TestRiskScorer(unittest.TestCase):
@@ -11,11 +12,11 @@ class TestRiskScorer(unittest.TestCase):
 
     def test_healthy_baseline_cow(self):
         record = {
-            "cow_id": "cow_01",
-            "ts_utc": "2026-07-25T10:00:00Z",
-            "cbt": 38.7,
-            "thi": 64.0,
-            "activity_index": 0.035,
+            "cow_id": "C01",
+            "ts_utc": "2023-07-25T10:00:00Z",
+            "cbt_c": 38.7,
+            "indoor_thi": 64.0,
+            "neck_imu_magnitude_std": 0.035,
             "rumination_proxy": 85.0,
             "milk_drop_pct": 0.5,
             "idling_fraction": 0.3,
@@ -28,11 +29,11 @@ class TestRiskScorer(unittest.TestCase):
 
     def test_distressed_priority_watch_cow(self):
         record = {
-            "cow_id": "cow_02",
-            "ts_utc": "2026-07-25T10:00:00Z",
-            "cbt": 40.2, # Elevated fever / heat strain
-            "thi": 76.0, # High environmental THI
-            "activity_index": 0.010, # Lethargy
+            "cow_id": "C02",
+            "ts_utc": "2023-07-25T10:00:00Z",
+            "cbt_c": 40.2, # Elevated fever / heat strain
+            "indoor_thi": 76.0, # High environmental THI
+            "neck_imu_magnitude_std": 0.010, # Lethargy
             "rumination_proxy": 15.0, # Depressed rumination
             "milk_drop_pct": 18.0, # Significant milk drop
             "idling_fraction": 0.8,
@@ -45,24 +46,49 @@ class TestRiskScorer(unittest.TestCase):
         self.assertTrue(len(res["recommended_actions"]) > 0)
 
     def test_graceful_missing_modality_degradation(self):
-        # Record with no CBT (e.g. bolus not yet swallowed or detached)
         record = {
-            "cow_id": "cow_03",
-            "ts_utc": "2026-07-25T10:00:00Z",
-            "cbt": None,
-            "thi": 75.0,
-            "activity_index": 0.03,
+            "cow_id": "C03",
+            "ts_utc": "2023-07-25T10:00:00Z",
+            "cbt_c": None,
+            "indoor_thi": 75.0,
+            "neck_imu_magnitude_std": 0.03,
             "rumination_proxy": 45.0,
             "milk_drop_pct": 2.0,
         }
         res = self.scorer.score_record(record)
-        # Should gracefully compute score without crashing
         self.assertIn("cbt", res["missing_modalities"])
         self.assertNotIn("cbt", res["modalities_present"])
-        # Confidence score should decrease
         self.assertLess(res["confidence_score"], 0.8)
         self.assertGreaterEqual(res["watch_risk_score"], 0.0)
         self.assertLessEqual(res["watch_risk_score"], 100.0)
+
+    def test_stationary_reference_hardware_tag(self):
+        # Stress-test case: T13/T14 stationary reference tag
+        # Collar and UWB present, but zero biological movement (std < 0.005)
+        # No CBT bolus, no milk, no barn environment
+        record = {
+            "cow_id": "T13",
+            "ts_utc": "2023-07-25T12:00:00Z",
+            "neck_imu_magnitude_std": 0.002, # Stationary hardware noise floor
+            "uwb_x_m": 5.4,
+            "uwb_y_m": 3.2,
+            "cbt_c": None,
+            "indoor_thi": None,
+            "milk_yield_kg": None,
+            "lying": None,
+        }
+
+        # 1. Posture state correctly identifies stationary hardware rather than resting animal
+        posture = classify_posture_state(pd.Series([record["neck_imu_magnitude_std"]]))
+        self.assertEqual(posture.iloc[0], "stationary_hardware")
+
+        # 2. Risk scoring drops confidence severely and reports missing channels
+        res = self.scorer.score_record(record)
+        self.assertLess(res["confidence_score"], 0.50)
+        self.assertIn("cbt", res["missing_modalities"])
+        self.assertIn("indoor_env", res["missing_modalities"])
+        self.assertIn("milk_yield", res["missing_modalities"])
+        self.assertTrue(res["is_model_suggestion"])
 
 
 if __name__ == "__main__":
