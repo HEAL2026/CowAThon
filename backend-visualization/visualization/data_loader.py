@@ -516,8 +516,22 @@ def get_pen_map_data(
                             elif "lying" in row and pd.notnull(row["lying"]):
                                 is_lying = (int(row["lying"]) == 1)
 
-                            out_pen = bool(row.get("out_of_pen", False)) or (xm < 0 or xm > 30 or ym < 0 or ym > 15)
-                            zone = "milking_lane" if out_pen else ("cubicle_row_a" if ym <= 7.0 else ("cubicle_row_b" if ym >= 9.0 else "feed_alley"))
+                            in_centered = (-13.0 <= xm <= 13.0) and (-10.0 <= ym <= 9.0)
+                            in_positive = (0.0 <= xm <= 30.0) and (0.0 <= ym <= 15.0)
+                            is_in_bounds = in_centered or in_positive
+
+                            raw_oop = row.get("out_of_pen")
+                            if pd.notna(raw_oop):
+                                out_pen = bool(raw_oop) or not is_in_bounds
+                            else:
+                                out_pen = not is_in_bounds
+
+                            if out_pen:
+                                zone = "milking_lane"
+                            elif in_centered and (xm < 0 or ym < 0):
+                                zone = "cubicle_row_a" if ym <= -1.0 else ("cubicle_row_b" if ym <= 4.0 else "feed_alley")
+                            else:
+                                zone = "cubicle_row_a" if ym <= 7.0 else ("cubicle_row_b" if ym >= 9.0 else "feed_alley")
                             activity_state = "milking" if out_pen else ("resting" if is_lying else "active")
                             is_c01 = (cid == "C01")
                             is_c02 = (cid == "C02")
@@ -565,8 +579,22 @@ def get_pen_map_data(
                         xm = float(row.get("uwb_x_m") or 15.0)
                         ym = float(row.get("uwb_y_m") or 7.5)
                         lying = int(row.get("lying", 0))
-                        out_pen = bool(row.get("out_of_pen", False))
-                        zone = "milking_lane" if out_pen else ("cubicle_row_a" if ym <= 7.0 else ("cubicle_row_b" if ym >= 9.0 else "feed_alley"))
+                        in_centered = (-13.0 <= xm <= 13.0) and (-10.0 <= ym <= 9.0)
+                        in_positive = (0.0 <= xm <= 30.0) and (0.0 <= ym <= 15.0)
+                        is_in_bounds = in_centered or in_positive
+
+                        raw_oop = row.get("out_of_pen")
+                        if pd.notna(raw_oop):
+                            out_pen = bool(raw_oop) or not is_in_bounds
+                        else:
+                            out_pen = not is_in_bounds
+
+                        if out_pen:
+                            zone = "milking_lane"
+                        elif in_centered and (xm < 0 or ym < 0):
+                            zone = "cubicle_row_a" if ym <= -1.0 else ("cubicle_row_b" if ym <= 4.0 else "feed_alley")
+                        else:
+                            zone = "cubicle_row_a" if ym <= 7.0 else ("cubicle_row_b" if ym >= 9.0 else "feed_alley")
                         is_c01 = (cid == "C01")
                         is_c02 = (cid == "C02")
                         cows_data.append({
