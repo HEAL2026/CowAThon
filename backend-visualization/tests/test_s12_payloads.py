@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-for p in [REPO_ROOT / "backend-visualization", REPO_ROOT / "backend-cleaning", REPO_ROOT / "apis"]:
+for p in [REPO_ROOT, REPO_ROOT / "backend-visualization", REPO_ROOT / "backend-cleaning", REPO_ROOT / "apis"]:
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
@@ -236,13 +236,14 @@ class TestS12Payloads(unittest.TestCase):
         self.assertNotEqual((c1_c01["uwb_x_m"], c1_c01["uwb_y_m"]), (c2_c01["uwb_x_m"], c2_c01["uwb_y_m"]))
         self.assertNotEqual((c2_c01["uwb_x_m"], c2_c01["uwb_y_m"]), (c3_c01["uwb_x_m"], c3_c01["uwb_y_m"]))
 
-        # Bounds check across all 16 cows
+        # Bounds check across all instrumented cows
         for payload in [p1, p2, p3]:
             for cow in payload["cows"]:
-                self.assertGreaterEqual(cow["uwb_x_m"], 0.0)
-                self.assertLessEqual(cow["uwb_x_m"], 30.0)
-                self.assertGreaterEqual(cow["uwb_y_m"], 0.0)
-                self.assertLessEqual(cow["uwb_y_m"], 15.0)
+                if cow.get("uwb_x_m") is not None:
+                    self.assertGreaterEqual(cow["uwb_x_m"], 0.0)
+                    self.assertLessEqual(cow["uwb_x_m"], 30.0)
+                    self.assertGreaterEqual(cow["uwb_y_m"], 0.0)
+                    self.assertLessEqual(cow["uwb_y_m"], 15.0)
 
     def test_pen_map_with_cows_data_and_synthetic_gating(self):
         """Verifies is_synthetic is False when real cow positions are supplied."""
@@ -322,6 +323,139 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p["grid"]["origin"], "bottom_left")
         self.assertEqual(p["grid"]["x_min_m"], 0.0)
         self.assertEqual(p["grid"]["x_max_m"], 30.0)
+
+    def test_heatmap_c11_c16_exclusion(self):
+        """Verifies uninstrumented cows C11-C16 and rows with is_instrumented=False do not contribute heatmap cells."""
+        # 1. Test generate_pen_map with bouts for C11-C16
+        bouts_with_untracked = [
+            {
+                "cow_id": "C12",
+                "x_m": -2.0,
+                "y_m": 1.0,
+                "duration_min": 45.0,
+                "is_instrumented": False,
+            },
+            {
+                "cow_id": "C15",
+                "center_x_m": 0.0,
+                "center_y_m": 0.0,
+                "duration_min": 60.0,
+            },
+            {
+                "cow_id": "C01",
+                "x_m": 5.0,
+                "y_m": 2.0,
+                "duration_min": 35.0,
+                "is_instrumented": True,
+            },
+        ]
+        p = generate_pen_map(lying_bouts=bouts_with_untracked)
+        heatmap = p["grid"]["heatmap"]
+        # Only C01's bout should contribute; total non-zero cells in heatmap should be exactly 1
+        non_zero_cells = [val for row in heatmap for val in row if val > 0]
+        self.assertEqual(len(non_zero_cells), 1)
+
+        # 2. Test generate_barn_overview with C11-C16 cows
+        from visualization.payloads import generate_barn_overview
+        cows_overview = [
+            {
+                "cow_id": "C01",
+                "uwb_x_m": 15.0,
+                "uwb_y_m": 7.5,
+                "is_instrumented": True,
+            },
+            {
+                "cow_id": "C12",
+                "uwb_x_m": 0.0,
+                "uwb_y_m": 0.0,
+                "is_instrumented": False,
+            },
+            {
+                "cow_id": "C13",
+                "uwb_x_m": None,
+                "uwb_y_m": None,
+            },
+        ]
+        barn = generate_barn_overview(cows_data=cows_overview)
+        matrix = barn["heatmap_grid"]["density_matrix"]
+        # Only C01 should contribute, cell (0, 0) should remain 0.0
+        self.assertEqual(matrix[0][0], 0.0)
+        total_density = sum(sum(row) for row in matrix)
+        self.assertAlmostEqual(total_density, 1.0)
+        c12_rec = next(c for c in barn["cows"] if c["cow_id"] == "C12")
+        self.assertIsNone(c12_rec["uwb_x_m"])
+        self.assertFalse(c12_rec["is_instrumented"])
+
+    def test_heatmap_negative_centered_coordinates_projection(self):
+        """Verifies negative centered MMCows coordinates project to valid interior grid cells without (0, 0) clamping."""
+        centered_bouts = [
+            {
+                "cow_id": "C01",
+                "x_m": -4.2,
+                "y_m": 2.1,
+                "duration_min": 40.0,
+                "is_instrumented": True,
+            },
+            {
+                "cow_id": "C03",
+                "x_m": float("nan"),
+                "y_m": float("nan"),
+                "duration_min": 50.0,
+            },
+        ]
+        p = generate_pen_map(lying_bouts=centered_bouts)
+        heatmap = p["grid"]["heatmap"]
+        # Top-left cell (0, 0) must NOT be clamped to
+        self.assertEqual(heatmap[0][0], 0.0)
+        # Expected grid indices:
+        # gx = int(((-4.2 - (-12.45)) / 24.9) * 30) = int((8.25 / 24.9) * 30) = int(9.939) = 9
+        # gy = int(((2.1 - (-9.31)) / 17.7) * 15) = int((11.41 / 17.7) * 15) = int(9.669) = 9
+        self.assertGreater(heatmap[9][9], 0.0)
+        self.assertEqual(p["coordinate_system"], "centered")
+        self.assertEqual(p["grid"]["origin"], "center")
+        self.assertEqual(p["grid"]["x_min_m"], -12.45)
+        self.assertEqual(p["grid"]["x_max_m"], 12.45)
+        self.assertEqual(p["grid"]["y_min_m"], -9.31)
+        self.assertEqual(p["grid"]["y_max_m"], 8.39)
+
+    def test_heatmap_empty_when_no_qualifying_bouts(self):
+        """Verifies explicitly passing empty or short bouts yields an empty heatmap rather than fallback fixture."""
+        # 1. Empty list
+        p_empty = generate_pen_map(lying_bouts=[])
+        heatmap_empty = p_empty["grid"]["heatmap"]
+        max_density = max(max(row) for row in heatmap_empty)
+        self.assertEqual(max_density, 0.0)
+
+        # 2. Only bouts < 20 min (below resting occupancy threshold)
+        short_bouts = [
+            {"cow_id": "C01", "x_m": 5.0, "y_m": 2.0, "duration_min": 12.0},
+            {"cow_id": "C02", "x_m": -3.0, "y_m": 1.0, "duration_min": 8.5},
+        ]
+        p_short = generate_pen_map(lying_bouts=short_bouts)
+        self.assertEqual(max(max(row) for row in p_short["grid"]["heatmap"]), 0.0)
+
+        # 3. Only NaN coordinate bouts
+        nan_bouts = [
+            {"cow_id": "C01", "x_m": float("nan"), "y_m": float("nan"), "duration_min": 45.0},
+        ]
+        p_nan = generate_pen_map(lying_bouts=nan_bouts)
+        self.assertEqual(max(max(row) for row in p_nan["grid"]["heatmap"]), 0.0)
+
+    def test_heatmap_provenance_real_vs_fallback(self):
+        """Verifies is_synthetic flag and fallback cubicle blocks when lying_bouts is None."""
+        # When lying_bouts is None: synthetic fallback cubicle rows A & B
+        p_fallback = generate_pen_map(lying_bouts=None, is_synthetic=True)
+        self.assertTrue(p_fallback["is_synthetic"])
+        # Check standard resting zone values
+        self.assertGreater(p_fallback["grid"]["heatmap"][3][10], 0.0)
+        self.assertGreater(p_fallback["grid"]["heatmap"][10][10], 0.0)
+
+        # When real bouts are supplied with is_synthetic=False
+        p_real = generate_pen_map(
+            lying_bouts=[{"cow_id": "C01", "x_m": 12.0, "y_m": 6.0, "duration_min": 35.0}],
+            is_synthetic=False,
+        )
+        self.assertFalse(p_real["is_synthetic"])
 
 
 if __name__ == "__main__":
