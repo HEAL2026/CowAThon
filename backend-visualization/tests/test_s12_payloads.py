@@ -461,6 +461,62 @@ class TestS12Payloads(unittest.TestCase):
         )
         self.assertFalse(p_real["is_synthetic"])
 
+    def test_resting_areas_real_missing_centered_and_bottom_left_frames(self):
+        """
+        Verifies resting area coordinates handling across:
+        1) Real source coordinates preserved verbatim (never hardcoded over);
+        2) Missing coordinates in centered frame fallback to cubicle row B (-2.4, 1.5);
+        3) Missing coordinates in bottom_left frame fallback to (12.4, 10.2);
+        4) Explicit empty list preserved without fallback injection.
+        """
+        # 1. Real coordinates in centered frame: must preserve exact source coordinates
+        real_resting = [
+            {
+                "area_id": "real_circle_c01",
+                "center_x_m": -5.25,
+                "center_y_m": 0.75,
+                "radius_m": 1.5,
+                "zone_id": "cubicle_row_b",
+                "target_cow_id": "C01",
+            }
+        ]
+        centered_cows = [{"cow_id": "C01", "uwb_x_m": -5.0, "uwb_y_m": 1.0}]
+        p_real = generate_pen_map(cows_data=centered_cows, resting_areas=real_resting, is_synthetic=False)
+        self.assertFalse(p_real["is_synthetic"])
+        self.assertEqual(len(p_real["resting_areas"]), 1)
+        self.assertEqual(p_real["resting_areas"][0]["center_x_m"], -5.25)
+        self.assertEqual(p_real["resting_areas"][0]["center_y_m"], 0.75)
+        self.assertEqual(p_real["coordinate_system"], "centered")
+        self.assertEqual(p_real["grid"]["origin"], "center")
+
+        # 2. Missing coordinates in centered frame: cubicle row B fallback (-2.4, 1.5)
+        p_missing_centered = generate_pen_map(cows_data=centered_cows, resting_areas=None, is_synthetic=False)
+        self.assertEqual(p_missing_centered["resting_areas"][0]["center_x_m"], -2.4)
+        self.assertEqual(p_missing_centered["resting_areas"][0]["center_y_m"], 1.5)
+        self.assertEqual(p_missing_centered["coordinate_system"], "centered")
+        self.assertEqual(p_missing_centered["grid"]["origin"], "center")
+        self.assertEqual(p_missing_centered["grid"]["x_min_m"], -12.45)
+        self.assertEqual(p_missing_centered["grid"]["x_max_m"], 12.45)
+        self.assertEqual(p_missing_centered["grid"]["y_min_m"], -9.31)
+        self.assertEqual(p_missing_centered["grid"]["y_max_m"], 8.39)
+
+        # 3. Missing coordinates in bottom_left (positive) frame: fallback (12.4, 10.2)
+        pos_cows = [{"cow_id": "C01", "uwb_x_m": 15.0, "uwb_y_m": 7.5}]
+        p_missing_pos = generate_pen_map(cows_data=pos_cows, resting_areas=None, is_synthetic=True)
+        self.assertEqual(p_missing_pos["resting_areas"][0]["center_x_m"], 12.4)
+        self.assertEqual(p_missing_pos["resting_areas"][0]["center_y_m"], 10.2)
+        self.assertEqual(p_missing_pos["coordinate_system"], "positive")
+        self.assertEqual(p_missing_pos["grid"]["origin"], "bottom_left")
+        self.assertEqual(p_missing_pos["grid"]["x_min_m"], 0.0)
+        self.assertEqual(p_missing_pos["grid"]["x_max_m"], 30.0)
+        self.assertEqual(p_missing_pos["grid"]["y_min_m"], 0.0)
+        self.assertEqual(p_missing_pos["grid"]["y_max_m"], 15.0)
+
+        # 4. Explicit empty list: preserved without fallback injection
+        p_empty = generate_pen_map(cows_data=centered_cows, resting_areas=[], is_synthetic=False)
+        self.assertEqual(p_empty["resting_areas"], [])
+        self.assertEqual(p_empty["implicated_circles"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
