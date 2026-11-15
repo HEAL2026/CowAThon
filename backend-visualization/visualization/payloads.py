@@ -807,25 +807,69 @@ def generate_pen_map(
             "resting_zones": ["cubicle_row_b"],
         }
 
-    # Real-coordinate 1.5m resting circles bounded by bedding change
+    # Cubicle-level resting spots (5 rows) per docs/backtrace_spec.md §3.2 & §6
     if resting_areas is None:
-        def_cx = -2.4 if has_centered_coords else 12.4
-        def_cy = 1.5 if has_centered_coords else 10.2
-        resting_areas = [
-            {
-                "area_id": "rest_circle_01",
-                "center_x_m": def_cx,
-                "center_y_m": def_cy,
+        from visualization.data_loader import load_resting_spots_data
+        base_spots = load_resting_spots_data()
+        flagged_ids = [c["cow_id"] for c in (cows_payload or []) if c.get("flag_status") == "flagged" or c.get("on_watch_list")]
+        if not flagged_ids:
+            flagged_ids = ["C06"] if any(c.get("cow_id") == "C06" for c in (cows_payload or [])) else ["C01"]
+
+        resting_areas = []
+        for sp in base_spots:
+            cx = float(sp["center_x_m"])
+            cy = float(sp["center_y_m"])
+            if not has_centered_coords:
+                # Shift centered coordinates to positive frame bounds [0..30] x [0..15]
+                cx = round(cx + 12.45, 2)
+                cy = round(cy + 9.31, 2)
+
+            spot_id = sp.get("spot_id", "spot_01")
+            spot_flagged = [cid for cid in flagged_ids if spot_id != "spot_05" or cid in ["C02", "C03"]]
+            n_flagged = len(spot_flagged)
+
+            # Successors per spec 6
+            successors = []
+            if spot_id == "spot_01":
+                successors = [
+                    {"cow_id": "C07", "rank": 1, "lag_h": 2.5, "w": 0.85},
+                    {"cow_id": "C10", "rank": 2, "lag_h": 4.1, "w": 0.72},
+                    {"cow_id": "C01", "rank": 3, "lag_h": 6.0, "w": 0.65},
+                ]
+            elif spot_id == "spot_02":
+                successors = [
+                    {"cow_id": "C03", "rank": 1, "lag_h": 3.2, "w": 0.78},
+                    {"cow_id": "C08", "rank": 2, "lag_h": 5.4, "w": 0.60},
+                ]
+            elif spot_id == "spot_03":
+                successors = [
+                    {"cow_id": "C04", "rank": 1, "lag_h": 4.0, "w": 0.68},
+                ]
+            elif spot_id == "spot_04":
+                successors = [
+                    {"cow_id": "C02", "rank": 1, "lag_h": 7.1, "w": 0.52},
+                ]
+
+            resting_areas.append({
+                "spot_id": spot_id,
+                "area_id": spot_id,
+                "zone_id": sp.get("zone_id", "cubicle_row_b"),
+                "center_x_m": cx,
+                "center_y_m": cy,
                 "radius_m": 1.5,
-                "zone_id": "cubicle_row_b",
-                "target_cow_id": "C01",
-                "target_cows": ["C01"],
-                "until_bedding_change_utc": "2023-07-29T08:15:00Z",
-                "contact_cows": ["C02", "C07"],
-                "cumulative_shed_duration_min": 140.0,
-                "n_contacts": 2,
-            }
-        ]
+                "n_bouts": sp.get("n_bouts", 100),
+                "n_cows": sp.get("n_cows", 10),
+                "dwell_min": sp.get("dwell_min", 10000.0),
+                "n_flagged": n_flagged,
+                "flagged_cows": spot_flagged,
+                "dwell_min_by_flagged": {cid: round(sp.get("dwell_min", 1000.0) * 0.1, 1) for cid in spot_flagged},
+                "successors": successors,
+                "until_bedding_change_utc": "2023-07-28T14:00:00Z",
+                "contact_cows": [s["cow_id"] for s in successors],
+                "contact_cow_ids": [s["cow_id"] for s in successors],
+                "provenance": sp.get("provenance", "real"),
+                "is_synthetic": sp.get("is_synthetic", False),
+            })
 
     # Contact events overlay
     if contact_events is None:
@@ -871,6 +915,7 @@ def generate_pen_map(
         },
         "cows": cows_payload,
         "implicated_elements": implicated_elements,
+        "resting_spots": resting_areas,
         "resting_areas": resting_areas,
         "implicated_circles": resting_areas,
         "contact_events": contact_events,

@@ -275,16 +275,22 @@ Exposes system modularity, capability profiles, and cost metrics for small-farm 
 ```
 
 ### 3.7 2D Pen Map (`/api/pen-map` or `pen_map.json`)
-Visualizes pen layout, resting density heatmap generated from lying bouts (duration >= 20 min), real-coordinate 1.5m resting circles bounded by bedding change cutoff, contact event overlays, flagged cows, and exposed cows shaded by continuous exposure score.
+Visualizes pen layout, resting density heatmap generated from lying bouts (duration >= 20 min), cubicle-level resting spots layer (5 canonical spots on `y ≈ 0` centered: `spot_01`..`spot_05`, radius 1.5m, carrying `n_flagged` and forward `successors` per `docs/backtrace_spec.md §3.2 & §6`), contact event overlays, flagged cows, and exposed cows shaded by continuous exposure score.
 
 ```json
 {
   "ts_utc": "2023-07-28T14:00:00Z",
   "barn_id": "main_barn_01",
   "pen_id": "pen_01",
+  "coordinate_system": "centered",
   "grid": {
-    "width_m": 30.0,
-    "height_m": 15.0,
+    "origin": "center",
+    "width_m": 24.9,
+    "height_m": 17.7,
+    "x_min_m": -12.45,
+    "x_max_m": 12.45,
+    "y_min_m": -9.31,
+    "y_max_m": 8.39,
     "cell_size_m": 1.0,
     "heatmap": [[0.0, 0.65], [0.85, 0.0]]
   },
@@ -292,8 +298,8 @@ Visualizes pen layout, resting density heatmap generated from lying bouts (durat
     {
       "cow_id": "C01",
       "display_name": "Fern (C01)",
-      "uwb_x_m": 12.4,
-      "uwb_y_m": 8.2,
+      "uwb_x_m": -2.4,
+      "uwb_y_m": 1.5,
       "zone": "cubicle_row_b",
       "activity_state": "resting",
       "out_of_pen": false,
@@ -308,29 +314,57 @@ Visualizes pen layout, resting density heatmap generated from lying bouts (durat
     "milking_units": ["unit_04"],
     "resting_zones": ["cubicle_row_b"]
   },
+  "resting_spots": [
+    {
+      "spot_id": "spot_01",
+      "area_id": "spot_01",
+      "zone_id": "cubicle_row_b",
+      "center_x_m": 0.06,
+      "center_y_m": 0.00,
+      "radius_m": 1.5,
+      "n_bouts": 493,
+      "n_cows": 10,
+      "dwell_min": 41137.0,
+      "n_flagged": 1,
+      "flagged_cows": ["C01"],
+      "dwell_min_by_flagged": {"C01": 4113.7},
+      "successors": [
+        {"cow_id": "C07", "rank": 1, "lag_h": 2.5, "w": 0.85},
+        {"cow_id": "C10", "rank": 2, "lag_h": 4.1, "w": 0.72},
+        {"cow_id": "C01", "rank": 3, "lag_h": 6.0, "w": 0.65}
+      ],
+      "until_bedding_change_utc": "2023-07-28T14:00:00Z",
+      "contact_cows": ["C07", "C10", "C01"],
+      "provenance": "real",
+      "is_synthetic": false
+    }
+  ],
   "resting_areas": [
     {
-      "area_id": "rest_circle_01",
-      "center_x_m": 12.4,
-      "center_y_m": 10.2,
+      "spot_id": "spot_01",
+      "area_id": "spot_01",
+      "center_x_m": 0.06,
+      "center_y_m": 0.00,
       "radius_m": 1.5,
       "zone_id": "cubicle_row_b",
-      "target_cow_id": "C01",
-      "target_cows": ["C01"],
-      "until_bedding_change_utc": "2023-07-29T08:15:00Z",
-      "contact_cows": ["C02", "C07"],
-      "cumulative_shed_duration_min": 140.0,
-      "n_contacts": 2
+      "n_flagged": 1,
+      "flagged_cows": ["C01"],
+      "successors": [
+        {"cow_id": "C07", "rank": 1, "lag_h": 2.5, "w": 0.85}
+      ],
+      "until_bedding_change_utc": "2023-07-28T14:00:00Z",
+      "contact_cows": ["C07"],
+      "provenance": "real",
+      "is_synthetic": false
     }
   ],
   "implicated_circles": [
     {
-      "center_x_m": 12.4,
-      "center_y_m": 10.2,
+      "spot_id": "spot_01",
+      "center_x_m": 0.06,
+      "center_y_m": 0.00,
       "radius_m": 1.5,
-      "target_cow_id": "C01",
-      "contact_cows": ["C02", "C07"],
-      "until_bedding_change_utc": "2023-07-29T08:15:00Z"
+      "until_bedding_change_utc": "2023-07-28T14:00:00Z"
     }
   ],
   "contact_events": [
