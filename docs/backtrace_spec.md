@@ -27,9 +27,9 @@ whole pen unless it is weighted by *how soon after* and *how long*.
 | Table | Source | Provenance today |
 |---|---|---|
 | `lying_bouts` (`cow_id, start_utc, end_utc, duration_min, x_m, y_m, z_m, n_fixes, in_pen_frac`) | backend‑cleaning | real, 1,462 bouts, 1,296 ≥ 20 min |
-| `resting_spots` (§3.2) | backend‑cleaning | real, derived from bouts |
+| `resting_spots` (`spot_id, center_x_m, center_y_m, radius_m, n_bouts, n_cows, dwell_min`) | backend‑cleaning | real, derived from bouts — `cleaning.bouts.resting_spots` / `assign_spots` |
 | `milking_log` (`cow_id, milking_time, unit_id, session_id, order_in_session`) | synthetic (`data/synthetic/`) until a farm feed exists | synthetic |
-| `sanitation` (`unit_id, sanitized_at, session_id`) | synthetic | synthetic — one event per unit per session, **after** the session ends |
+| `sanitation` (`unit_id, sanitized_at, session_id, kind`) | synthetic | synthetic — `end_of_session` after each session's last milking, plus `between_cows` cluster cleans on about half of the handovers; the planted milking episode's (session, unit) has none |
 | `bedding` (`zone_id, changed_at`) | synthetic | synthetic — 2023‑07‑21 14:00Z and 2023‑07‑28 14:00Z |
 | `flags` (`cow_id, flagged_at, onset_utc?, source, type`) | manual / auto | per request |
 | `mastitis_events` (Gram status) | backend‑cleaning | real, 57 dx, none inside the sensor window |
@@ -168,14 +168,21 @@ Two metrics, measured separately, both reported in `backtrace_eval.json`:
    `route_accuracy` over the three episodes and `source_hit` (the planted spot
    or unit is in the top resources).
 
-Measured 2026‑11‑15 on the real bouts + synthetic log:
+Measured 2026‑11‑15 on the real bouts + the synthetic world **v2** (seed 0;
+between‑cow cluster cleans, causal case timing — `cleaning/synth.py`):
 
-| | `main` (per‑bout circles, p‑gated, window anchored at max dx) | this spec (prototype) |
+| | `main` before this spec (per‑bout circles, p‑gated, window at max dx) | this spec (prototype, world v2) |
 |---|---|---|
-| resting precision@3 | 0 / 3 | **3 / 3** (C01 5.16, C10 4.13, C07 4.01, next C03 3.95) |
-| milking precision@2 | 0 / 2 | **1 / 2** (C04 4.0, C01 1.0, C08 0.5) |
-| route accuracy | 1 / 3 (only the sporadic case, by default) | resting `p` 0.085, milking `p` 0.09–0.15 (floors 0.012 / 0.028); sporadic `p` 0.96–1.0 |
+| resting precision@3 | 0 / 3 | **2 / 3** (C03 6.02, C01 5.62, C10 4.61, C08 4.43, C07 3.79) |
+| milking precision@2 | 0 / 2 | **2 / 2** (C04 4.0, C08 0.5, all others 0) |
+| route: resting episode | `no_common_route` | `resting_area` — z_rest 1.59 (p 0.066) vs z_milk 0.91 |
+| route: milking episode | `no_common_route` | `milking_equipment` — z_milk 2.13 (p 0.047) vs z_rest −0.34 |
+| route: sporadic | `no_common_route` | `no_common_route` — z_rest 0.21, z_milk −0.75 |
 | contact events, resting, 72 h | 4,091; all 10 cows at exposure 1.0 | bounded; 5 spots |
+
+World v1 (end‑of‑session cleaning only, non‑causal onsets) gave resting 3/3 and
+milking 1/2: the un‑cleaned handovers made every direct successor look alike.
+v2 is the reference; regenerate it with `python3 -m cleaning synth`.
 
 The evaluator on `main` scores the built‑in C02 fixture unless the real tables
 are passed explicitly (`analysis.run` does not pass them), and the live
@@ -192,9 +199,12 @@ Acceptance: resting precision@3 ≥ 2/3, milking precision@2 ≥ 1/2, sporadic
 - One cubicle row: all 1,296 bouts cluster into five spots on `y ≈ 0`, four of
   them used by every cow. Location alone cannot separate cows; *timing* can.
 - Ten cows, so permutation p‑values have a hard floor (§4, Step 4).
-- Milking order, sanitation and bedding changes are synthetic. The synthetic
-  sanitation happens after each session, so it never separates two cows in the
-  same session; the planted route is distinguished only by who got sick when.
+- Milking order, sanitation and bedding changes are synthetic. Cluster cleans
+  happen after each session and on about half of the handovers between cows;
+  the planted milking episode has none on its unit that session.
+- Synthetic case timing is causal (world v2): the index cow's onset precedes
+  the exposure event, each secondary's onset follows it by 12–48 h and its
+  diagnosis follows onset by 24–72 h.
 - No real clinical case falls inside the sensor window; the nearest is C12's
   2023‑09‑02 Gram‑positive diagnosis.
 

@@ -42,8 +42,33 @@ def test_sanitation_skips_the_exposure_pair_only():
     assert not ((san["session_id"] == pair[0]) & (san["unit_id"] == pair[1])).any()
     assert ((san["session_id"] == "2023-07-26_AM") & (san["unit_id"] == "U1")).any()
     last = log[(log["session_id"] == "2023-07-26_AM") & (log["unit_id"] == "U1")]["milking_time"].max()
-    s = san[(san["session_id"] == "2023-07-26_AM") & (san["unit_id"] == "U1")]["sanitized_at"].iloc[0]
-    assert s > last, "sanitised after the session's last milking"
+    end = san[(san["session_id"] == "2023-07-26_AM") & (san["unit_id"] == "U1") & (san["kind"] == "end_of_session")]
+    assert len(end) == 1 and end["sanitized_at"].iloc[0] > last, "one end-of-session clean after the last milking"
+
+
+def test_sanitation_cleans_between_cows_and_never_on_the_skipped_pair():
+    log = synth.synth_milking_log(_sessions(), synth._rng(5), n_units=1)   # one unit: 6 cows in a row per session
+    san = synth.synth_sanitation(log, synth._rng(5), skip={("2023-07-25_AM", "U1")}, p_between=1.0)
+    assert not (san["session_id"] == "2023-07-25_AM").any(), "skipped pair has no cleaning at all"
+    day2 = san[san["session_id"] == "2023-07-26_AM"].sort_values("sanitized_at")
+    assert (day2["kind"] == "between_cows").sum() == 5 and (day2["kind"] == "end_of_session").sum() == 1
+    visits = log[log["session_id"] == "2023-07-26_AM"].sort_values("milking_time")["milking_time"].tolist()
+    between = day2[day2["kind"] == "between_cows"]["sanitized_at"].tolist()
+    for t_prev, t_next, t_clean in zip(visits[:-1], visits[1:], between):
+        assert t_prev < t_clean, "clean follows the earlier cow"
+    none = synth.synth_sanitation(log, synth._rng(5), p_between=0.0)
+    assert (none["kind"] == "end_of_session").all()
+
+
+def test_cases_are_causal_secondaries_after_exposure_index_before():
+    ep = {"scenario": "resting_route", "index_cow": "C01", "exposure_start_utc": T0, "secondary_cows": ["C02", "C03"],
+          "source": {"cells": [[0, 0]]}}
+    c = synth.make_cases([ep], synth._rng(6))
+    idx = c[c["role"] == "index"].iloc[0]; sec = c[c["role"] == "secondary"]
+    assert idx["onset_utc"] < T0 < idx["dx_utc"], "index is shedding at the exposure event"
+    assert (sec["onset_utc"] > T0).all(), "secondaries fall ill only after the exposure"
+    assert ((sec["onset_utc"] - T0) <= pd.Timedelta(hours=48)).all() and ((sec["onset_utc"] - T0) >= pd.Timedelta(hours=12)).all()
+    assert ((sec["dx_utc"] - sec["onset_utc"]) >= pd.Timedelta(hours=24)).all()
 
 
 def test_cases_carry_true_route_and_secondaries_after_index():
