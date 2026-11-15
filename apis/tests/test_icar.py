@@ -194,6 +194,24 @@ class TestIcarAdeService(unittest.TestCase):
         self.assertIn("disclaimer", run["summary"])
         self.assertIn("delegatedToAnalysis", run["summary"])
 
+    def test_backtrace_flag_timestamps_forwarding(self):
+        self.service.create_flag(
+            animal_id="C02",
+            flag_type="manual",
+            reason="Elevated SCC and heat spike",
+            flagged_at_utc="2026-10-14T08:00:00Z",
+        )
+        self.service.create_flag(
+            animal_id="C05",
+            flag_type="auto",
+            reason="Conductivity anomaly",
+            flagged_at_utc="2026-10-14T09:30:00Z",
+        )
+        run = self.service.run_backtrace(animal_id="C02", lookback_days=3)
+        self.assertEqual(run["status"], "completed")
+        self.assertEqual(run["targetAnimalId"], "C02")
+        self.assertEqual(run["lookbackDays"], 3)
+
 
 if __name__ == "__main__":
     unittest.main()
