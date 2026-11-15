@@ -632,11 +632,13 @@ def generate_attribution(
     return {
         "ts_utc": ts_utc,
         "lookback_hours": 72,
-        "likely_route": "resting_cubicle_route",
+        "likely_route": "resting_area",
+        "likely_route_alias": "resting_cubicle_route",
         "route_probabilities": {
-            "resting_cubicle_route": 0.78,
-            "milking_equipment_route": 0.18,
-            "sporadic_individual": 0.04,
+            "resting_area": 0.78,
+            "milking_equipment": 0.18,
+            "both": 0.0,
+            "no_common_route": 0.04,
         },
         "p_values": {
             "resting_permutation_p": 0.008,

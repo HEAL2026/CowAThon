@@ -1,0 +1,1773 @@
+{
+  "source_dataset": "doi:10.5683/SP2/KIEMHY (Quebec Commercial Dairy Herd Study)",
+  "farm_count": 88,
+  "farms": [
+    {
+      "farm_id": "farm_01",
+      "lactating_cows": 115,
+      "stall_renovation_age_years": 1.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 19,
+      "severe_cm_cases": 4,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 5,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 9
+      },
+      "animal_days_at_risk": 115.0,
+      "cm_rate_per_1000_cow_days": 165.217,
+      "severe_cm_rate_per_1000_cow_days": 34.783
+    },
+    {
+      "farm_id": "farm_02",
+      "lactating_cows": 68,
+      "stall_renovation_age_years": 12.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 34,
+      "severe_cm_cases": 7,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 5,
+        "s_aureus": 3,
+        "s_dys": 1,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 68.0,
+      "cm_rate_per_1000_cow_days": 500.0,
+      "severe_cm_rate_per_1000_cow_days": 102.941
+    },
+    {
+      "farm_id": "farm_03",
+      "lactating_cows": 98,
+      "stall_renovation_age_years": 4.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 10,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 2,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 98.0,
+      "cm_rate_per_1000_cow_days": 102.041,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_04",
+      "lactating_cows": 61,
+      "stall_renovation_age_years": 0.07999999821186066,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 8,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 61.0,
+      "cm_rate_per_1000_cow_days": 131.148,
+      "severe_cm_rate_per_1000_cow_days": 16.393
+    },
+    {
+      "farm_id": "farm_05",
+      "lactating_cows": 214,
+      "stall_renovation_age_years": 2.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 8,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 1,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 214.0,
+      "cm_rate_per_1000_cow_days": 37.383,
+      "severe_cm_rate_per_1000_cow_days": 4.673
+    },
+    {
+      "farm_id": "farm_06",
+      "lactating_cows": 239,
+      "stall_renovation_age_years": 1.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 37,
+      "severe_cm_cases": 6,
+      "pathogens": {
+        "e_coli": 4,
+        "k_pneumo": 0,
+        "s_aureus": 4,
+        "s_dys": 2,
+        "s_ube": 22
+      },
+      "animal_days_at_risk": 239.0,
+      "cm_rate_per_1000_cow_days": 154.812,
+      "severe_cm_rate_per_1000_cow_days": 25.105
+    },
+    {
+      "farm_id": "farm_07",
+      "lactating_cows": 210,
+      "stall_renovation_age_years": 12.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 76650.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_08",
+      "lactating_cows": 55,
+      "stall_renovation_age_years": 2.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 2,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 2,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 55.0,
+      "cm_rate_per_1000_cow_days": 36.364,
+      "severe_cm_rate_per_1000_cow_days": 36.364
+    },
+    {
+      "farm_id": "farm_09",
+      "lactating_cows": 68,
+      "stall_renovation_age_years": 4.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 68.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_10",
+      "lactating_cows": 69,
+      "stall_renovation_age_years": 2.5,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 9,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 5,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 69.0,
+      "cm_rate_per_1000_cow_days": 130.435,
+      "severe_cm_rate_per_1000_cow_days": 43.478
+    },
+    {
+      "farm_id": "farm_11",
+      "lactating_cows": 128,
+      "stall_renovation_age_years": 1.5,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 8,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 1,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 128.0,
+      "cm_rate_per_1000_cow_days": 62.5,
+      "severe_cm_rate_per_1000_cow_days": 23.438
+    },
+    {
+      "farm_id": "farm_12",
+      "lactating_cows": 75,
+      "stall_renovation_age_years": 23.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 12,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 3,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 75.0,
+      "cm_rate_per_1000_cow_days": 160.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_13",
+      "lactating_cows": 900,
+      "stall_renovation_age_years": 22.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 900.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_15",
+      "lactating_cows": 120,
+      "stall_renovation_age_years": 9.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 26,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 4,
+        "k_pneumo": 1,
+        "s_aureus": 2,
+        "s_dys": 4,
+        "s_ube": 4
+      },
+      "animal_days_at_risk": 120.0,
+      "cm_rate_per_1000_cow_days": 216.667,
+      "severe_cm_rate_per_1000_cow_days": 8.333
+    },
+    {
+      "farm_id": "farm_16",
+      "lactating_cows": 74,
+      "stall_renovation_age_years": 3.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 4,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 1,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 74.0,
+      "cm_rate_per_1000_cow_days": 54.054,
+      "severe_cm_rate_per_1000_cow_days": 13.514
+    },
+    {
+      "farm_id": "farm_17",
+      "lactating_cows": 100,
+      "stall_renovation_age_years": 4.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 3,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 1,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 100.0,
+      "cm_rate_per_1000_cow_days": 30.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_18",
+      "lactating_cows": 160,
+      "stall_renovation_age_years": 3.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 1,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 160.0,
+      "cm_rate_per_1000_cow_days": 6.25,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_19",
+      "lactating_cows": 230,
+      "stall_renovation_age_years": 2.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 81,
+      "severe_cm_cases": 39,
+      "pathogens": {
+        "e_coli": 26,
+        "k_pneumo": 7,
+        "s_aureus": 1,
+        "s_dys": 7,
+        "s_ube": 13
+      },
+      "animal_days_at_risk": 230.0,
+      "cm_rate_per_1000_cow_days": 352.174,
+      "severe_cm_rate_per_1000_cow_days": 169.565
+    },
+    {
+      "farm_id": "farm_20",
+      "lactating_cows": 111,
+      "stall_renovation_age_years": 0.9200000166893005,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 111.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_21",
+      "lactating_cows": 150,
+      "stall_renovation_age_years": 10.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 63.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_22",
+      "lactating_cows": 200,
+      "stall_renovation_age_years": 9.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 8,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 4,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 200.0,
+      "cm_rate_per_1000_cow_days": 40.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_23",
+      "lactating_cows": 90,
+      "stall_renovation_age_years": 7.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 10,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 1,
+        "s_aureus": 0,
+        "s_dys": 1,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 90.0,
+      "cm_rate_per_1000_cow_days": 111.111,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_24",
+      "lactating_cows": 231,
+      "stall_renovation_age_years": 6.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 231.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_25",
+      "lactating_cows": 280,
+      "stall_renovation_age_years": 1.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 13,
+      "severe_cm_cases": 4,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 2,
+        "s_aureus": 0,
+        "s_dys": 1,
+        "s_ube": 5
+      },
+      "animal_days_at_risk": 280.0,
+      "cm_rate_per_1000_cow_days": 46.429,
+      "severe_cm_rate_per_1000_cow_days": 14.286
+    },
+    {
+      "farm_id": "farm_26",
+      "lactating_cows": 108,
+      "stall_renovation_age_years": 5.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 108.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_27",
+      "lactating_cows": 110,
+      "stall_renovation_age_years": 0.5799999833106995,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 44,
+      "severe_cm_cases": 9,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 4,
+        "s_aureus": 0,
+        "s_dys": 1,
+        "s_ube": 2
+      },
+      "animal_days_at_risk": 110.0,
+      "cm_rate_per_1000_cow_days": 400.0,
+      "severe_cm_rate_per_1000_cow_days": 81.818
+    },
+    {
+      "farm_id": "farm_28",
+      "lactating_cows": 55,
+      "stall_renovation_age_years": 1.5,
+      "housing_type": "free_stall",
+      "bedding_thickness": "deep_ge_10cm",
+      "bedding_material": "recycled_manure_solids",
+      "total_cm_cases": 19,
+      "severe_cm_cases": 4,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 5,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 55.0,
+      "cm_rate_per_1000_cow_days": 345.455,
+      "severe_cm_rate_per_1000_cow_days": 72.727
+    },
+    {
+      "farm_id": "farm_30",
+      "lactating_cows": 55,
+      "stall_renovation_age_years": 3.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 6,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 55.0,
+      "cm_rate_per_1000_cow_days": 109.091,
+      "severe_cm_rate_per_1000_cow_days": 36.364
+    },
+    {
+      "farm_id": "farm_31",
+      "lactating_cows": 70,
+      "stall_renovation_age_years": 10.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 20,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 0,
+        "s_aureus": 3,
+        "s_dys": 5,
+        "s_ube": 5
+      },
+      "animal_days_at_risk": 70.0,
+      "cm_rate_per_1000_cow_days": 285.714,
+      "severe_cm_rate_per_1000_cow_days": 14.286
+    },
+    {
+      "farm_id": "farm_32",
+      "lactating_cows": 44,
+      "stall_renovation_age_years": 30.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 16,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 6,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 44.0,
+      "cm_rate_per_1000_cow_days": 363.636,
+      "severe_cm_rate_per_1000_cow_days": 22.727
+    },
+    {
+      "farm_id": "farm_33",
+      "lactating_cows": 58,
+      "stall_renovation_age_years": 3.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 3,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 58.0,
+      "cm_rate_per_1000_cow_days": 51.724,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_34",
+      "lactating_cows": 44,
+      "stall_renovation_age_years": 3.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 4,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 2,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 44.0,
+      "cm_rate_per_1000_cow_days": 90.909,
+      "severe_cm_rate_per_1000_cow_days": 45.455
+    },
+    {
+      "farm_id": "farm_35",
+      "lactating_cows": 65,
+      "stall_renovation_age_years": 0.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 16,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 0,
+        "s_aureus": 7,
+        "s_dys": 5,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 65.0,
+      "cm_rate_per_1000_cow_days": 246.154,
+      "severe_cm_rate_per_1000_cow_days": 30.769
+    },
+    {
+      "farm_id": "farm_36",
+      "lactating_cows": 50,
+      "stall_renovation_age_years": 7.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 7,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 50.0,
+      "cm_rate_per_1000_cow_days": 140.0,
+      "severe_cm_rate_per_1000_cow_days": 20.0
+    },
+    {
+      "farm_id": "farm_37",
+      "lactating_cows": 64,
+      "stall_renovation_age_years": 18.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 57,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 4,
+        "k_pneumo": 2,
+        "s_aureus": 6,
+        "s_dys": 3,
+        "s_ube": 2
+      },
+      "animal_days_at_risk": 64.0,
+      "cm_rate_per_1000_cow_days": 890.625,
+      "severe_cm_rate_per_1000_cow_days": 46.875
+    },
+    {
+      "farm_id": "farm_38",
+      "lactating_cows": 131,
+      "stall_renovation_age_years": 9.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 26,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 3,
+        "s_dys": 3,
+        "s_ube": 8
+      },
+      "animal_days_at_risk": 120.5,
+      "cm_rate_per_1000_cow_days": 215.732,
+      "severe_cm_rate_per_1000_cow_days": 24.892
+    },
+    {
+      "farm_id": "farm_39",
+      "lactating_cows": 72,
+      "stall_renovation_age_years": 1.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 17,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 3,
+        "s_dys": 1,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 72.0,
+      "cm_rate_per_1000_cow_days": 236.111,
+      "severe_cm_rate_per_1000_cow_days": 41.667
+    },
+    {
+      "farm_id": "farm_40",
+      "lactating_cows": 70,
+      "stall_renovation_age_years": 15.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 5,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 70.0,
+      "cm_rate_per_1000_cow_days": 71.429,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_41",
+      "lactating_cows": 229,
+      "stall_renovation_age_years": 5.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 21,
+      "severe_cm_cases": 11,
+      "pathogens": {
+        "e_coli": 5,
+        "k_pneumo": 2,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 229.0,
+      "cm_rate_per_1000_cow_days": 91.703,
+      "severe_cm_rate_per_1000_cow_days": 48.035
+    },
+    {
+      "farm_id": "farm_42",
+      "lactating_cows": 47,
+      "stall_renovation_age_years": 4.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 47.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_43",
+      "lactating_cows": 81,
+      "stall_renovation_age_years": 27.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 6,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 81.0,
+      "cm_rate_per_1000_cow_days": 74.074,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_44",
+      "lactating_cows": 95,
+      "stall_renovation_age_years": 2.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 31,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 1,
+        "s_aureus": 2,
+        "s_dys": 3,
+        "s_ube": 13
+      },
+      "animal_days_at_risk": 95.0,
+      "cm_rate_per_1000_cow_days": 326.316,
+      "severe_cm_rate_per_1000_cow_days": 31.579
+    },
+    {
+      "farm_id": "farm_45",
+      "lactating_cows": 64,
+      "stall_renovation_age_years": 2.5,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 23,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 3,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 64.0,
+      "cm_rate_per_1000_cow_days": 359.375,
+      "severe_cm_rate_per_1000_cow_days": 31.25
+    },
+    {
+      "farm_id": "farm_46",
+      "lactating_cows": 59,
+      "stall_renovation_age_years": 0.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 6,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 2,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 10.0,
+      "cm_rate_per_1000_cow_days": 598.205,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_47",
+      "lactating_cows": 51,
+      "stall_renovation_age_years": 7.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 51.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_48",
+      "lactating_cows": 65,
+      "stall_renovation_age_years": 15.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 15,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 3,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 65.0,
+      "cm_rate_per_1000_cow_days": 230.769,
+      "severe_cm_rate_per_1000_cow_days": 30.769
+    },
+    {
+      "farm_id": "farm_49",
+      "lactating_cows": 51,
+      "stall_renovation_age_years": 7.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 3,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 51.0,
+      "cm_rate_per_1000_cow_days": 58.824,
+      "severe_cm_rate_per_1000_cow_days": 19.608
+    },
+    {
+      "farm_id": "farm_50",
+      "lactating_cows": 76,
+      "stall_renovation_age_years": 3.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 9,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 3
+      },
+      "animal_days_at_risk": 76.0,
+      "cm_rate_per_1000_cow_days": 118.421,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_51",
+      "lactating_cows": 70,
+      "stall_renovation_age_years": 15.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 70.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_52",
+      "lactating_cows": 110,
+      "stall_renovation_age_years": 12.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 23,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 0,
+        "s_aureus": 4,
+        "s_dys": 2,
+        "s_ube": 2
+      },
+      "animal_days_at_risk": 110.0,
+      "cm_rate_per_1000_cow_days": 209.091,
+      "severe_cm_rate_per_1000_cow_days": 9.091
+    },
+    {
+      "farm_id": "farm_53",
+      "lactating_cows": 84,
+      "stall_renovation_age_years": 10.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 13,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 4,
+        "s_dys": 2,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 84.0,
+      "cm_rate_per_1000_cow_days": 154.762,
+      "severe_cm_rate_per_1000_cow_days": 35.714
+    },
+    {
+      "farm_id": "farm_54",
+      "lactating_cows": 60,
+      "stall_renovation_age_years": 20.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 1,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 60.0,
+      "cm_rate_per_1000_cow_days": 16.667,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_55",
+      "lactating_cows": 46,
+      "stall_renovation_age_years": 17.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 24,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 1,
+        "s_aureus": 6,
+        "s_dys": 3,
+        "s_ube": 2
+      },
+      "animal_days_at_risk": 46.0,
+      "cm_rate_per_1000_cow_days": 521.739,
+      "severe_cm_rate_per_1000_cow_days": 43.478
+    },
+    {
+      "farm_id": "farm_56",
+      "lactating_cows": 98,
+      "stall_renovation_age_years": 26.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 6,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 3,
+        "s_dys": 0,
+        "s_ube": 2
+      },
+      "animal_days_at_risk": 98.0,
+      "cm_rate_per_1000_cow_days": 61.224,
+      "severe_cm_rate_per_1000_cow_days": 10.204
+    },
+    {
+      "farm_id": "farm_57",
+      "lactating_cows": 44,
+      "stall_renovation_age_years": 21.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 15,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 5,
+        "s_dys": 1,
+        "s_ube": 3
+      },
+      "animal_days_at_risk": 44.0,
+      "cm_rate_per_1000_cow_days": 340.909,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_58",
+      "lactating_cows": 60,
+      "stall_renovation_age_years": 5.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 7,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 2,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 60.0,
+      "cm_rate_per_1000_cow_days": 116.667,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_59",
+      "lactating_cows": 69,
+      "stall_renovation_age_years": 5.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 10,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 1,
+        "s_ube": 2
+      },
+      "animal_days_at_risk": 69.0,
+      "cm_rate_per_1000_cow_days": 144.928,
+      "severe_cm_rate_per_1000_cow_days": 28.986
+    },
+    {
+      "farm_id": "farm_60",
+      "lactating_cows": 75,
+      "stall_renovation_age_years": 17.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 24.8,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_61",
+      "lactating_cows": 117,
+      "stall_renovation_age_years": 6.0,
+      "housing_type": "free_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 14,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 5,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 117.0,
+      "cm_rate_per_1000_cow_days": 119.658,
+      "severe_cm_rate_per_1000_cow_days": 17.094
+    },
+    {
+      "farm_id": "farm_62",
+      "lactating_cows": 94,
+      "stall_renovation_age_years": 11.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 24,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 2,
+        "s_aureus": 3,
+        "s_dys": 3,
+        "s_ube": 5
+      },
+      "animal_days_at_risk": 94.0,
+      "cm_rate_per_1000_cow_days": 255.319,
+      "severe_cm_rate_per_1000_cow_days": 31.915
+    },
+    {
+      "farm_id": "farm_63",
+      "lactating_cows": 54,
+      "stall_renovation_age_years": 3.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 15,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 1,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 4
+      },
+      "animal_days_at_risk": 54.0,
+      "cm_rate_per_1000_cow_days": 277.778,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_64",
+      "lactating_cows": 62,
+      "stall_renovation_age_years": 1.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 15,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 0,
+        "s_aureus": 4,
+        "s_dys": 1,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 62.0,
+      "cm_rate_per_1000_cow_days": 241.935,
+      "severe_cm_rate_per_1000_cow_days": 16.129
+    },
+    {
+      "farm_id": "farm_65",
+      "lactating_cows": 75,
+      "stall_renovation_age_years": 28.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 33,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 4,
+        "s_dys": 0,
+        "s_ube": 4
+      },
+      "animal_days_at_risk": 75.0,
+      "cm_rate_per_1000_cow_days": 440.0,
+      "severe_cm_rate_per_1000_cow_days": 26.667
+    },
+    {
+      "farm_id": "farm_66",
+      "lactating_cows": 46,
+      "stall_renovation_age_years": 11.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 2,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 46.0,
+      "cm_rate_per_1000_cow_days": 43.478,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_67",
+      "lactating_cows": 80,
+      "stall_renovation_age_years": 4.5,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 10,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 0,
+        "s_aureus": 2,
+        "s_dys": 0,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 80.0,
+      "cm_rate_per_1000_cow_days": 125.0,
+      "severe_cm_rate_per_1000_cow_days": 25.0
+    },
+    {
+      "farm_id": "farm_68",
+      "lactating_cows": 64,
+      "stall_renovation_age_years": 24.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 4,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 64.0,
+      "cm_rate_per_1000_cow_days": 62.5,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_69",
+      "lactating_cows": 68,
+      "stall_renovation_age_years": 30.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 68.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_70",
+      "lactating_cows": 53,
+      "stall_renovation_age_years": 2.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 7,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 5,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 53.0,
+      "cm_rate_per_1000_cow_days": 132.075,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_71",
+      "lactating_cows": 51,
+      "stall_renovation_age_years": 70.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 22,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 6,
+        "s_dys": 1,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 51.0,
+      "cm_rate_per_1000_cow_days": 431.373,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_72",
+      "lactating_cows": 70,
+      "stall_renovation_age_years": 27.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 70.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_73",
+      "lactating_cows": 60,
+      "stall_renovation_age_years": 8.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 60.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_74",
+      "lactating_cows": 57,
+      "stall_renovation_age_years": 7.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 10,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 2
+      },
+      "animal_days_at_risk": 57.0,
+      "cm_rate_per_1000_cow_days": 175.439,
+      "severe_cm_rate_per_1000_cow_days": 52.632
+    },
+    {
+      "farm_id": "farm_75",
+      "lactating_cows": 65,
+      "stall_renovation_age_years": 9.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 28,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 9,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 65.0,
+      "cm_rate_per_1000_cow_days": 430.769,
+      "severe_cm_rate_per_1000_cow_days": 15.385
+    },
+    {
+      "farm_id": "farm_76",
+      "lactating_cows": 72,
+      "stall_renovation_age_years": 10.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 26280.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_77",
+      "lactating_cows": 58,
+      "stall_renovation_age_years": 8.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 18,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 2,
+        "k_pneumo": 0,
+        "s_aureus": 4,
+        "s_dys": 2,
+        "s_ube": 3
+      },
+      "animal_days_at_risk": 58.0,
+      "cm_rate_per_1000_cow_days": 310.345,
+      "severe_cm_rate_per_1000_cow_days": 17.241
+    },
+    {
+      "farm_id": "farm_78",
+      "lactating_cows": 54,
+      "stall_renovation_age_years": 20.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 27,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 54.0,
+      "cm_rate_per_1000_cow_days": 500.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_79",
+      "lactating_cows": 114,
+      "stall_renovation_age_years": 37.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 28,
+      "severe_cm_cases": 3,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 8
+      },
+      "animal_days_at_risk": 114.0,
+      "cm_rate_per_1000_cow_days": 245.614,
+      "severe_cm_rate_per_1000_cow_days": 26.316
+    },
+    {
+      "farm_id": "farm_80",
+      "lactating_cows": 98,
+      "stall_renovation_age_years": 7.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 23,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 3,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 24.5,
+      "cm_rate_per_1000_cow_days": 938.776,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_81",
+      "lactating_cows": 66,
+      "stall_renovation_age_years": 15.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 4,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 66.0,
+      "cm_rate_per_1000_cow_days": 60.606,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_82",
+      "lactating_cows": 55,
+      "stall_renovation_age_years": 8.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 55.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_83",
+      "lactating_cows": 58,
+      "stall_renovation_age_years": 2.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 17,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 4
+      },
+      "animal_days_at_risk": 58.0,
+      "cm_rate_per_1000_cow_days": 293.103,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_84",
+      "lactating_cows": 45,
+      "stall_renovation_age_years": 17.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 2,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 45.0,
+      "cm_rate_per_1000_cow_days": 44.444,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_85",
+      "lactating_cows": 75,
+      "stall_renovation_age_years": 17.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 21,
+      "severe_cm_cases": 4,
+      "pathogens": {
+        "e_coli": 8,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 0,
+        "s_ube": 3
+      },
+      "animal_days_at_risk": 75.0,
+      "cm_rate_per_1000_cow_days": 280.0,
+      "severe_cm_rate_per_1000_cow_days": 53.333
+    },
+    {
+      "farm_id": "farm_86",
+      "lactating_cows": 82,
+      "stall_renovation_age_years": 20.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 21,
+      "severe_cm_cases": 2,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 11,
+        "s_dys": 3,
+        "s_ube": 1
+      },
+      "animal_days_at_risk": 82.0,
+      "cm_rate_per_1000_cow_days": 256.098,
+      "severe_cm_rate_per_1000_cow_days": 24.39
+    },
+    {
+      "farm_id": "farm_87",
+      "lactating_cows": 50,
+      "stall_renovation_age_years": 18.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 14,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 1,
+        "s_dys": 1,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 50.0,
+      "cm_rate_per_1000_cow_days": 280.0,
+      "severe_cm_rate_per_1000_cow_days": 20.0
+    },
+    {
+      "farm_id": "farm_88",
+      "lactating_cows": 95,
+      "stall_renovation_age_years": 17.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 13,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 3
+      },
+      "animal_days_at_risk": 95.0,
+      "cm_rate_per_1000_cow_days": 136.842,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_89",
+      "lactating_cows": 43,
+      "stall_renovation_age_years": 17.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 0,
+      "severe_cm_cases": 0,
+      "pathogens": {
+        "e_coli": 0,
+        "k_pneumo": 0,
+        "s_aureus": 0,
+        "s_dys": 0,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 43.0,
+      "cm_rate_per_1000_cow_days": 0.0,
+      "severe_cm_rate_per_1000_cow_days": 0.0
+    },
+    {
+      "farm_id": "farm_90",
+      "lactating_cows": 83,
+      "stall_renovation_age_years": 10.0,
+      "housing_type": "tie_stall",
+      "bedding_thickness": "shallow_lt_10cm",
+      "bedding_material": "straw",
+      "total_cm_cases": 26,
+      "severe_cm_cases": 1,
+      "pathogens": {
+        "e_coli": 1,
+        "k_pneumo": 0,
+        "s_aureus": 7,
+        "s_dys": 5,
+        "s_ube": 0
+      },
+      "animal_days_at_risk": 83.0,
+      "cm_rate_per_1000_cow_days": 313.253,
+      "severe_cm_rate_per_1000_cow_days": 12.048
+    }
+  ],
+  "pathogen_distribution": {
+    "e_coli": 121,
+    "k_pneumo": 56,
+    "s_aureus": 143,
+    "s_dys": 85,
+    "s_ube": 144
+  }
+}
