@@ -539,6 +539,7 @@ def get_pen_map_data(
     ts_utc: Optional[str] = None,
     pen_id: Optional[str] = None,
     flagged_cows: Optional[Sequence[str]] = None,
+    lookback_hours: int = 48,
 ) -> Tuple[Dict[str, Any], bool]:
     """
     Constructs the 2D pen map payload using real location_1min (or joined_1min)
@@ -787,6 +788,7 @@ def get_pen_map_data(
         pen_id=pen_id or "pen_01",
         ts_utc=ts_utc,
         is_synthetic=is_synthetic,
+        lookback_hours=lookback_hours,
     )
     return payload, is_synthetic
 

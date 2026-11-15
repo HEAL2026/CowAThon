@@ -198,7 +198,12 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
                 flagged_list = [f.strip().upper() for f in raw_flags.split(",") if f.strip()]
             elif isinstance(raw_flags, (list, tuple)):
                 flagged_list = [str(f).strip().upper() for f in raw_flags if str(f).strip()]
-            payload, is_synth = get_pen_map_data(ts_utc=ts_utc, pen_id=pen_id, flagged_cows=flagged_list)
+            payload, is_synth = get_pen_map_data(
+                ts_utc=ts_utc,
+                pen_id=pen_id,
+                flagged_cows=flagged_list,
+                lookback_hours=lookback_hours,
+            )
             payload["is_synthetic"] = is_synth
             return 200, payload
 
