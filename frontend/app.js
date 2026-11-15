@@ -5,6 +5,7 @@ const state = {
   overlay: false,
   selectedCow: null,
   restingFilter: false,
+  colorByMode: "status",
   currentTsUtc: "2023-08-04T11:59:00Z",
   currentPenId: null,
   modelWatchList: new Set(["Fern 221"]),
@@ -64,11 +65,18 @@ function getGridBounds(payload) {
   const cows = payload?.cows || state.s12.penMap?.cows || [];
   const restingAreas = payload?.resting_areas || payload?.implicated_resting_areas || state.s12.penMap?.resting_areas || [];
 
-  if (grid.x_min_m != null && grid.x_max_m != null && grid.y_min_m != null && grid.y_max_m != null) {
-    const xMin = Number(grid.x_min_m);
-    const xMax = Number(grid.x_max_m);
-    const yMin = Number(grid.y_min_m);
-    const yMax = Number(grid.y_max_m);
+  // 1. Explicit bounds directly on grid or grid.bounds
+  const boundsObj = grid.bounds || grid;
+  const xMinVal = boundsObj.x_min_m ?? boundsObj.x_min ?? boundsObj.xmin;
+  const xMaxVal = boundsObj.x_max_m ?? boundsObj.x_max ?? boundsObj.xmax;
+  const yMinVal = boundsObj.y_min_m ?? boundsObj.y_min ?? boundsObj.ymin;
+  const yMaxVal = boundsObj.y_max_m ?? boundsObj.y_max ?? boundsObj.ymax;
+
+  if (xMinVal != null && xMaxVal != null && yMinVal != null && yMaxVal != null) {
+    const xMin = Number(xMinVal);
+    const xMax = Number(xMaxVal);
+    const yMin = Number(yMinVal);
+    const yMax = Number(yMaxVal);
     return {
       xMin,
       xMax,
@@ -76,10 +84,26 @@ function getGridBounds(payload) {
       yMax,
       width: xMax - xMin || 24.9,
       height: yMax - yMin || 17.7,
+      isCentered: xMin < 0,
+    };
+  }
+
+  // 2. Explicit origin "center" with width/height
+  if (grid.origin === "center" || payload?.coordinate_system === "centered" || grid.coordinate_system === "centered") {
+    const w = Number(grid.width_m || 24.9);
+    const h = Number(grid.height_m || 17.7);
+    return {
+      xMin: -(w / 2),
+      xMax: w / 2,
+      yMin: -(h / 2),
+      yMax: h / 2,
+      width: w,
+      height: h,
       isCentered: true,
     };
   }
 
+  // 3. Negative coordinates detection in cows or resting areas
   const hasNegativeCoords = cows.some((c) => {
     const x = Number(c.uwb_x_m ?? c.x_coord);
     const y = Number(c.uwb_y_m ?? c.y_coord);
@@ -88,7 +112,7 @@ function getGridBounds(payload) {
     const x = Number(a.center_x_m ?? a.x_m);
     const y = Number(a.center_y_m ?? a.y_m);
     return (!isNaN(x) && x < 0) || (!isNaN(y) && y < 0);
-  }) || grid.origin === "center" || payload?.coordinate_system === "centered";
+  });
 
   if (hasNegativeCoords) {
     // Real barn with 0.5 m margin: 24.90 m x 17.70 m (aspect 1.407)
@@ -105,7 +129,7 @@ function getGridBounds(payload) {
     };
   }
 
-  // Fallback to legacy positive 0..width_m, 0..height_m space (synthetic default)
+  // 4. Fallback to legacy positive 0..width_m, 0..height_m space (synthetic default)
   const width = Number(grid.width_m || 30);
   const height = Number(grid.height_m || 15);
   return {
@@ -192,6 +216,62 @@ function attachCowDot(dot) {
   });
 }
 
+function getCowDotFill(record, mode = state.colorByMode || "status") {
+  if (!record) return "#4fbe89";
+
+  const isUrgent = record.risk_status === "urgent"
+    || record.risk_status === "priority_watch"
+    || record.flag_status === "flagged"
+    || Boolean(record.vet_flagged)
+    || Number(record.risk_score || 0) >= 0.70;
+
+  const isWatch = record.risk_status === "watch"
+    || record.risk_status === "elevated"
+    || Number(record.risk_score || 0) >= 0.35
+    || Number(record.exposure_score || 0) > 0.35
+    || state.modelWatchList.has(cowLabel(record))
+    || state.manualWatchList.has(cowLabel(record));
+
+  if (mode === "health") {
+    const healthIndex = record.health_index != null
+      ? Number(record.health_index)
+      : Math.round((1.0 - Number(record.risk_score || 0.1)) * 100);
+    const mastitisRisk = Number(record.mastitis_risk || 0);
+
+    if (healthIndex < 50 || mastitisRisk >= 60 || isUrgent) {
+      return "#d75f51"; // Red
+    }
+    if (healthIndex < 75 || mastitisRisk >= 35 || isWatch) {
+      return "#e6a23c"; // Amber
+    }
+    return "#4fbe89"; // Green
+  }
+
+  if (mode === "behavior") {
+    const exposure = Number(record.exposure_score || 0);
+    const idling = Number(record.idling_minutes || 0);
+
+    if (exposure > 0.6 || isUrgent) {
+      return "#d75f51"; // Red
+    }
+    if (exposure > 0.3 || idling > 60 || isWatch) {
+      return "#e6a23c"; // Amber
+    }
+    return "#4fbe89"; // Green
+  }
+
+  // mode === "status" (Lactation / Clinical status)
+  if (isUrgent) return "#d75f51";
+  if (isWatch) return "#e6a23c";
+
+  const statusStr = String(record.lactation_status || record.activity_state || record.status || "").toLowerCase();
+  if (statusStr.includes("pregnant")) return "#6f96e8";
+  if (statusStr.includes("estrus")) return "#a971cc";
+  if (statusStr.includes("fresh") || statusStr.includes("calved")) return "#6f96e8";
+
+  return "#4fbe89";
+}
+
 function ensureCowDot(record, index) {
   const polygon = document.querySelector(".barn-polygon");
   let dot = findCowDot(record.cow_id);
@@ -205,6 +285,13 @@ function ensureCowDot(record, index) {
   dot.classList.add("api-cow");
   dot.dataset.cow = cowLabel(record);
   dot.dataset.restZone = record.zone || "zone-a";
+
+  const fill = getCowDotFill(record, state.colorByMode);
+  dot.style.setProperty("--dot-fill", fill);
+  dot.style.background = fill;
+  dot.classList.toggle("dot-urgent", fill === "#d75f51");
+  dot.classList.toggle("dot-watch", fill === "#e6a23c");
+  dot.classList.toggle("dot-healthy", fill === "#4fbe89");
 
   const rawX = record.uwb_x_m ?? record.x_coord;
   const rawY = record.uwb_y_m ?? record.y_coord;
@@ -435,6 +522,11 @@ async function loadS12Data(tsUtc = state.currentTsUtc) {
   } catch (error) {
     setDataStatus("Demo fallback · API unavailable", "fallback");
     document.querySelector("#backtrace-status").textContent = "The visualization service is unavailable; demo panels remain visible.";
+    if (!state.s12.penMap) {
+      document.querySelectorAll(".cow-dot:not(.api-cow)").forEach((dot) => {
+        dot.hidden = false;
+      });
+    }
   }
 }
 
@@ -491,14 +583,17 @@ document.querySelectorAll(".cow-dot").forEach(attachCowDot);
 
 document.querySelectorAll('input[name="color-by"]').forEach((input) => {
   input.addEventListener("change", () => {
-    const mode = input.value;
-    const colors = {
-      status: ["#4fbe89", "#6f96e8", "#d75f51", "#a971cc", "#e6a23c"],
-      health: ["#4fbe89", "#4fbe89", "#d75f51", "#e6a23c", "#4fbe89"],
-      behavior: ["#4fbe89", "#e6a23c", "#d75f51", "#d75f51", "#4fbe89"],
-    }[mode];
-    document.querySelectorAll(".cow-dot").forEach((dot, index) => {
-      dot.style.background = colors[index % colors.length];
+    state.colorByMode = input.value;
+    document.querySelectorAll(".cow-dot").forEach((dot) => {
+      const rec = state.cowRecords.get(dot.dataset.cow);
+      if (rec) {
+        const fill = getCowDotFill(rec, state.colorByMode);
+        dot.style.setProperty("--dot-fill", fill);
+        dot.style.background = fill;
+        dot.classList.toggle("dot-urgent", fill === "#d75f51");
+        dot.classList.toggle("dot-watch", fill === "#e6a23c");
+        dot.classList.toggle("dot-healthy", fill === "#4fbe89");
+      }
     });
   });
 });
