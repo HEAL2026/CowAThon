@@ -81,7 +81,7 @@
           <button class="view-tab active" data-view="barn"><span>⌂</span> Barn</button>
           <button class="view-tab" data-view="milking"><span>◫</span> Milking</button>
           <button class="view-tab alert-tab" data-view="alerts"><span>!</span> Alerts <b>4</b></button>
-          <button class="view-tab" data-view="messages"><span>✉</span> Messages <b>2</b></button>
+          <button class="view-tab" data-view="messages"><span>✉</span> Messages <b>6</b></button>
         </nav>
 
         <section id="barn-view" class="view-panel">
@@ -108,7 +108,7 @@
               </div>
               <div id="heatmap-gradient-key" class="heatmap-gradient-key" hidden>
                 <div class="gradient-header-row">
-                  <span class="gradient-title">Idle area density (lying bouts &ge; 20 min)</span>
+                  <span class="gradient-title">Idle area density (lying bouts &gt; 30 min)</span>
                   <span class="gradient-sub">Spatial rest accumulation</span>
                 </div>
                 <div class="gradient-bar-wrap">
@@ -120,21 +120,23 @@
                   </div>
                 </div>
               </div>
-              <div class="barn-polygon">
-                <canvas id="heatmap-canvas" class="heatmap-canvas" width="400" height="284" hidden></canvas>
-                <div class="feed-lane">Feed lane</div>
-                <div class="rest-zone zone-a">Rest zone A</div>
-                <div class="rest-zone zone-b">Rest zone B</div>
-                <div class="water-zone">Water</div>
-                <div id="resting-overlays" class="resting-overlays" aria-label="Real-coordinate resting exposure areas"></div>
-                <div class="cow-dot cow-a" data-cow="Bessie 01" data-cow-id="C01" data-rest-zone="zone-a" title="Bessie 01 · Within baseline" hidden></div>
-                <div class="cow-dot cow-b" data-cow="Daisy 108" data-cow-id="C02" data-rest-zone="zone-a" title="Daisy 108 · Pregnant" hidden></div>
-                <div class="cow-dot cow-c model-watch" data-cow="Fern 221" data-cow-id="C03" data-rest-zone="zone-b" title="Fern 221 · Elevated risk · model" hidden></div>
-                <div class="cow-dot cow-d" data-cow="Luna 095" data-cow-id="C04" data-rest-zone="zone-b" title="Luna 095 · Estrus" hidden></div>
-                <div class="cow-dot cow-e" data-cow="Mabel 187" data-cow-id="C05" data-rest-zone="zone-a" title="Mabel 187 · Resting anomaly" hidden></div>
-                <div class="cow-dot cow-f" data-cow="Poppy 164" data-cow-id="C06" data-rest-zone="zone-b" title="Poppy 164 · Within baseline" hidden></div>
-                <div class="cow-dot cow-g" data-cow="Rose 204" data-cow-id="C07" data-rest-zone="zone-b" title="Rose 204 · Recently calved" hidden></div>
-                <div class="cow-dot cow-h" data-cow="Willow 131" data-cow-id="C08" data-rest-zone="zone-a" title="Willow 131 · Within baseline" hidden></div>
+              <div class="barn-stage">
+                <div class="barn-polygon">
+                  <canvas id="heatmap-canvas" class="heatmap-canvas" width="400" height="284" hidden></canvas>
+                  <div class="feed-lane">Feed lane</div>
+                  <div class="rest-zone zone-a">Rest zone A</div>
+                  <div class="rest-zone zone-b">Rest zone B</div>
+                  <div class="water-zone">Water</div>
+                  <div id="resting-overlays" class="resting-overlays" aria-label="Real-coordinate resting exposure areas"></div>
+                  <div class="cow-dot cow-a" data-cow="Bessie 01" data-cow-id="C01" data-rest-zone="zone-a" title="Bessie 01 · Within baseline" hidden></div>
+                  <div class="cow-dot cow-b" data-cow="Daisy 108" data-cow-id="C02" data-rest-zone="zone-a" title="Daisy 108 · Pregnant" hidden></div>
+                  <div class="cow-dot cow-c model-watch" data-cow="Fern 221" data-cow-id="C03" data-rest-zone="zone-b" title="Fern 221 · Elevated risk · model" hidden></div>
+                  <div class="cow-dot cow-d" data-cow="Luna 095" data-cow-id="C04" data-rest-zone="zone-b" title="Luna 095 · Estrus" hidden></div>
+                  <div class="cow-dot cow-e" data-cow="Mabel 187" data-cow-id="C05" data-rest-zone="zone-a" title="Mabel 187 · Resting anomaly" hidden></div>
+                  <div class="cow-dot cow-f" data-cow="Poppy 164" data-cow-id="C06" data-rest-zone="zone-b" title="Poppy 164 · Within baseline" hidden></div>
+                  <div class="cow-dot cow-g" data-cow="Rose 204" data-cow-id="C07" data-rest-zone="zone-b" title="Rose 204 · Recently calved" hidden></div>
+                  <div class="cow-dot cow-h" data-cow="Willow 131" data-cow-id="C08" data-rest-zone="zone-a" title="Willow 131 · Within baseline" hidden></div>
+                </div>
               </div>
               <div id="cow-detail" class="cow-detail" hidden></div>
             </div>
@@ -297,8 +299,12 @@
           </div>
           <div class="messages-layout">
             <aside class="card message-threads">
-              <button class="message-thread active" data-thread="fern"><strong>Fern 221 · follow-up</strong><span>Dr. Patel · 12 min ago</span></button>
-              <button class="message-thread" data-thread="herd"><strong>Herd report · July 28</strong><span>You · yesterday</span></button>
+              <button class="message-thread active" data-thread="fern"><strong>Fern 221 (C03) · High risk</strong><span>Dr. Patel · 12 min ago</span></button>
+              <button class="message-thread" data-thread="bessie"><strong>Bessie 01 (C01) · Index case</strong><span>Dr. Patel · 45 min ago</span></button>
+              <button class="message-thread" data-thread="luna"><strong>Luna 095 (C04) · Estrus window</strong><span>Dr. Patel · 2 hrs ago</span></button>
+              <button class="message-thread" data-thread="daisy"><strong>Daisy 108 (C02) · Post-calving</strong><span>You · yesterday</span></button>
+              <button class="message-thread" data-thread="poppy"><strong>Poppy 164 (C06) · Stall 6 check</strong><span>Dr. Patel · yesterday</span></button>
+              <button class="message-thread" data-thread="mabel"><strong>Mabel 187 (C05) · Rest anomaly</strong><span>You · 2 days ago</span></button>
             </aside>
             <section class="card conversation">
               <div class="conversation-heading"><div><h3 id="conversation-title">Fern 221 · follow-up</h3><span class="muted">Farmer ↔ Dr. Maya Patel</span></div><button id="message-citation" class="secondary-button small">Cite selected</button></div>
@@ -438,7 +444,7 @@
         <button class="mobile-nav-item active" data-view="barn"><span>⌂</span>Barn</button>
         <button class="mobile-nav-item" data-view="milking"><span>◫</span>Milking</button>
         <button class="mobile-nav-item" data-view="alerts"><span>!</span>Alerts <b>4</b></button>
-        <button class="mobile-nav-item" data-view="messages"><span>✉</span>Messages <b>2</b></button>
+        <button class="mobile-nav-item" data-view="messages"><span>✉</span>Messages <b>6</b></button>
         <button class="mobile-nav-item" id="mobile-profile"><span>◎</span>Profile</button>
       </nav>
     </div>

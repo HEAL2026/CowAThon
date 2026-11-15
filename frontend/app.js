@@ -617,9 +617,18 @@ function renderMilkingStalls(payload) {
     stallBtn.hidden = (sNum > stalls.length);
   });
 
-  stalls.forEach((stall) => {
+  // Position visible stalls symmetrically on the rotary circle
+  const activeCount = stalls.length;
+  stalls.forEach((stall, idx) => {
     const stallBtn = document.querySelector(`.stall[data-stall="${stall.stall_number}"]`);
     if (!stallBtn) return;
+
+    const angle = (idx / activeCount) * 2 * Math.PI - Math.PI / 2;
+    const x = (50 + 47 * Math.cos(angle)).toFixed(2);
+    const y = (50 + 47 * Math.sin(angle)).toFixed(2);
+    stallBtn.style.left = `${x}%`;
+    stallBtn.style.top = `${y}%`;
+    stallBtn.style.transform = "translate(-50%, -50%)";
 
     stallBtn.hidden = false;
     const isHighRisk = Boolean(stall.last_completed_cycle?.flagged_risk);
@@ -757,9 +766,14 @@ function renderAlerts() {
   criticalList.querySelectorAll(".alert-assign-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       showView("messages");
+      const cowKey = btn.dataset.cowId === "C01" ? "bessie" : "fern";
+      const targetThread = document.querySelector(`.message-thread[data-thread="${cowKey}"]`);
+      if (targetThread) {
+        targetThread.click();
+      }
       const input = document.querySelector("#message-input");
       if (input) {
-        input.value = "Dr. Patel: Notifying you about Fern 221 alert and Rest zone B bedding hotspot. Reviewing CMT test.";
+        input.value = `Dr. Patel: Notifying you regarding ${btn.dataset.cowName || "Fern 221"} alert. Reviewing CMT & bedding protocol.`;
         input.focus();
       }
     });
@@ -1207,32 +1221,217 @@ document.querySelectorAll(".suggestion").forEach((button) => {
   });
 });
 
-document.querySelectorAll(".citation").forEach((button) => {
-  button.addEventListener("click", () => {
-    const target = document.querySelector("#selected-citation");
-    target.textContent = `Selected reference: ${button.dataset.citation}`;
-    target.hidden = false;
+const cowMessageThreads = {
+  fern: {
+    title: "Fern 221 (C03) · High mastitis risk",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
+    cowId: "C03",
+    messages: [
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Fern (C03) showed an 85% mastitis probability score after 42 min idle in Rest zone B. Have you run a CMT (California Mastitis Test) on her quarters yet?",
+        citation: "Fern 221 · Mastitis risk 85% alert",
+      },
+      {
+        author: "You",
+        type: "sent",
+        text: "Checking her right now. Right-rear quarter looks slightly warm and swollen. Running CMT test paddle.",
+      },
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "CMT score >= 2 indicates environmental Strep/E. coli. If positive, withhold milk and start intramammary antibiotic protocol per North Barn protocol.",
+        citation: "Clinical protocol: Environmental mastitis Rx",
+      },
+    ],
+  },
+  bessie: {
+    title: "Bessie 01 (C01) · Index case candidate",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
+    cowId: "C01",
+    messages: [
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Permutation analysis flagged Bessie 01 as the primary index case candidate (shared cubicle B4 contact with Fern). Any clinical signs during morning milking?",
+        citation: "Attribution model: Primary index candidate C01",
+      },
+      {
+        author: "You",
+        type: "sent",
+        text: "She passed milking inspection at 5:30 AM without obvious clots, but conductivity was borderline 6.2 mS/cm. I stripped all 4 teats into the cup.",
+      },
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Good catch. Keep her on close watch for the next 48 hrs and ensure cubicle B4 bedding is completely shoveled out and limed.",
+        citation: "Bedding sanitation protocol · Rest Zone B",
+      },
+    ],
+  },
+  luna: {
+    title: "Luna 095 (C04) · Estrus window",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
+    cowId: "C04",
+    messages: [
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Activity monitor detected +62% nighttime step activity and restlessness for Luna 095. Estrus confidence is at 94%.",
+        citation: "Estrus alert · Luna 095 (+62% mobility)",
+      },
+      {
+        author: "You",
+        type: "sent",
+        text: "Confirmed standing heat in the loafing lane around 8:00 AM. Insemination scheduled for 4:00 PM today.",
+      },
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Perfect timing for the AM/PM rule. Her rumination dropped slightly during standing heat, which is normal. Let me know when AI is completed.",
+      },
+    ],
+  },
+  daisy: {
+    title: "Daisy 108 (C02) · Post-calving transition",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
+    cowId: "C02",
+    messages: [
+      {
+        author: "You",
+        type: "sent",
+        text: "Daisy 108 is day 5 post-calving. Morning yield in Stall 2 was 34.6 L, rumination steady at 480 min/day.",
+      },
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Great transition. Fresh cow ketone strip test was negative (0.4 mmol/L BHB). Keep her on the fresh group transition ration.",
+        citation: "Fresh cow health log · Day 5 check",
+      },
+      {
+        author: "You",
+        type: "sent",
+        text: "Will do. She's resting primarily in Zone A cubicles with no signs of metritis or hypocalcemia.",
+      },
+    ],
+  },
+  poppy: {
+    title: "Poppy 164 (C06) · Stall 6 check",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
+    cowId: "C06",
+    messages: [
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Poppy milked in Stall 6 immediately after the alert. Sensor recorded minor electrical conductivity deviation (6.4 mS/cm). Any sign of cluster cross-contamination?",
+        citation: "Milking parlor alert · Stall 6 conductivity",
+      },
+      {
+        author: "You",
+        type: "sent",
+        text: "Cluster #6 was automatically flushed and sanitized before the next cow entered. Poppy's milk filters came back clean.",
+      },
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Excellent preventative hygiene. Let's monitor her next two milking sessions to ensure conductivity normalizes below 5.8.",
+      },
+    ],
+  },
+  mabel: {
+    title: "Mabel 187 (C05) · Rest anomaly check",
+    subtitle: "Farmer ↔ Dr. Maya Patel",
+    cowId: "C05",
+    messages: [
+      {
+        author: "You",
+        type: "sent",
+        text: "Mabel spent 4.2 hrs resting away from herd in Zone A outer cubicles. Locomotion score looks normal (score 1), but she was slow to rise.",
+      },
+      {
+        author: "Dr. Patel",
+        type: "received",
+        text: "Check her right front hoof for any solar ulcer or bruising before turn-out tomorrow. Vitality score is 74/100.",
+        citation: "Herd vitality report · Mabel 187",
+      },
+      {
+        author: "You",
+        type: "sent",
+        text: "Inspected hoof and trimmed slight overgrowth. Bedding fluffed. Rumination is recovering well.",
+      },
+    ],
+  },
+};
+
+function renderMessageThread(threadKey) {
+  state.activeMessageThread = threadKey;
+  const threadData = cowMessageThreads[threadKey] || cowMessageThreads.fern;
+  const titleEl = document.querySelector("#conversation-title");
+  if (titleEl) titleEl.textContent = threadData.title;
+
+  const msgList = document.querySelector("#message-list");
+  if (!msgList) return;
+  msgList.innerHTML = "";
+
+  threadData.messages.forEach((msg) => {
+    const article = document.createElement("article");
+    article.className = `message ${msg.type}`;
+    const authorSpan = document.createElement("span");
+    authorSpan.className = "message-author";
+    authorSpan.textContent = msg.author;
+    const bodyP = document.createElement("p");
+    bodyP.textContent = msg.text;
+    article.append(authorSpan, bodyP);
+
+    if (msg.citation) {
+      const citeBtn = document.createElement("button");
+      citeBtn.className = "citation";
+      citeBtn.dataset.citation = msg.citation;
+      citeBtn.textContent = "Cite this";
+      citeBtn.addEventListener("click", () => {
+        const selected = document.querySelector("#selected-citation");
+        if (selected) {
+          selected.textContent = `Selected reference: ${msg.citation}`;
+          selected.hidden = false;
+        }
+      });
+      article.append(citeBtn);
+    }
+    msgList.append(article);
   });
-});
+}
 
 document.querySelectorAll(".message-thread").forEach((thread) => {
   thread.addEventListener("click", () => {
     document.querySelectorAll(".message-thread").forEach((item) => item.classList.toggle("active", item === thread));
-    document.querySelector("#conversation-title").textContent = thread.dataset.thread === "herd" ? "Herd report · July 28" : "Fern 221 · follow-up";
+    renderMessageThread(thread.dataset.thread);
   });
 });
 
-document.querySelector("#message-citation").addEventListener("click", () => {
+document.querySelector("#message-citation")?.addEventListener("click", () => {
   const selected = document.querySelector("#selected-citation");
-  selected.textContent = selected.hidden ? "Select a report, cow alert, or resting area to cite it here." : selected.textContent;
+  if (!selected) return;
+  const currentKey = state.activeMessageThread || "fern";
+  const threadData = cowMessageThreads[currentKey];
+  const firstCitation = threadData?.messages.find((m) => m.citation)?.citation || "Fern 221 · elevated risk model alert";
+  selected.textContent = `Selected reference: ${firstCitation}`;
   selected.hidden = false;
 });
 
-document.querySelector("#message-form").addEventListener("submit", (event) => {
+document.querySelector("#message-form")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const input = document.querySelector("#message-input");
-  const value = input.value.trim();
+  const value = input?.value.trim();
   if (!value) return;
+
+  const currentKey = state.activeMessageThread || "fern";
+  if (!cowMessageThreads[currentKey]) {
+    cowMessageThreads[currentKey] = { title: "Custom conversation", messages: [] };
+  }
+  const newMsg = { author: "You", type: "sent", text: value };
+  cowMessageThreads[currentKey].messages.push(newMsg);
+
   const message = document.createElement("article");
   message.className = "message sent";
   const author = document.createElement("span");
@@ -1241,7 +1440,7 @@ document.querySelector("#message-form").addEventListener("submit", (event) => {
   const body = document.createElement("p");
   body.textContent = value;
   message.append(author, body);
-  document.querySelector("#message-list").append(message);
+  document.querySelector("#message-list")?.append(message);
   input.value = "";
 });
 
@@ -1405,6 +1604,7 @@ document.querySelectorAll(".role-button").forEach((button) => {
 
 applyRolePresentation();
 updateColorScaleGuides();
+renderMessageThread("fern");
 showView("barn");
 if (timeLabel) timeLabel.textContent = formatDisplayTime(state.currentTsUtc);
 loadS12Data(state.currentTsUtc);
