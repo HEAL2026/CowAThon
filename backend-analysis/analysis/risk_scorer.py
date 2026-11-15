@@ -101,9 +101,9 @@ class MultimodalRiskScorer:
                 behavior_score += hypo_def
                 contributing_factors.append(f"Pronounced lethargy / hypoactivity ({act_val:.2f} m/s²)")
 
-            # Kinetic agitation / restlessness (up to behavior_weight)
-            if act_val > 0.70:
-                hyper_def = min(self.behavior_weight, (act_val - 0.70) / 0.80 * self.behavior_weight)
+            # Kinetic agitation / restlessness (calibrated to empirical p90 = 0.85 m/s²)
+            if act_val > 0.85:
+                hyper_def = min(self.behavior_weight, (act_val - 0.85) / 0.75 * self.behavior_weight)
                 behavior_score += hyper_def
                 contributing_factors.append(f"Acute kinetic agitation / restlessness ({act_val:.2f} m/s²)")
 

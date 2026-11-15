@@ -92,7 +92,7 @@ Analysis consumes the canonical processed joined table produced by `backend-clea
 Composite weighted score reflecting multi-system deviation:
 $$\text{watch\_risk\_score} = S_{\text{thermal}} + S_{\text{behavior}} + S_{\text{production}} + S_{\text{movement}}$$
 - **Thermal component ($S_{\text{thermal}}$, max 40)**: From CBT elevation and THI exposure.
-- **Behavioral component ($S_{\text{behavior}}$, max 30)**: From profound kinetic lethargy, acute restlessness/agitation, and recumbent rest deficits.
+- **Behavioral component ($S_{\text{behavior}}$, max 30)**: From profound kinetic lethargy ($< 0.15\text{ m/s}^2$ outside rest), acute kinetic agitation/restlessness ($> 0.85\text{ m/s}^2$, calibrated to empirical p90), and recumbent rest deficits.
 - **Production component ($S_{\text{production}}$, max 20)**: From sudden milk yield deviation below rolling baseline.
 - **Movement / Spatial component ($S_{\text{movement}}$, max 10)**: Prolonged displacement from comfort/ventilation zones, respecting `out_of_pen` milking trips.
 
