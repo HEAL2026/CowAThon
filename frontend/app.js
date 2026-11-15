@@ -357,6 +357,10 @@ function updateColorScaleGuides() {
 
 function renderHeatmap(heatmapData) {
   const canvas = document.querySelector("#heatmap-canvas");
+  const gradientKey = document.querySelector("#heatmap-gradient-key");
+  if (gradientKey) {
+    gradientKey.hidden = (state.mode !== "heatmap");
+  }
   if (!canvas) return;
 
   if (state.mode !== "heatmap" || !heatmapData || !Array.isArray(heatmapData) || !heatmapData.length) {
@@ -607,10 +611,17 @@ function renderMilkingStalls(payload) {
   let activeYieldCount = 0;
   let highRiskCount = 0;
 
+  // Hide any stalls that exceed active stall count from API
+  document.querySelectorAll(".stall").forEach((stallBtn) => {
+    const sNum = Number(stallBtn.dataset.stall);
+    stallBtn.hidden = (sNum > stalls.length);
+  });
+
   stalls.forEach((stall) => {
     const stallBtn = document.querySelector(`.stall[data-stall="${stall.stall_number}"]`);
     if (!stallBtn) return;
 
+    stallBtn.hidden = false;
     const isHighRisk = Boolean(stall.last_completed_cycle?.flagged_risk);
     const isWatch = Boolean(stall.last_completed_cycle?.cow_id && (state.modelWatchList.has(stall.last_completed_cycle.cow_id) || state.manualWatchList.has(stall.last_completed_cycle.cow_id)));
     if (isHighRisk) highRiskCount++;
@@ -634,6 +645,211 @@ function renderMilkingStalls(payload) {
     const avgYieldEl = document.querySelector("#milking-avg-yield");
     if (avgYieldEl) avgYieldEl.textContent = `${avgYield} kg / cow`;
   }
+  if (totalYield > 0) {
+    const totalYieldEl = document.querySelector("#milking-total-yield");
+    if (totalYieldEl) totalYieldEl.innerHTML = `${Math.round(totalYield * 8)} <span>kg</span>`;
+  }
+}
+
+function renderAlerts() {
+  const criticalList = document.querySelector("#critical-alerts-list");
+  const stackedList = document.querySelector("#stacked-routine-inbox");
+  const summaryEyebrow = document.querySelector("#alerts-summary-eyebrow");
+  if (!criticalList || !stackedList) return;
+
+  const records = state.s12.penMap?.cows || [...state.cowRecords.values()];
+  const healthRecords = state.s12.herdHealth?.cows || [];
+  const stalls = state.milking?.stalls || [];
+  const attribution = state.s12.attribution || {};
+
+  // 1. Critical Alerts (Urgent Priority)
+  const criticalItems = [];
+
+  // Cow Fern 221 / acute mastitis risk
+  const acuteCow = healthRecords.find((c) => c.cow_id === "C03" || Number(c.mastitis_risk || 0) >= 80)
+    || records.find((c) => c.cow_id === "C03" || Number(c.exposure_score || 0) >= 0.80)
+    || { cow_id: "C03", display_name: "Fern 221", mastitis_risk: 85 };
+  const cowId = acuteCow?.cow_id || "C03";
+  const cowName = acuteCow?.display_name || (cowId === "C03" ? "Fern 221" : `Cow ${cowId}`);
+  const riskScore = Math.round(Number(acuteCow?.mastitis_risk || 85));
+
+  criticalItems.push({
+    id: "alert-fern",
+    type: "Urgent · Clinical Risk",
+    title: `${cowName} has a sharp health-index change (Mastitis Risk ${riskScore}%)`,
+    desc: "Activity is down 38% and continuous lying bout duration in Rest zone B is 42 min. Model-predicted environmental mastitis risk.",
+    time: "12 min ago",
+    badge: "Auto-dispatched to Dr. Patel",
+    actionLabel: "Inspect cow now",
+    actionTarget: "barn",
+    cowId: cowId,
+  });
+
+  // Bedding Hotspot Alert
+  if (attribution.likely_route === "resting_area" || state.s12.penMap?.resting_areas?.length) {
+    criticalItems.push({
+      id: "alert-bedding",
+      type: "Urgent · Environmental Vector",
+      title: "Rest Zone B cubicle bedding contamination hotspot",
+      desc: "Lying exposure permutation p = 0.024 (*). Multiple contacts (C01, C03, C04) in shared bedding cells. High environmental pathogen risk (E. coli / Strep. uberis).",
+      time: "24 min ago",
+      badge: "Bedding renewal required",
+      actionLabel: "Highlight zone on map",
+      actionTarget: "barn-overlay",
+    });
+  }
+
+  // Milking Stall Alert
+  const flaggedStall = stalls.find((s) => s.last_completed_cycle?.flagged_risk) || { stall_number: 6 };
+  criticalItems.push({
+    id: "alert-stall",
+    type: "Watch · Parlor Hygiene",
+    title: `Stall ${flaggedStall.stall_number} has elevated conductivity`,
+    desc: "Consecutive cycles recorded milk conductivity above barn baseline. Run sanitize flush cycle before next group.",
+    time: "34 min ago",
+    badge: "Sanitize cluster",
+    actionLabel: "View stall in parlor",
+    actionTarget: "milking",
+    stallNum: flaggedStall.stall_number,
+  });
+
+  criticalList.innerHTML = criticalItems.map((item) => `
+    <article class="alert-card urgent" id="${item.id}">
+      <div class="alert-icon">!</div>
+      <div>
+        <span class="alert-type">${item.type} · ${item.badge}</span>
+        <h3>${item.title}</h3>
+        <p>${item.desc}</p>
+        <div class="alert-actions">
+          <button class="primary-button small alert-act-btn" data-target="${item.actionTarget}" data-cow="${item.cowId || ''}" data-stall="${item.stallNum || ''}">${item.actionLabel}</button>
+          <button class="secondary-button small alert-assign-btn">Notify Dr. Patel</button>
+          <button class="text-button alert-ack-btn">Acknowledge</button>
+        </div>
+      </div>
+      <time>${item.time}</time>
+    </article>
+  `).join("");
+
+  // Wire critical alert action buttons
+  criticalList.querySelectorAll(".alert-act-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.target;
+      if (target === "barn") {
+        showView("barn");
+        if (btn.dataset.cow) {
+          const dot = findCowDot(btn.dataset.cow);
+          if (dot) dot.click();
+        }
+      } else if (target === "barn-overlay") {
+        showView("barn");
+        const overlayBtn = document.querySelector("#problem-overlay");
+        if (overlayBtn && !state.overlay) overlayBtn.click();
+      } else if (target === "milking") {
+        showView("milking");
+        if (btn.dataset.stall) {
+          const stallBtn = document.querySelector(`.stall[data-stall="${btn.dataset.stall}"]`);
+          if (stallBtn) stallBtn.click();
+        }
+      }
+    });
+  });
+
+  criticalList.querySelectorAll(".alert-assign-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      showView("messages");
+      const input = document.querySelector("#message-input");
+      if (input) {
+        input.value = "Dr. Patel: Notifying you about Fern 221 alert and Rest zone B bedding hotspot. Reviewing CMT test.";
+        input.focus();
+      }
+    });
+  });
+
+  criticalList.querySelectorAll(".alert-ack-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const card = e.target.closest(".alert-card");
+      if (card) {
+        card.style.opacity = "0.5";
+        e.target.textContent = "Acknowledged ✓";
+      }
+    });
+  });
+
+  // 2. Stacked Routine Activity Inbox (Non-urgent events grouped to eliminate notification overload)
+  const stackedItems = [
+    {
+      id: "stack-estrus",
+      icon: "♀",
+      title: "Estrus & Reproductive Events",
+      count: "1 cow",
+      summaryHtml: `
+        <div class="stacked-item">
+          <div><strong>Luna 095 (C04)</strong> — Heightened night mobility (+62%), restless bout pattern (42 min).</div>
+          <span class="stacked-badge badge-watch">Optimal insemination window</span>
+        </div>
+      `,
+    },
+    {
+      id: "stack-milking",
+      icon: "◫",
+      title: "Milking Parlor Yields",
+      count: "8 stalls active",
+      summaryHtml: `
+        <div class="stacked-item">
+          <div><strong>Parlor throughput nominal</strong> — 34.1 kg avg yield per cow, flow rate 2.7–3.2 kg/min.</div>
+          <span class="stacked-badge badge-normal">Within target</span>
+        </div>
+      `,
+    },
+    {
+      id: "stack-cohort",
+      icon: "◎",
+      title: "Uninstrumented Cohort Telemetry",
+      count: "6 cows (C11–C16)",
+      summaryHtml: `
+        <div class="stacked-item">
+          <div><strong>Visual welfare protocol</strong> — Head count confirmed in feeding alley; zero physical distress.</div>
+          <span class="stacked-badge badge-normal">Monitored</span>
+        </div>
+      `,
+    },
+    {
+      id: "stack-resting",
+      icon: "⌂",
+      title: "Cubicle Resting Durations",
+      count: "8 cows baseline",
+      summaryHtml: `
+        <div class="stacked-item">
+          <div><strong>Standard resting bouts</strong> — Bessie 01, Daisy 108, Mabel 187, Poppy 164, Rose 204, Willow 131 logging >20 min bouts.</div>
+          <span class="stacked-badge badge-normal">Normal</span>
+        </div>
+      `,
+    },
+  ];
+
+  stackedList.innerHTML = stackedItems.map((item) => `
+    <details class="stacked-card" id="${item.id}">
+      <summary class="stacked-summary">
+        <span class="stacked-title-left">
+          <span class="stacked-icon">${item.icon}</span>
+          <span>${item.title}</span>
+        </span>
+        <span class="stacked-count">${item.count}</span>
+      </summary>
+      <div class="stacked-content">
+        ${item.summaryHtml}
+      </div>
+    </details>
+  `).join("");
+
+  if (summaryEyebrow) {
+    summaryEyebrow.textContent = `${criticalItems.length} critical · ${stackedItems.length} routine stacked · ${formatDisplayTime(state.currentTsUtc)}`;
+  }
+
+  // Update tabs
+  document.querySelectorAll("[data-view='alerts'] b, .alert-tab b").forEach((b) => {
+    b.textContent = String(criticalItems.length);
+  });
 }
 
 async function loadMilkingData() {
@@ -661,10 +877,12 @@ async function loadS12Data(tsUtc = state.currentTsUtc) {
     renderHerdHealth(herdHealth);
     renderAttribution(attribution);
     renderImpact(impact);
-    loadMilkingData();
+    await loadMilkingData();
+    renderAlerts();
     updateDataBadge([penMap, herdHealth, attribution, impact]);
     setDataStatus("API connected", "connected");
   } catch (error) {
+    renderAlerts();
     setDataStatus("Demo fallback · API unavailable", "fallback");
     document.querySelector("#backtrace-status").textContent = "The visualization service is unavailable; demo panels remain visible.";
     if (!state.s12.penMap) {
@@ -690,16 +908,39 @@ function showView(view) {
 }
 
 function applyRolePresentation() {
-  document.body.classList.toggle("farmer-mode", state.role === "farmer");
-  document.body.classList.toggle("vet-mode", state.role === "vet");
-  document.querySelector(".welcome-row h1").textContent = state.role === "vet"
+  const isFarmer = (state.role === "farmer");
+  const isVet = (state.role === "vet");
+  document.body.classList.toggle("farmer-mode", isFarmer);
+  document.body.classList.toggle("vet-mode", isVet);
+
+  document.querySelector(".welcome-row h1").textContent = isVet
     ? "Herd detail for clinical review"
     : "Today’s farm priorities";
-  document.querySelector(".section-heading h2").textContent = state.role === "vet"
+  document.querySelector(".section-heading h2").textContent = isVet
     ? "Barn overview and risk context"
     : "Where should I look first?";
+
   const toggle = document.querySelector("#role-details-toggle");
-  if (toggle) toggle.textContent = state.role === "vet" ? "Hide model details ↑" : "View model details →";
+  if (toggle) toggle.textContent = isVet ? "Hide model details ↑" : "View model details →";
+
+  // Partner summary presentation
+  const careTeamFarmer = document.querySelector(".care-team-farmer");
+  const partnerFarmVet = document.querySelector(".partner-farm-vet");
+  if (careTeamFarmer) careTeamFarmer.hidden = isVet;
+  if (partnerFarmVet) partnerFarmVet.hidden = !isVet;
+
+  // Toggle farmer actionable banner vs vet differential panel
+  const farmerBanner = document.querySelector("#farmer-action-banner");
+  const vetPanel = document.querySelector("#vet-differential-panel");
+  if (farmerBanner) farmerBanner.hidden = isVet;
+  if (vetPanel) vetPanel.hidden = !isVet;
+
+  // In farmer mode, hide complex color-by options to avoid quantitative clutter
+  document.querySelectorAll(".color-by-option").forEach((opt) => {
+    opt.style.display = isVet ? "" : "none";
+  });
+  const legendHr = document.querySelector(".legend-card hr");
+  if (legendHr) legendHr.style.display = isVet ? "" : "none";
 }
 
 document.querySelectorAll("[data-view]").forEach((button) => {
@@ -715,8 +956,10 @@ document.querySelectorAll(".mode-button").forEach((button) => {
     state.mode = button.dataset.mode;
     document.querySelectorAll(".mode-button").forEach((item) => item.classList.toggle("active", item === button));
     document.querySelector(".barn-polygon").classList.toggle("heatmap", state.mode === "heatmap");
+    const gradientKey = document.querySelector("#heatmap-gradient-key");
+    if (gradientKey) gradientKey.hidden = (state.mode !== "heatmap");
     document.querySelector(".map-legend").innerHTML = state.mode === "heatmap"
-      ? "Gradient shows time spent idling"
+      ? '<span class="map-legend-heatmap">Idle density: <span class="guide-dot healthy"></span> &lt;30m <span class="guide-dot watch"></span> 30–60m <span class="guide-dot urgent"></span> &gt;60m</span>'
       : '<i class="legend-dot healthy"></i> Cow location';
     renderHeatmap(state.s12.penMap?.grid?.heatmap);
   });
@@ -1002,12 +1245,152 @@ document.querySelector("#message-form").addEventListener("submit", (event) => {
   input.value = "";
 });
 
+function handleAdvisorQuery(rawQuery) {
+  const q = (rawQuery || "").toLowerCase();
+  if (q.includes("first") || q.includes("morning") || q.includes("today") || q.includes("priorities")) {
+    return "<strong>Today's 3 morning priorities (Aug 4):</strong><br>" +
+      "1. <strong>Inspect Fern 221 (C03)</strong> in Rest zone B before milking; examine rear udder quarters and run a California Mastitis Test (CMT).<br>" +
+      "2. <strong>Sanitize Rest zone B cubicle bedding</strong>; scrape moist manure and apply dry lime/disinfectant bedding to prevent environmental pathogen spread.<br>" +
+      "3. <strong>Service Stall 6 cluster</strong> in Parlor 1; run a sanitize rinse cycle before the next group.";
+  }
+  if (q.includes("fern") || q.includes("c03") || q.includes("alert")) {
+    return "<strong>Fern 221 (C03) Clinical Status:</strong><br>" +
+      "• <strong>Risk:</strong> High mastitis risk score (0.85) flagged by behavioral anomaly model.<br>" +
+      "• <strong>Observation:</strong> 42 minutes of restless idling in Rest zone B; rumination activity down 38%.<br>" +
+      "• <strong>Action:</strong> Milk last in rotation, inspect teats for heat/swelling, and log CMT score.";
+  }
+  if (q.includes("bedding") || q.includes("zone b") || q.includes("sanitize") || q.includes("clean")) {
+    return "<strong>Rest Zone B Bedding Sanitation Protocol:</strong><br>" +
+      "• Remove all soiled organic matter from cubicle stalls B1 through B8.<br>" +
+      "• Dust stall beds with hydrated lime or antibacterial bedding conditioner.<br>" +
+      "• Re-bed with 3+ inches of clean kiln-dried sawdust or inorganic sand.<br>" +
+      "• <em>Goal:</em> Eliminate environmental reservoirs of <em>E. coli</em> and <em>Strep. uberis</em>.";
+  }
+  if (q.includes("stall") || q.includes("parlor") || q.includes("milking") || q.includes("service")) {
+    return "<strong>Milking Parlor Guidance:</strong><br>" +
+      "• <strong>Stall 6:</strong> Conductivity reading elevated in the last cycle. Run cluster sanitize cycle before the next group.<br>" +
+      "• <strong>Order:</strong> Milk healthy baseline cows first; milk watch cows (Fern 221, Bessie 01) last to prevent cluster cross-transmission.<br>" +
+      "• <strong>Post-Dip:</strong> Maintain 0.5% iodine teat dip across all stalls.";
+  }
+  if (q.includes("differential") || q.includes("diagnosis") || q.includes("pathogen")) {
+    return "<strong>Differential Diagnosis Context:</strong><br>" +
+      "• <strong>Environmental Route (84% Likelihood):</strong> <em>E. coli</em>, <em>S. uberis</em> via contaminated bedding in Rest Zone B. Significant resting permutation p = 0.024.<br>" +
+      "• <strong>Contagious Route (16% Likelihood):</strong> <em>Staph. aureus</em> via milking clusters. Non-significant permutation p = 0.412.<br>" +
+      "• <strong>Pre-visit Action:</strong> Confirm with CMT test; prepare intramammary antibiotics if CMT is positive.";
+  }
+  return "<strong>Herdwise Advisor:</strong> Based on current telemetry for North Barn (16 cows, 10 tracked), the primary focus is environmental mastitis prevention. Focus on Fern 221 udder inspection and Rest zone B bedding sanitation.";
+}
+
+// Inline farmer advisor form
+const farmerInlineForm = document.querySelector("#farmer-inline-chat-form");
+if (farmerInlineForm) {
+  farmerInlineForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = document.querySelector("#farmer-inline-chat-input");
+    const replyEl = document.querySelector("#farmer-inline-chat-reply");
+    if (!input || !input.value.trim() || !replyEl) return;
+    replyEl.innerHTML = handleAdvisorQuery(input.value.trim());
+    replyEl.hidden = false;
+  });
+}
+
+// Quick chip prompts
+document.querySelectorAll(".quick-chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    const query = chip.dataset.query || chip.textContent;
+    const input = document.querySelector("#farmer-inline-chat-input");
+    const replyEl = document.querySelector("#farmer-inline-chat-reply");
+    if (input) input.value = query;
+    if (replyEl) {
+      replyEl.innerHTML = handleAdvisorQuery(query);
+      replyEl.hidden = false;
+    }
+  });
+});
+
+// Farmer Action buttons
+const farmerBtn1 = document.querySelector("#farmer-action-btn-1");
+if (farmerBtn1) {
+  farmerBtn1.addEventListener("click", () => {
+    showView("barn");
+    const fernDot = findCowDot("C03") || findCowDot("Fern 221");
+    if (fernDot) fernDot.click();
+  });
+}
+
+const farmerBtn2 = document.querySelector("#farmer-action-btn-2");
+if (farmerBtn2) {
+  farmerBtn2.addEventListener("click", () => {
+    showView("barn");
+    const overlayBtn = document.querySelector("#problem-overlay");
+    if (overlayBtn && !state.overlay) overlayBtn.click();
+  });
+}
+
+const farmerBtn3 = document.querySelector("#farmer-action-btn-3");
+if (farmerBtn3) {
+  farmerBtn3.addEventListener("click", () => {
+    showView("milking");
+    const stall6 = document.querySelector('.stall[data-stall="6"]');
+    if (stall6) stall6.click();
+  });
+}
+
+// Clinical summary export
+const exportClinicalBtn = document.querySelector("#export-clinical-report-btn");
+if (exportClinicalBtn) {
+  exportClinicalBtn.addEventListener("click", () => {
+    const reportText = `HERDWISE CLINICAL CASE SUMMARY\nFarm: North Barn Dairy (Mike Johnson)\nDate: ${state.currentTsUtc || "Aug 4, 11:59 AM UTC"}\nPrimary Veterinarian: Dr. Maya Patel\n\nDIFFERENTIAL ATTRIBUTION:\n- Most Supported Route: Environmental Bedding Transmission (Likelihood 84%)\n- Resting Route Permutation p-value: 0.024 (Statistically Significant)\n- Milking Machine Permutation p-value: 0.412 (Non-significant)\n- Suspected Pathogens: E. coli, Streptococcus uberis, S. dysgalactiae\n\nPATIENT INVENTORY:\n- Primary Index Case: Cow C01 (Bessie 01)\n- Acute Clinical Suspect: Cow C03 (Fern 221) - Mastitis Risk 85%\n- Rest Zone Contacts: C01, C03, C04\n\nRECOMMENDED INTERVENTIONS:\n1. Complete California Mastitis Test (CMT) on C03 and C01.\n2. Initiate intramammary antimicrobial therapy if CMT score >= 2.\n3. Sanitize and renew organic bedding in Rest Zone B cubicles 1-8.\n4. Milk suspect cows last in milking sequence.`;
+    navigator.clipboard?.writeText?.(reportText);
+    exportClinicalBtn.textContent = "Copied to clipboard ✓";
+    setTimeout(() => { exportClinicalBtn.textContent = "Export clinical summary ↗"; }, 2500);
+  });
+}
+
+// Partner farm selector for vet view
+const partnerFarmSelect = document.querySelector("#partner-farm-select");
+if (partnerFarmSelect) {
+  partnerFarmSelect.addEventListener("change", (e) => {
+    const selected = e.target.value;
+    const eyebrow = document.querySelector("#barn-cohort-eyebrow");
+    if (selected === "north-barn") {
+      loadS12Data();
+    } else if (selected === "sunrise-coop") {
+      if (eyebrow) eyebrow.textContent = "Sunrise Cooperative (Farmer John Doe) · 120 cows (Demo client)";
+    } else if (selected === "green-pastures") {
+      if (eyebrow) eyebrow.textContent = "Green Pastures (Farmer Sarah Smith) · 85 cows (Demo client)";
+    } else if (selected === "highland-cattle") {
+      if (eyebrow) eyebrow.textContent = "Highland Cattle Co. (Farmer David Miller) · 64 cows (Demo client)";
+    }
+  });
+}
+
+// Mark all routine read
+const markRoutineBtn = document.querySelector("#mark-all-routine-read");
+if (markRoutineBtn) {
+  markRoutineBtn.addEventListener("click", () => {
+    document.querySelectorAll(".stacked-card").forEach((card) => {
+      card.removeAttribute("open");
+    });
+    markRoutineBtn.textContent = "All routine read ✓";
+    setTimeout(() => { markRoutineBtn.textContent = "Mark routine as read"; }, 2000);
+  });
+}
+
+// Vet contact button
+const vetContactBtn = document.querySelector("#vet-contact-btn");
+if (vetContactBtn) {
+  vetContactBtn.addEventListener("click", () => {
+    showView("messages");
+  });
+}
+
 document.querySelector("#assistant-form").addEventListener("submit", (event) => {
   event.preventDefault();
   const input = document.querySelector("#assistant-input");
   const response = document.querySelector("#assistant-response");
   if (!input.value.trim()) return;
-  response.textContent = "Based on the latest synced data, I recommend checking Fern 221 before the next milking. This is a model suggestion, not a diagnosis.";
+  response.innerHTML = handleAdvisorQuery(input.value.trim());
   response.hidden = false;
   input.value = "";
 });
@@ -1016,7 +1399,6 @@ document.querySelectorAll(".role-button").forEach((button) => {
   button.addEventListener("click", () => {
     state.role = button.dataset.role;
     document.querySelectorAll(".role-button").forEach((item) => item.classList.toggle("active", item === button));
-    document.querySelector(".partner-summary .field-label").textContent = state.role === "vet" ? "Partner farms" : "Care team";
     applyRolePresentation();
   });
 });
