@@ -4,10 +4,17 @@ Runs seamlessly with both standard library unittest and pytest.
 """
 
 import os
+import sys
 import json
 import tempfile
 import re
 import unittest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for p in [REPO_ROOT / "backend-visualization", REPO_ROOT / "backend-cleaning", REPO_ROOT / "apis"]:
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
 from visualization.payloads import (
     generate_barn_overview,
@@ -134,6 +141,10 @@ class TestVisualizationPayloads(unittest.TestCase):
     def test_benchmarks_summary_contract(self):
         payload = generate_benchmarks_summary()
         self.assertEqual(payload["dataset"], "MMCows Challenge 1")
+        self.assertIn("group_kfold", payload["evaluation_protocol"])
+        self.assertIn("cv_unavailable", payload)
+        self.assertFalse(payload["cv_unavailable"])
+        self.assertIn("is_synthetic", payload)
         self.assertIn("thi_threshold_baseline", payload["baselines"])
         self.assertIn("cbt_threshold_baseline", payload["baselines"])
         self.assertIn("multimodal_model", payload)

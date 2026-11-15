@@ -1,25 +1,53 @@
 """
 Unit tests for visualization data_loader real ingestion and fixture fallback.
+Verifies cwd-independent path resolution, benchmark protocol conformity, and watch-list ingestion.
 """
 
+import os
+import sys
+import json
+import tempfile
 import unittest
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for p in [REPO_ROOT / "backend-visualization", REPO_ROOT / "backend-cleaning", REPO_ROOT / "apis"]:
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
+
 from visualization.data_loader import (
     locate_joined_table,
     get_sidecar_metadata,
     load_raw_table_records,
     get_cow_timeseries_data,
     get_barn_overview_data,
+    get_benchmarks_data,
+    get_watch_list_data,
+    REPO_ROOT,
 )
 
 
 class TestDataLoader(unittest.TestCase):
 
     def test_locate_joined_returns_none_or_path(self):
-        # find_joined() or locate_joined_table() returns Path or None
         p = locate_joined_table()
         if p is not None:
             self.assertTrue(p.is_file())
+
+    def test_locate_joined_cwd_independence(self):
+        """Verify locate_joined_table resolves identically regardless of current working directory."""
+        original_cwd = os.getcwd()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            try:
+                os.chdir(tmpdir)
+                p_from_tmp = locate_joined_table()
+                # If joined table exists at repo root, it must resolve from tmpdir
+                canonical = REPO_ROOT / "backend-cleaning" / "data" / "processed" / "joined_1min.parquet"
+                if canonical.is_file():
+                    self.assertIsNotNone(p_from_tmp)
+                    self.assertEqual(p_from_tmp.resolve(), canonical.resolve())
+            finally:
+                os.chdir(original_cwd)
 
     def test_sidecar_metadata_fallback(self):
         meta = get_sidecar_metadata(Path("nonexistent.parquet"))
@@ -85,6 +113,33 @@ class TestDataLoader(unittest.TestCase):
         self.assertFalse(is_synth)
         self.assertEqual(len(cows), 7)
         self.assertEqual(env["indoor_thi"], 73.0)
+
+    def test_get_benchmarks_data_protocol_and_fields(self):
+        payload, is_synth = get_benchmarks_data()
+        self.assertIsInstance(payload, dict)
+        self.assertIsInstance(is_synth, bool)
+        self.assertIn("dataset", payload)
+        self.assertIn("evaluation_protocol", payload)
+        # Valid protocol prefixes
+        proto = payload["evaluation_protocol"]
+        valid_prefixes = ["group_kfold", "leave_one_animal_out", "insufficient_animals_for_cv"]
+        self.assertTrue(any(proto.startswith(p) for p in valid_prefixes), f"Unexpected protocol: {proto}")
+        self.assertIn("cv_unavailable", payload)
+        self.assertIn("baselines", payload)
+        self.assertIn("multimodal_model", payload)
+
+    def test_get_watch_list_data_non_clinical(self):
+        items, is_synth = get_watch_list_data()
+        self.assertIsInstance(items, list)
+        self.assertIsInstance(is_synth, bool)
+        self.assertGreater(len(items), 0)
+        for item in items:
+            self.assertIn("cow_id", item)
+            self.assertIn(item["risk_category"], ["priority_watch", "moderate_watch", "baseline"])
+            self.assertTrue(item["is_model_suggestion"])
+            self.assertIn("confidence", item)
+            self.assertIn("modalities_present", item)
+            self.assertIn("modalities_missing", item)
 
 
 if __name__ == "__main__":

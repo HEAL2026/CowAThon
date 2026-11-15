@@ -4,9 +4,16 @@ Transforms tabular inputs into validated, JSON-serializable structures.
 Alignd with MMCows raw schema and backend-analysis CONTRACT.md.
 """
 
+import sys
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 import math
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+APIS_PATH = str(REPO_ROOT / "apis")
+if APIS_PATH not in sys.path:
+    sys.path.insert(0, APIS_PATH)
 
 
 def generate_barn_overview(
@@ -300,9 +307,11 @@ def generate_benchmarks_summary(
     # Standard benchmark results aligned with backend-analysis/CONTRACT.md §4.2
     return {
         "dataset": "MMCows Challenge 1",
-        "evaluation_protocol": "GroupKFold by cow_id (zero animal leakage)",
+        "evaluation_protocol": "group_kfold_5 (n=10)",
         "n_groups": 10,
         "n_splits": 5,
+        "cv_unavailable": False,
+        "is_synthetic": True,
         "baselines": {
             "thi_threshold_baseline": {
                 "description": "Environmental rule: Alert when THI >= 68.0",

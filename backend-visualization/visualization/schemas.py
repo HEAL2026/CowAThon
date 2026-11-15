@@ -128,6 +128,8 @@ class BenchmarkSummaryPayload:
     multimodal_model: Dict[str, Any]
     multimodal_lift_over_env_baseline_auc: float
     multimodal_lift_over_cbt_baseline_auc: float
+    cv_unavailable: bool = False
+    is_synthetic: bool = False
 
 
 @dataclass
