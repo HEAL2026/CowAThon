@@ -32,6 +32,22 @@ python3 -m cleaning --skip-heavy                 # tabular core, ~6 s
 python3 -m cleaning                              # + 10 Hz immu/pressure -> collar_1min
 ```
 
+### Synthetic layer (brief S0b)
+
+```bash
+python3 -m cleaning synth --seed 0        # -> data/synthetic/ (gitignored), all is_synthetic=true
+```
+
+One seeded world over the 14 real days: `milking_log` (unit + order synthetic,
+visit time from each cow's real UWB milking trip), `sanitation` (one skipped
+on purpose), `bedding_synthetic` (placeholder until Aster's), `milk_visits_synthetic`
+(per‑quarter conductivity, SCC, yield — Aster's shape), `daily_perturbations`
+(multipliers analysis applies to its own daily features for case cows), and
+`synthetic_labels` (ground truth: case cows, onset, dx, `true_route`,
+`true_source`). Three disjoint episodes: resting‑route (days 1–5, built from
+where cows really lay), milking‑route (days 6–10), sporadic (days 11–14).
+Signature ranges and their sources are in `cleaning/synth.py`.
+
 ### Reading it from another folder
 
 Do not hardcode a relative path to the parquet — folders are nested

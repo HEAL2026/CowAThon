@@ -15,7 +15,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import bouts, derive, export, ingest, join
+from . import bouts, derive, export, ingest, join, synth
 from .ingest import write_table
 from .locate import find_joined
 
@@ -103,6 +103,13 @@ def _export(a: argparse.Namespace) -> int:
     return 0
 
 
+def _synth(a: argparse.Namespace) -> int:
+    summary = synth.run(a.processed, a.interim, a.out, seed=a.seed)
+    print(json.dumps(summary, indent=2, default=str))
+    print(f"-> {a.out}")
+    return 0
+
+
 def _where(_: argparse.Namespace) -> int:
     """Print what a consumer would resolve, so a fixture fallback is debuggable."""
     p = find_joined()
@@ -133,6 +140,13 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--source", type=Path, help="joined table to slice (default: resolved via $MMCOWS_JOINED)")
     e.add_argument("--format", choices=("parquet", "csv"), default="parquet")
     e.set_defaults(fn=_export)
+
+    sy = sub.add_parser("synth", help="S0b: seeded synthetic milking log / sanitation / cases / outbreak scenarios")
+    sy.add_argument("--processed", type=Path, default=HERE / "data" / "processed")
+    sy.add_argument("--interim", type=Path, default=HERE / "data" / "interim")
+    sy.add_argument("--out", type=Path, default=HERE / "data" / "synthetic")
+    sy.add_argument("--seed", type=int, default=0)
+    sy.set_defaults(fn=_synth)
 
     w = sub.add_parser("where", help="print the joined table a consumer would resolve")
     w.set_defaults(fn=_where)
