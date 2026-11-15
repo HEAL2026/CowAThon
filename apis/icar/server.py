@@ -15,6 +15,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from apis.icar.models import now_utc_iso
 from apis.icar.service import IcarAdeService
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -88,6 +89,12 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 status = query.get("status", [None])[0]
                 data = self.service.get_flags(animal_id=animal_id, status=status)
                 self._send_json({"flags": data})
+            elif path == "/sanitation":
+                unit_id = query.get("unit_id", [None])[0]
+                kind = query.get("kind", [None])[0]
+                session_id = query.get("session_id", [None])[0]
+                data = self.service.get_sanitation_records(unit_id=unit_id, kind=kind, session_id=session_id)
+                self._send_json({"sanitationRecords": data})
             elif path.startswith("/api/"):
                 if path == "/api/integrations":
                     from apis.registry import create_default_registry
@@ -129,11 +136,29 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 details = payload.get("details", {})
                 animal_id = payload.get("animal_id")
                 recorded_by = payload.get("recorded_by", "operator")
+                kind = payload.get("kind")
                 entry = self.service.create_manual_entry(
                     entry_type=entry_type,
                     details=details,
                     animal_id=animal_id,
                     recorded_by=recorded_by,
+                    kind=kind,
+                )
+                self._set_headers(201)
+                self.wfile.write(json.dumps(entry).encode("utf-8"))
+
+            elif path == "/sanitation":
+                unit_id = payload.get("unit_id") or payload.get("unitId") or "STALL-01"
+                sanitized_at = payload.get("sanitized_at") or payload.get("sanitizedAt") or now_utc_iso()
+                session_id = payload.get("session_id") or payload.get("sessionId") or "unknown_session"
+                kind = payload.get("kind", "end_of_session")
+                is_synthetic = bool(payload.get("is_synthetic", True))
+                entry = self.service.create_sanitation_record(
+                    unit_id=unit_id,
+                    sanitized_at=sanitized_at,
+                    session_id=session_id,
+                    kind=kind,
+                    is_synthetic=is_synthetic,
                 )
                 self._set_headers(201)
                 self.wfile.write(json.dumps(entry).encode("utf-8"))
@@ -211,6 +236,39 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 contacts = summary.get("primaryContactCows", [])
 
                 response_obj = {
+                    # Spec v2 Section 6 root keys
+                    "investigation_window": summary.get("investigation_window", {
+                        "start_utc": "2023-07-25T14:00:00Z",
+                        "end_utc": now_utc_iso(),
+                        "anchor": "flagged_at",
+                    }),
+                    "flagged_cows": summary.get("flagged_cows", [
+                        {"cow_id": cid, "role": "index" if i == 0 else "secondary", "flagged_at": now_utc_iso()}
+                        for i, cid in enumerate(target_ids)
+                    ]),
+                    "resources": summary.get("resources", {
+                        "resting_spots": resting_circles,
+                        "milking_units": [],
+                    }),
+                    "exposed_cows": summary.get("exposed_cows", []),
+                    "route": summary.get("route", {
+                        "likely_route": likely_route,
+                        "z_rest": 0.0,
+                        "z_milk": 0.0,
+                        "p_rest": resting_p,
+                        "p_milk": milking_p,
+                        "p_floor": 0.012,
+                        "n_permutations": 200,
+                    }),
+                    "provenance": summary.get("provenance", {
+                        "lying_bouts": "real",
+                        "milking_log": "synthetic",
+                        "sanitation": "synthetic",
+                        "bedding": "synthetic",
+                    }),
+                    "is_model_suggestion": True,
+                    "is_synthetic": summary.get("is_synthetic", True),
+                    # Legacy frontend and test compatibility keys
                     "likely_route": likely_route,
                     "likelyRoute": route,
                     "p_values": {
@@ -225,7 +283,7 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                         "identifier": summary.get("implicatedResource", "Resting circle 1.5m"),
                         "primary_index_cow": primary_cow,
                     },
-                    "recommended_actions": [summary.get("recommendedIntervention", "Sanitize resting zones.")],
+                    "recommended_actions": summary.get("recommended_actions", [summary.get("recommendedIntervention", "Sanitize resting zones.")]),
                     "pathogen_group_likelihood": summary.get("pathogenGroupLikelihood", "environmental_streptococci"),
                     "disclaimer": summary.get("disclaimer", "Attribution reflects epidemiological transmission probability, not clinical diagnosis."),
                     "impact": {
@@ -233,9 +291,8 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                         "flagged_early_count": len(target_ids),
                         "mean_lead_time_hours": 18.5,
                         "estimated_milk_saved_kg": round(142.0 * len(target_ids), 1),
-                        "is_synthetic": True,
+                        "is_synthetic": summary.get("is_synthetic", True),
                     },
-                    "is_synthetic": True,
                     "runId": run.get("runId"),
                     "targetAnimalId": primary_cow,
                     "targetAnimalIds": target_ids,
