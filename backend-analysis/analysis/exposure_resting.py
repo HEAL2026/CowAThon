@@ -49,6 +49,8 @@ def calculate_resting_exposure(
         return {
             "cow_exposure": {},
             "implicated_cells": [],
+            "implicated_resting_areas": [],
+            "implicated_circles": [],
             "contact_events": [],
             "co_occupancy_pairs_count": 0,
         }
@@ -86,6 +88,10 @@ def calculate_resting_exposure(
     def get_last_bedding_change(t: pd.Timestamp) -> pd.Timestamp:
         past_changes = [bc for bc in bedding_changes if bc <= t]
         return max(past_changes) if past_changes else pd.Timestamp.min.tz_localize("UTC")
+
+    def get_next_bedding_change(t: pd.Timestamp) -> pd.Timestamp:
+        future_changes = [bc for bc in bedding_changes if bc > t]
+        return min(future_changes) if future_changes else (ref_t + pd.Timedelta(days=1))
 
     # Track cell contamination and exposure
     # cell_id -> list of shedding events: (cow_id, end_utc, duration_min)
@@ -147,15 +153,38 @@ def calculate_resting_exposure(
         else:
             cow_exposure[cid] = float(round(np.clip(1.0 - np.exp(-raw_score), 0.0, 1.0), 3))
 
-    # Identify implicated cells ranked by transmission load
+    # Identify implicated cells and 1.5m resting circles ranked by transmission load
     implicated_cells = []
+    implicated_resting_areas = []
     for cell, load in sorted(cell_exposure_load.items(), key=lambda x: x[1], reverse=True):
         if load > 0.0:
             matching_bouts = bouts[bouts["cell_id"] == cell]
+            matching_flagged = bouts[(bouts["cell_id"] == cell) & (bouts["cow_id"].astype(str).isin(flag_set))].sort_values("start_utc")
+            center_x = round(float(matching_bouts["x_m"].median()), 2)
+            center_y = round(float(matching_bouts["y_m"].median()), 2)
+            contacts_in_cell = sorted(list({e["exposed_cow"] for e in contact_events if e["cell_id"] == cell}))
+
             implicated_cells.append({
                 "cell_id": cell,
-                "x_m": round(float(matching_bouts["x_m"].median()), 2),
-                "y_m": round(float(matching_bouts["y_m"].median()), 2),
+                "x_m": center_x,
+                "y_m": center_y,
+                "cumulative_shed_duration_min": round(load, 1),
+                "n_contacts": len([e for e in contact_events if e["cell_id"] == cell]),
+            })
+
+            target_cows = list(dict.fromkeys(matching_flagged["cow_id"].astype(str).tolist())) if len(matching_flagged) > 0 else sorted(list(flag_set))
+            primary_target = target_cows[0] if target_cows else "unknown"
+            latest_shed_end = matching_flagged["end_utc"].max() if len(matching_flagged) > 0 else ref_t
+            until_bedding_change = get_next_bedding_change(latest_shed_end)
+
+            implicated_resting_areas.append({
+                "center_x_m": center_x,
+                "center_y_m": center_y,
+                "radius_m": 1.5,
+                "target_cow_id": primary_target,
+                "target_cows": target_cows,
+                "until_bedding_change_utc": until_bedding_change.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "contact_cows": contacts_in_cell,
                 "cumulative_shed_duration_min": round(load, 1),
                 "n_contacts": len([e for e in contact_events if e["cell_id"] == cell]),
             })
@@ -163,6 +192,8 @@ def calculate_resting_exposure(
     return {
         "cow_exposure": cow_exposure,
         "implicated_cells": implicated_cells,
+        "implicated_resting_areas": implicated_resting_areas,
+        "implicated_circles": implicated_resting_areas,
         "contact_events": contact_events,
         "co_occupancy_pairs_count": len(contact_events),
     }
