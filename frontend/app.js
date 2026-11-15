@@ -3,6 +3,10 @@ const state = {
   mode: "location",
   role: "farmer",
   overlay: false,
+  selectedCow: null,
+  restingFilter: false,
+  modelWatchList: new Set(["Fern 221"]),
+  manualWatchList: new Set(),
 };
 
 const timeLabel = document.querySelector("#time-label");
@@ -47,9 +51,12 @@ document.querySelector("#problem-overlay").addEventListener("click", (event) => 
 
 document.querySelectorAll(".cow-dot").forEach((cow) => {
   cow.addEventListener("click", () => {
+    state.selectedCow = cow.dataset.cow;
     const detail = document.querySelector("#cow-detail");
-    detail.textContent = `${cow.dataset.cow} · Select for full record`;
+    document.querySelectorAll(".cow-dot").forEach((dot) => dot.classList.toggle("selected", dot === cow));
+    detail.textContent = `${cow.dataset.cow} · ${state.modelWatchList.has(cow.dataset.cow) ? "Elevated risk · model" : state.manualWatchList.has(cow.dataset.cow) ? "Vet watch list" : "Within baseline"}`;
     detail.hidden = false;
+    renderRestingFilter();
   });
 });
 
@@ -58,7 +65,6 @@ document.querySelectorAll('input[name="color-by"]').forEach((input) => {
     const mode = input.value;
     const colors = {
       status: ["#4fbe89", "#6f96e8", "#d75f51", "#a971cc", "#e6a23c"],
-      breed: ["#e6a23c", "#d75f51", "#6f96e8", "#4fbe89", "#a971cc"],
       health: ["#4fbe89", "#4fbe89", "#d75f51", "#e6a23c", "#4fbe89"],
       behavior: ["#4fbe89", "#e6a23c", "#d75f51", "#d75f51", "#4fbe89"],
     }[mode];
@@ -66,6 +72,72 @@ document.querySelectorAll('input[name="color-by"]').forEach((input) => {
       dot.style.background = colors[index % colors.length];
     });
   });
+});
+
+function isOnWatchList(cow) {
+    return state.modelWatchList.has(cow) || state.manualWatchList.has(cow);
+  }
+
+function renderRestingFilter() {
+    const content = document.querySelector("#resting-filter-content");
+    const empty = document.querySelector("#resting-filter-empty");
+    const title = document.querySelector("#selected-cow-title");
+    const cow = document.querySelector(`[data-cow="${state.selectedCow}"]`);
+    if (!cow) return;
+    const zone = cow.dataset.restZone;
+    const zoneLabel = zone === "zone-a" ? "Rest zone A" : "Rest zone B";
+    const coResters = [...document.querySelectorAll(`.cow-dot[data-rest-zone="${zone}"]`)]
+      .map((dot) => dot.dataset.cow)
+      .filter((name) => name !== state.selectedCow);
+    title.textContent = state.selectedCow;
+    empty.hidden = true;
+    content.hidden = false;
+    document.querySelector("#flag-illness").textContent = isOnWatchList(state.selectedCow) ? "Remove from watch list" : "Add to watch list";
+    document.querySelector("#resting-spots").innerHTML = state.restingFilter
+      ? `<span class="resting-spot">${zoneLabel} · 10:42 AM</span><span class="resting-spot">${zoneLabel} · 7:18 AM</span><span class="resting-spot">Rest zone A · yesterday</span>`
+      : `<span class="resting-spot">Last seen: ${zoneLabel}</span><span class="resting-spot">3 recorded spots</span>`;
+    document.querySelector("#co-resters").innerHTML = `<strong>${coResters.length} other cows shared this resting area</strong><ul>${coResters.map((name) => `<li>${name} <span class="shared-label">shared resting area</span></li>`).join("")}</ul>`;
+    document.querySelectorAll(".cow-dot").forEach((dot) => {
+      dot.classList.toggle("shared-resting", state.restingFilter && dot.dataset.restZone === zone && dot.dataset.cow !== state.selectedCow);
+    });
+    document.querySelector("#flag-count").textContent = `${state.modelWatchList.size + state.manualWatchList.size} on watch list`;
+  }
+
+document.querySelector("#flag-illness").addEventListener("click", () => {
+  if (!state.selectedCow) return;
+  if (state.manualWatchList.has(state.selectedCow)) state.manualWatchList.delete(state.selectedCow);
+  else state.manualWatchList.add(state.selectedCow);
+  const selected = document.querySelector(`[data-cow="${state.selectedCow}"]`);
+  selected.classList.toggle("manual-watch", state.manualWatchList.has(state.selectedCow));
+  renderRestingFilter();
+});
+
+document.querySelector("#filter-resting").addEventListener("click", () => {
+  state.restingFilter = !state.restingFilter;
+  document.querySelector("#filter-resting").textContent = state.restingFilter ? "Clear resting filter" : "Show resting spots";
+  renderRestingFilter();
+});
+
+const cowSearch = document.querySelector("#cow-search");
+const cowSearchStatus = document.querySelector("#cow-search-status");
+
+cowSearch.addEventListener("input", () => {
+  const query = cowSearch.value.trim().toLowerCase();
+  document.querySelectorAll(".cow-dot").forEach((dot) => dot.classList.remove("search-highlight"));
+  if (!query) {
+    cowSearchStatus.textContent = "";
+    return;
+  }
+  const match = [...document.querySelectorAll(".cow-dot")].find((dot) => dot.dataset.cow.toLowerCase().includes(query));
+  if (!match) {
+    cowSearchStatus.textContent = "No cow found";
+    return;
+  }
+  state.selectedCow = match.dataset.cow;
+  match.classList.add("search-highlight");
+  match.click();
+  document.querySelector("#barn-map").scrollIntoView({ behavior: "smooth", block: "center" });
+  cowSearchStatus.textContent = `${match.dataset.cow} highlighted`;
 });
 
 slider.addEventListener("input", () => {
