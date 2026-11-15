@@ -1,5 +1,6 @@
 """
 Data structures and schema definitions for visualization payloads.
+Alignd with MMCows raw schema and backend-analysis CONTRACT.md.
 """
 
 from dataclasses import dataclass, field
@@ -9,15 +10,18 @@ from typing import List, Optional, Dict, Any
 @dataclass
 class CowLocationPoint:
     cow_id: str
-    x_coord: float
-    y_coord: float
+    display_name: str
+    uwb_x_m: float
+    uwb_y_m: float
     zone: str
     activity_state: str
+    out_of_pen: bool
     risk_status: str
     risk_score: float
     factors: List[str]
     on_watch_list: bool
     vet_flagged: bool
+    is_instrumented: bool = True
     missing_modalities: List[str] = field(default_factory=list)
 
 
@@ -58,10 +62,12 @@ class TimeseriesPoint:
     cbt_c_is_imputed: bool
     neck_imu_magnitude_mean: Optional[float]
     neck_imu_magnitude_mean_is_imputed: bool
-    daily_milk_yield_l: Optional[float]
-    daily_milk_yield_l_is_imputed: bool
+    daily_milk_yield_kg: Optional[float]
+    daily_milk_yield_kg_is_imputed: bool
+    lying: Optional[int]
     indoor_thi: Optional[float]
     indoor_thi_is_imputed: bool
+    out_of_pen: bool
 
 
 @dataclass
@@ -79,8 +85,8 @@ class StallInfo:
     stall_number: int
     state: str
     current_cow_id: Optional[str]
-    session_yield_l: Optional[float]
-    flow_rate_l_min: Optional[float]
+    session_yield_kg: Optional[float]
+    flow_rate_kg_min: Optional[float]
     last_completed_cycle: Optional[Dict[str, Any]]
 
 
@@ -95,18 +101,33 @@ class MilkingStallsPayload:
 class WatchListItem:
     cow_id: str
     flag_type: str
+    risk_category: str
+    watch_risk_score: float
     watch_reason: str
     confidence: float
     modalities_present: List[str]
     modalities_missing: List[str]
     missing_modality_impact: str
     recommended_action: str
+    is_model_suggestion: bool = True
 
 
 @dataclass
 class WatchListPayload:
     ts_utc: str
     items: List[Dict[str, Any]]
+
+
+@dataclass
+class BenchmarkSummaryPayload:
+    dataset: str
+    evaluation_protocol: str
+    n_groups: int
+    n_splits: int
+    baselines: Dict[str, Any]
+    multimodal_model: Dict[str, Any]
+    multimodal_lift_over_env_baseline_auc: float
+    multimodal_lift_over_cbt_baseline_auc: float
 
 
 @dataclass
