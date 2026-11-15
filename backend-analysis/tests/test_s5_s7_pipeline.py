@@ -25,7 +25,6 @@ class TestS5S7Pipeline(unittest.TestCase):
         self.assertIn("daily_milk_yield_kg", day_df.columns)
         self.assertIn("lying_time_min", day_df.columns)
         self.assertIn("lying_bouts_count", day_df.columns)
-        self.assertIn("rumination_proxy_mean", day_df.columns)
 
         # Check values are populated and reasonable
         c01_row = day_df[day_df["cow_id"] == "C01"].iloc[0]
@@ -79,7 +78,7 @@ class TestS5S7Pipeline(unittest.TestCase):
         healthy_base = {
             "metrics": {
                 "cbt_mean": {"effective_z_score": 0.0},
-                "rumination_proxy_mean": {"effective_z_score": 0.0},
+                "clf_feeding_time_min": {"effective_z_score": 0.0},
                 "lying_time_min": {"effective_z_score": 0.0},
                 "activity_index_mean": {"effective_z_score": 0.0},
                 "daily_milk_yield_kg": {"effective_z_score": 0.0},
@@ -89,11 +88,11 @@ class TestS5S7Pipeline(unittest.TestCase):
         self.assertEqual(res_healthy["health_index"], 100.0)
         self.assertEqual(res_healthy["vitality_tier"], "thriving")
 
-        # Strained cow: elevated CBT, dropped rumination and yield
+        # Strained cow: elevated CBT, dropped lying/feeding and yield
         strained_base = {
             "metrics": {
                 "cbt_mean": {"effective_z_score": 2.2},
-                "rumination_proxy_mean": {"effective_z_score": -2.0},
+                "clf_feeding_time_min": {"effective_z_score": -2.0},
                 "lying_time_min": {"effective_z_score": -1.5},
                 "activity_index_mean": {"effective_z_score": -1.8},
                 "daily_milk_yield_kg": {"effective_z_score": -2.5},

@@ -43,16 +43,19 @@ def compute_health_index(
         thermal_penalty = min(25.0, z_cbt * 10.0)
     thermal_vitality = max(0.0, 25.0 - thermal_penalty)
 
-    # 2. Rumination & Posture Vitality (0–25 points)
-    # Penalized by depressed rumination or abnormal lying drop
-    z_rum = get_z("rumination_proxy_mean")
+    # 2. Posture & Feeding Behavior Vitality (0–25 points)
+    # Penalized by abnormal lying duration drop or depressed feeding duration
     z_lying = get_z("lying_time_min")
-    rum_penalty = 0.0
-    if z_rum is not None and z_rum < 0.0:
-        rum_penalty += min(15.0, abs(z_rum) * 7.5)
+    if z_lying is None:
+        z_lying = get_z("clf_lying_time_min")
+    z_feed = get_z("clf_feeding_time_min")
+
+    behavior_penalty = 0.0
     if z_lying is not None and z_lying < 0.0:
-        rum_penalty += min(10.0, abs(z_lying) * 5.0)
-    behavior_vitality = max(0.0, 25.0 - rum_penalty)
+        behavior_penalty += min(15.0, abs(z_lying) * 7.5)
+    if z_feed is not None and z_feed < 0.0:
+        behavior_penalty += min(10.0, abs(z_feed) * 5.0)
+    behavior_vitality = max(0.0, 25.0 - behavior_penalty)
 
     # 3. Activity & Kinetic Vitality (0–25 points)
     # Penalized by severe lethargy or extreme agitation

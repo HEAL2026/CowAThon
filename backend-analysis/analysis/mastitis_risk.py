@@ -29,7 +29,7 @@ MASTITIS_CHANNELS: dict[str, tuple[float, int]] = {
     "daily_milk_yield_kg": (0.25, -1),
     "cbt_mean": (0.20, +1),
     "lying_time_min": (0.15, -1),
-    "rumination_proxy_mean": (0.15, -1),
+    "clf_feeding_time_min": (0.15, -1),
 }
 
 

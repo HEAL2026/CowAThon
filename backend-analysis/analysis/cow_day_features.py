@@ -4,7 +4,7 @@ Aggregates 1-minute time series into standardized cow-day summary records:
 - Thermal load: cbt_mean, cbt_max, cbt_std, cbt_spikes, thi_mean, thi_hours_above_68
 - Production: daily_milk_yield_kg, milk_drop_pct
 - Posture & Lying: lying_time_min, lying_bouts_count, mean_bout_duration_min
-- Behavior: rumination_proxy_mean, activity_index_mean, activity_index_std
+- Behavior: activity_index_mean, activity_index_std, clf_*_time_min
 - Feeding proxy: feeding_time_min / active feeding zone
 - Optional clinical/lab indicators: conductivity_max, scc_mean
 - Optional feed intake: dmi_kg and 2–3 day lagged DMI features for production
@@ -49,7 +49,6 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
     act_col = "activity_index" if "activity_index" in df_proc.columns else (
         "neck_imu_magnitude_std" if "neck_imu_magnitude_std" in df_proc.columns else None
     )
-    rum_col = "rumination_proxy" if "rumination_proxy" in df_proc.columns else None
     milk_col = "milk_yield_kg" if "milk_yield_kg" in df_proc.columns else (
         "milk_yield" if "milk_yield" in df_proc.columns else None
     )
@@ -166,12 +165,6 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
         else:
             rec["activity_index_mean"] = None
             rec["activity_index_std"] = None
-
-        if rum_col and group[rum_col].notna().any():
-            rum_s = group[rum_col].dropna()
-            rec["rumination_proxy_mean"] = round(float(rum_s.mean()), 1)
-        else:
-            rec["rumination_proxy_mean"] = None
 
         # 4b. Trained Behavior Classifier Durations (MMCows 8-class vocabulary: 0 unknown, 1 walking, 2 standing, 3 feed_up, 4 feed_down, 5 licking, 6 drinking, 7 lying)
         if b_name_col and group[b_name_col].notna().any():

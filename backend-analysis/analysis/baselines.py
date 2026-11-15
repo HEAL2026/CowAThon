@@ -15,7 +15,7 @@ import pandas as pd
 
 from .evaluation import group_kfold
 from .env_thermal import calculate_thi
-from .behavior import calculate_activity_index, calculate_rumination_proxy
+from .behavior import calculate_activity_index
 
 
 def _compute_roc_auc(y_true: np.ndarray, y_score: np.ndarray) -> float:
@@ -133,18 +133,16 @@ def evaluate_baselines_vs_multimodal(
         df_eval["thi"] = calculate_thi(df_eval["temp_c"], df_eval["rh_pct"])
     if "activity_index" not in df_eval.columns:
         df_eval["activity_index"] = calculate_activity_index(df_eval)
-    if "rumination_proxy" not in df_eval.columns:
-        df_eval["rumination_proxy"] = calculate_rumination_proxy(df_eval)
 
     # Ensure binary target exists
     if target_col not in df_eval.columns:
         cbt_high = df_eval.get("cbt", pd.Series(38.8, index=df_eval.index)) >= 39.2
         thi_high = df_eval.get("thi", pd.Series(65.0, index=df_eval.index)) >= 68.0
-        rum_low = df_eval.get("rumination_proxy", pd.Series(50.0, index=df_eval.index)) < 40.0
-        df_eval[target_col] = ((cbt_high & thi_high) | (cbt_high & rum_low)).astype(int)
+        act_low = df_eval.get("activity_index", pd.Series(0.30, index=df_eval.index)) < 0.15
+        df_eval[target_col] = ((cbt_high & thi_high) | (cbt_high & act_low)).astype(int)
 
     feature_cols = [
-        col for col in ["cbt", "thi", "activity_index", "rumination_proxy", "milk_drop_pct", "idling_fraction"]
+        col for col in ["cbt", "thi", "activity_index", "milk_drop_pct", "idling_fraction"]
         if col in df_eval.columns
     ]
 
