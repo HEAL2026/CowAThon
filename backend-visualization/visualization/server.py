@@ -192,7 +192,13 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
             return 200, generate_integrations_feasibility()
 
         if path == "/api/pen-map":
-            payload, is_synth = get_pen_map_data(ts_utc=ts_utc, pen_id=pen_id)
+            raw_flags = params.get("flagged_cows") or params.get("flagged_cow") or params.get("cow_id")
+            flagged_list = None
+            if isinstance(raw_flags, str):
+                flagged_list = [f.strip().upper() for f in raw_flags.split(",") if f.strip()]
+            elif isinstance(raw_flags, (list, tuple)):
+                flagged_list = [str(f).strip().upper() for f in raw_flags if str(f).strip()]
+            payload, is_synth = get_pen_map_data(ts_utc=ts_utc, pen_id=pen_id, flagged_cows=flagged_list)
             payload["is_synthetic"] = is_synth
             return 200, payload
 

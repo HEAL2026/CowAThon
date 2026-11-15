@@ -812,8 +812,6 @@ def generate_pen_map(
         from visualization.data_loader import load_resting_spots_data
         base_spots = load_resting_spots_data()
         flagged_ids = [c["cow_id"] for c in (cows_payload or []) if c.get("flag_status") == "flagged" or c.get("on_watch_list")]
-        if not flagged_ids:
-            flagged_ids = ["C06"] if any(c.get("cow_id") == "C06" for c in (cows_payload or [])) else ["C01"]
 
         resting_areas = []
         for sp in base_spots:
@@ -906,10 +904,16 @@ def generate_pen_map(
             "origin": grid_origin,
             "width_m": 24.9 if has_centered_coords else float(grid_w),
             "height_m": 17.7 if has_centered_coords else float(grid_h),
+            "width": 24.9 if has_centered_coords else float(grid_w),
+            "height": 17.7 if has_centered_coords else float(grid_h),
             "x_min_m": x_min_m,
             "x_max_m": x_max_m,
             "y_min_m": y_min_m,
             "y_max_m": y_max_m,
+            "x_min": x_min_m,
+            "x_max": x_max_m,
+            "y_min": y_min_m,
+            "y_max": y_max_m,
             "cell_size_m": 1.0,
             "heatmap": heatmap,
         },

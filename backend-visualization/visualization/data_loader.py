@@ -538,6 +538,7 @@ def load_resting_spots_data() -> List[Dict[str, Any]]:
 def get_pen_map_data(
     ts_utc: Optional[str] = None,
     pen_id: Optional[str] = None,
+    flagged_cows: Optional[Sequence[str]] = None,
 ) -> Tuple[Dict[str, Any], bool]:
     """
     Constructs the 2D pen map payload using real location_1min (or joined_1min)
@@ -546,6 +547,8 @@ def get_pen_map_data(
     is_synthetic is False ONLY when real cow positions are successfully resolved.
     """
     from visualization.payloads import generate_pen_map
+
+    flagged_set = {str(c).upper() for c in (flagged_cows or [])}
 
     if ts_utc is None:
         ts_utc = datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc).isoformat()
@@ -676,11 +679,9 @@ def get_pen_map_data(
                             else:
                                 zone = "cubicle_row_a" if ym <= 7.0 else ("cubicle_row_b" if ym >= 9.0 else "feed_alley")
                             activity_state = "milking" if out_pen else ("resting" if is_lying else "active")
-                            is_c01 = (cid == "C01")
-                            is_c02 = (cid == "C02")
-                            is_flagged = is_c01
-                            exposure = 0.92 if is_c01 else (0.76 if is_c02 else 0.12)
-                            tier = "priority_watch" if is_c01 else ("moderate_watch" if is_c02 else "baseline")
+                            is_flagged = (cid in flagged_set)
+                            exposure = 0.92 if is_flagged else 0.0
+                            tier = "priority_watch" if is_flagged else "baseline"
 
                             cows_data.append({
                                 "cow_id": cid,
@@ -693,7 +694,7 @@ def get_pen_map_data(
                                 "flag_status": "flagged" if is_flagged else "unflagged",
                                 "exposure_score": exposure,
                                 "exposure_tier": tier,
-                                "is_source_candidate": is_c01,
+                                "is_source_candidate": is_flagged,
                             })
                         is_synthetic = False
                         break
@@ -738,8 +739,7 @@ def get_pen_map_data(
                             zone = "cubicle_row_a" if ym <= -1.0 else ("cubicle_row_b" if ym <= 4.0 else "feed_alley")
                         else:
                             zone = "cubicle_row_a" if ym <= 7.0 else ("cubicle_row_b" if ym >= 9.0 else "feed_alley")
-                        is_c01 = (cid == "C01")
-                        is_c02 = (cid == "C02")
+                        is_flagged = (cid in flagged_set)
                         cows_data.append({
                             "cow_id": cid,
                             "display_name": f"Cow {cid}",
@@ -748,20 +748,21 @@ def get_pen_map_data(
                             "zone": zone,
                             "activity_state": "milking" if out_pen else ("resting" if lying == 1 else "active"),
                             "out_of_pen": out_pen,
-                            "flag_status": "flagged" if is_c01 else "unflagged",
-                            "exposure_score": 0.92 if is_c01 else (0.76 if is_c02 else 0.12),
-                            "exposure_tier": "priority_watch" if is_c01 else ("moderate_watch" if is_c02 else "baseline"),
-                            "is_source_candidate": is_c01,
+                            "flag_status": "flagged" if is_flagged else "unflagged",
+                            "exposure_score": 0.92 if is_flagged else 0.0,
+                            "exposure_tier": "priority_watch" if is_flagged else "baseline",
+                            "is_source_candidate": is_flagged,
                         })
                     is_synthetic = False
         except Exception as e:
             logger.warning("Failed to query joined_1min for cows_data: %s", e)
 
-    # Ensure uninstrumented cohort animals (C11-C16) are represented if missing from location fixes
+    # Ensure real cohort animals (C01-C10) are represented if missing from location fixes
     if cows_data is not None:
         present_cids = {c["cow_id"] for c in cows_data}
-        for uid in COW_IDS:
+        for uid in COW_IDS[:10]:
             if uid not in present_cids:
+                is_flagged = (uid in flagged_set)
                 cows_data.append({
                     "cow_id": uid,
                     "display_name": f"Cow {uid}",
@@ -770,12 +771,12 @@ def get_pen_map_data(
                     "zone": "cubicle_row_a",
                     "activity_state": "resting",
                     "out_of_pen": False,
-                    "flag_status": "unflagged",
-                    "exposure_score": 0.05,
-                    "exposure_tier": "baseline",
-                    "is_source_candidate": False,
-                    "is_instrumented": False,
-                    "missing_modalities": ["cbt", "uwb", "neck_imu", "ankle", "pressure"],
+                    "flag_status": "flagged" if is_flagged else "unflagged",
+                    "exposure_score": 0.92 if is_flagged else 0.0,
+                    "exposure_tier": "priority_watch" if is_flagged else "baseline",
+                    "is_source_candidate": is_flagged,
+                    "is_instrumented": True,
+                    "missing_modalities": ["uwb"],
                 })
 
     payload = generate_pen_map(
