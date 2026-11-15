@@ -20,6 +20,7 @@ from visualization.payloads import (
     generate_attribution,
     generate_impact,
     generate_backtrace_run,
+    generate_milking_stalls,
 )
 from visualization.data_loader import (
     load_bedding_data,
@@ -129,27 +130,27 @@ class TestS12Payloads(unittest.TestCase):
     def test_backtrace_run_payload(self):
         canonical_routes = ["resting_area", "milking_equipment", "both", "no_common_route"]
 
-        # Single cow run
+        # Single cow run (offline / no result: returns is_synthetic=True and empty resources per spec v2 §7)
         payload = generate_backtrace_run(flags=[{"cow_id": "C01"}], lookback_hours=72)
         self.assertIn(payload["likely_route"], canonical_routes)
         self.assertIn("p_values", payload)
         self.assertIn("resting_areas", payload)
         self.assertIn("implicated_resting_areas", payload)
+        self.assertIn("resources", payload)
         self.assertIn("impact", payload)
         self.assertIn("transmission_source", payload)
         self.assertEqual(payload["impact"]["flagged_early_count"], 1)
-
-        circle = payload["resting_areas"][0]
-        self.assertEqual(circle["radius_m"], 1.5)
-        self.assertIn("center_x_m", circle)
-        self.assertIn("center_y_m", circle)
-        self.assertIn("until_bedding_change_utc", circle)
+        self.assertTrue(payload["is_synthetic"])
+        self.assertEqual(payload["resting_areas"], [])
+        self.assertEqual(payload["resources"]["resting_spots"], [])
+        self.assertEqual(payload["resources"]["milking_units"], [])
 
         # Multi-cow group run
         payload_multi = generate_backtrace_run(target_cows=["C01", "C02"], lookback_hours=72)
         self.assertIn(payload_multi["likely_route"], canonical_routes)
         self.assertEqual(payload_multi["impact"]["flagged_early_count"], 2)
-        self.assertGreaterEqual(len(payload_multi["resting_areas"]), 1)
+        self.assertEqual(payload_multi["resting_areas"], [])
+        self.assertTrue(payload_multi["is_synthetic"])
 
     def test_impact_panel(self):
         payload = generate_impact()
@@ -279,14 +280,16 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(res["cohort_size"], 16)
 
     def test_backtrace_run_no_unbound_local_error(self):
-        """Verifies generate_backtrace_run handles service exceptions without UnboundLocalError."""
+        """Verifies generate_backtrace_run handles service exceptions without UnboundLocalError and returns empty resources."""
         from unittest.mock import patch
         with patch("apis.icar.service.IcarAdeService.run_backtrace", side_effect=RuntimeError("Simulated failure")):
             run = generate_backtrace_run(flags=[{"cow_id": "C01"}], lookback_hours=72)
             self.assertIn("likely_route", run)
             self.assertIn("resting_areas", run)
             self.assertIn("impact", run)
-            self.assertEqual(len(run["resting_areas"]), 1)
+            self.assertEqual(len(run["resting_areas"]), 0)
+            self.assertEqual(run["resources"]["resting_spots"], [])
+            self.assertTrue(run["is_synthetic"])
 
     def test_pen_map_centered_coordinate_system(self):
         """Verifies pen map automatically detects centered MMCows coordinates and outputs origin='center'."""
@@ -539,16 +542,109 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p_real["implicated_resting_areas"][0]["center_x_m"], -3.2)
         self.assertEqual(p_real["implicated_resting_areas"][0]["center_y_m"], 1.1)
 
-        # 2. Fallback attribution fixture
+        # 2. Fallback attribution fixture (empty resources per spec v2 §7, zero invented geometry)
         p_fallback = generate_attribution(attribution_data=None, is_synthetic=True)
         self.assertTrue(p_fallback["is_synthetic"])
         self.assertIn("implicated_resting_areas", p_fallback)
-        self.assertEqual(len(p_fallback["implicated_resting_areas"]), 1)
+        self.assertEqual(p_fallback["implicated_resting_areas"], [])
+        self.assertEqual(p_fallback["resources"]["resting_spots"], [])
+        self.assertEqual(p_fallback["resources"]["milking_units"], [])
 
         # 3. data_loader get_attribution_data fallback
         p_loaded, is_synth = get_attribution_data()
         self.assertIsInstance(is_synth, bool)
         self.assertEqual(p_loaded["is_synthetic"], is_synth)
+
+    def test_attribution_section_6_payload_surfaced_unchanged(self):
+        """Verifies Section 6 payload is surfaced unchanged per docs/backtrace_spec.md §7."""
+        sec6 = {
+            "investigation_window": {
+                "start_utc": "2023-07-25T14:00:00Z",
+                "end_utc": "2023-07-28T14:00:00Z",
+                "anchor": "onset",
+            },
+            "flagged_cows": [{"cow_id": "C06", "role": "index", "onset_utc": "2023-07-25T14:00:00Z"}],
+            "resources": {
+                "resting_spots": [
+                    {
+                        "spot_id": "spot_01",
+                        "center_x_m": -2.4,
+                        "center_y_m": 1.5,
+                        "radius_m": 1.5,
+                        "n_flagged": 1,
+                        "flagged_cows": ["C06"],
+                        "dwell_min_by_flagged": {"C06": 120.0},
+                        "successors": [{"cow_id": "C07", "rank": 1, "lag_h": 2.5, "w": 0.85}],
+                        "until_bedding_change_utc": "2023-07-28T06:00:00Z",
+                        "provenance": "real",
+                    }
+                ],
+                "milking_units": [
+                    {
+                        "unit_id": "unit_02",
+                        "n_flagged": 1,
+                        "flagged_cows": ["C06"],
+                        "sessions": ["sess_01"],
+                        "successors": [{"cow_id": "C07", "rank": 1, "session_id": "sess_01", "w": 0.65}],
+                        "sanitized_between": False,
+                        "provenance": "synthetic",
+                    }
+                ],
+            },
+            "exposed_cows": [
+                {
+                    "cow_id": "C07",
+                    "e": 4.01,
+                    "e_rest": 3.16,
+                    "e_milk": 0.85,
+                    "tier": "high",
+                    "primary_route": "resting_spot",
+                    "via": [{"resource": "spot_01", "predecessor": "C06", "w": 0.85}],
+                }
+            ],
+            "route": {
+                "likely_route": "resting_spot",
+                "z_rest": 1.85,
+                "z_milk": 0.22,
+                "p_rest": 0.085,
+                "p_milk": 0.42,
+                "p_floor": 0.012,
+                "n_permutations": 1000,
+            },
+            "provenance": {
+                "lying_bouts": "real",
+                "milking_log": "synthetic",
+                "sanitation": "synthetic",
+                "bedding": "synthetic",
+            },
+            "is_model_suggestion": True,
+            "is_synthetic": False,
+        }
+        res = generate_attribution(attribution_data=sec6)
+        self.assertEqual(res["investigation_window"]["anchor"], "onset")
+        self.assertEqual(res["resources"]["resting_spots"][0]["spot_id"], "spot_01")
+        self.assertEqual(res["resources"]["milking_units"][0]["unit_id"], "unit_02")
+        self.assertEqual(res["exposed_cows"][0]["cow_id"], "C07")
+        self.assertEqual(res["route"]["likely_route"], "resting_spot")
+        self.assertFalse(res["is_synthetic"])
+        self.assertEqual(res["resting_areas"][0]["spot_id"], "spot_01")
+
+    def test_milking_stalls_succession_contract(self):
+        """Verifies /api/milking-stalls is driven by milking_log successions and flags."""
+        stalls_payload = generate_milking_stalls(num_stalls=8, ts_utc="2023-07-28T14:00:00Z")
+        self.assertEqual(stalls_payload["parlor_id"], "parlor_alpha")
+        self.assertEqual(len(stalls_payload["stalls"]), 8)
+        self.assertTrue(stalls_payload["is_synthetic"])
+        self.assertEqual(stalls_payload["provenance"]["milking_log"], "synthetic")
+
+        for stall in stalls_payload["stalls"]:
+            self.assertIn("stall_number", stall)
+            self.assertIn("unit_id", stall)
+            self.assertIn(stall["state"], ["active", "idle"])
+            self.assertIn("last_completed_cycle", stall)
+            self.assertIn("successors", stall)
+            self.assertIn("predecessor", stall)
+            self.assertIn("sanitized_between", stall)
 
 
 if __name__ == "__main__":
