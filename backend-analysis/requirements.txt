@@ -1,0 +1,5 @@
+# Backend Analysis dependencies
+# Core tabular data and statistical modeling
+numpy>=1.24.0
+pandas>=2.0.0
+pyarrow>=12.0.0
