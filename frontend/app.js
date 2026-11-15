@@ -1021,7 +1021,7 @@ document.querySelectorAll(".mode-button").forEach((button) => {
     const gradientKey = document.querySelector("#heatmap-gradient-key");
     if (gradientKey) gradientKey.hidden = (state.mode !== "heatmap");
     document.querySelector(".map-legend").innerHTML = state.mode === "heatmap"
-      ? '<span class="map-legend-heatmap">Idle density: <span class="guide-dot healthy"></span> &lt;30m <span class="guide-dot watch"></span> 30–60m <span class="guide-dot urgent"></span> &gt;60m</span>'
+      ? '<span class="map-legend-heatmap">Idle density (fixed stall grid): <span class="guide-dot healthy"></span> &lt;30m <span class="guide-dot watch"></span> 30–60m <span class="guide-dot urgent"></span> &gt;60m</span>'
       : `<span class="legend-item"><i class="legend-dot healthy"></i> Cow location</span><span class="legend-item" id="legend-resting-oval" ${state.overlay ? "" : "hidden"}><span class="legend-oval-dot"></span> Red oval: Shared resting risk area (Model estimate · Non-clinical)</span>`;
     renderHeatmap(state.s12.penMap?.grid?.heatmap);
   });
