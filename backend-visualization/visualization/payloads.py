@@ -823,15 +823,99 @@ def generate_backtrace_run(
 
     if summary:
         route = summary.get("likelyRoute", "resting_environment")
-        likely_route = "resting_area" if "resting" in route else ("milking_equipment" if "milking" in route else route)
+        if "resting" in route:
+            likely_route = "resting_area"
+            likely_alias = "resting_cubicle_route"
+        elif "milking" in route:
+            likely_route = "milking_equipment"
+            likely_alias = "milking_equipment_route"
+        elif "both" in route or "mixed" in route:
+            likely_route = "both"
+            likely_alias = "mixed_transmission"
+        elif "no_common" in route or "sporadic" in route or "inconclusive" in route:
+            likely_route = "no_common_route"
+            likely_alias = "sporadic_individual"
+        else:
+            likely_route = route
+            likely_alias = route
+
         p_val = summary.get("routeConfidencePValue", 0.008)
-        resting_p = p_val if "resting" in route else round(1.0 - p_val, 3)
-        milking_p = p_val if "milking" in route else round(1.0 - p_val, 3)
+        if likely_route == "no_common_route":
+            resting_p = 1.0
+            milking_p = 1.0
+            route_probs = {
+                "resting_area": 0.05,
+                "milking_equipment": 0.05,
+                "both": 0.0,
+                "no_common_route": 0.90,
+            }
+            pathogen_statement = (
+                "No statistically significant transmission clustering across resting areas or milking units; "
+                "indicates sporadic or individual animal event. Not a clinical diagnosis."
+            )
+            actions = [
+                "Continue standard parlor hygiene and monitor individual cow vitality trends.",
+                "Review cow history and isolate if mastitis risk score exceeds watch threshold.",
+            ]
+        elif likely_route == "both":
+            resting_p = p_val
+            milking_p = p_val
+            route_probs = {
+                "resting_area": 0.45,
+                "milking_equipment": 0.45,
+                "both": 0.08,
+                "no_common_route": 0.02,
+            }
+            pathogen_statement = (
+                "Mixed transmission pattern consistent with simultaneous environmental resting and milking equipment exposure. "
+                "Not a clinical diagnosis."
+            )
+            actions = [
+                "Immediate bedding cleanout and lime dressing across resting cubicles.",
+                "Inspect liner condition and run hot acid sanitizer on milking clusters.",
+            ]
+        elif likely_route == "resting_area":
+            resting_p = p_val
+            milking_p = round(1.0 - p_val, 3)
+            route_probs = {
+                "resting_area": 0.78,
+                "milking_equipment": 0.18,
+                "both": 0.0,
+                "no_common_route": 0.04,
+            }
+            pathogen_statement = (
+                "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. "
+                "Not a clinical diagnosis."
+            )
+            actions = [
+                "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8",
+                "Verify teat pre-dip coverage and contact time prior to unit attachment",
+                f"Segregate {primary_target} milking order to end of session",
+            ]
+        else:  # milking_equipment
+            resting_p = round(1.0 - p_val, 3)
+            milking_p = p_val
+            route_probs = {
+                "resting_area": 0.18,
+                "milking_equipment": 0.78,
+                "both": 0.0,
+                "no_common_route": 0.04,
+            }
+            pathogen_statement = (
+                "Contagious transmission pattern consistent with milking equipment cluster challenge. "
+                "Not a clinical diagnosis."
+            )
+            actions = [
+                "Inspect liner condition and run hot acid sanitizer on milking clusters.",
+                "Sanitize cluster units after flagged animal milking visits.",
+                f"Segregate {primary_target} milking order to end of session",
+            ]
+
         resting_circles = summary.get("implicatedRestingCircles") or []
         primary_cow = summary.get("targetCow", primary_target)
         contacts = summary.get("primaryContactCows") or []
-        source_id = summary.get("implicatedResource", "cubicle_row_b")
-        intervention = summary.get("recommendedIntervention", "Immediate bedding cleanout and lime dressing.")
+        source_id = summary.get("implicatedResource", "cubicle_row_b" if likely_route == "resting_area" else "STALL-01")
+        intervention = summary.get("recommendedIntervention", actions[0])
 
     if not resting_circles:
         resting_circles = []
@@ -858,16 +942,32 @@ def generate_backtrace_run(
         num = int(primary_target.replace("C", "")) if primary_target.startswith("C") and primary_target[1:].isdigit() else 1
         route = "resting_environment" if num % 2 != 0 else "milking_machine"
         likely_route = "resting_area" if "resting" in route else "milking_equipment"
+        likely_alias = "resting_cubicle_route" if likely_route == "resting_area" else "milking_equipment_route"
         resting_p = 0.008 if "resting" in route else 0.24
         milking_p = 0.24 if "resting" in route else 0.012
+        route_probs = {
+            "resting_area": 0.78 if "resting" in route else 0.18,
+            "milking_equipment": 0.18 if "resting" in route else 0.78,
+            "both": 0.0,
+            "no_common_route": 0.04,
+        }
         primary_cow = primary_target
         contacts = ["C02", "C07"] if num % 2 != 0 else ["C04", "C08"]
         source_id = "cubicle_row_b" if "resting" in route else "STALL-02"
-        intervention = (
+        pathogen_statement = (
+            "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. "
+            "Not a clinical diagnosis."
+            if "resting" in route
+            else "Contagious transmission pattern consistent with milking equipment cluster challenge. Not a clinical diagnosis."
+        )
+        actions = [
             "Immediate bedding cleanout and lime dressing in cubicle_row_b stalls 4-8"
             if "resting" in route
-            else "Inspect liner condition and run hot acid sanitizer on milking clusters."
-        )
+            else "Inspect liner condition and run hot acid sanitizer on milking clusters.",
+            "Verify teat pre-dip coverage and contact time prior to unit attachment",
+            f"Segregate {primary_cow} milking order to end of session",
+        ]
+        intervention = actions[0]
 
     total_affected = len(set(contacts + cows))
     flagged_count = len(cows)
@@ -876,20 +976,15 @@ def generate_backtrace_run(
         "ts_utc": datetime.now(timezone.utc).isoformat(),
         "lookback_hours": lookback_hours,
         "likely_route": likely_route,
-        "likely_route_alias": "resting_cubicle_route" if likely_route == "resting_area" else "milking_equipment_route",
+        "likely_route_alias": likely_alias,
         "likelyRoute": route,
-        "route_probabilities": {
-            "resting_area": 0.78 if "resting" in route else 0.18,
-            "milking_equipment": 0.18 if "resting" in route else 0.78,
-            "both": 0.0,
-            "no_common_route": 0.04,
-        },
+        "route_probabilities": route_probs,
         "p_values": {
             "resting_permutation_p": resting_p,
             "milking_permutation_p": milking_p,
         },
         "transmission_source": {
-            "type": "resting_zone" if "resting" in route else "milking_unit",
+            "type": "resting_zone" if "resting" in route else ("milking_unit" if "milking" in route else "inconclusive"),
             "identifier": source_id,
             "primary_index_cow": primary_cow,
             "bedding_window_start_utc": "2023-07-25T08:30:00Z",
@@ -900,18 +995,12 @@ def generate_backtrace_run(
         "implicated_circles": resting_circles,
         "contact_cows": contacts,
         "pathogen_group_likelihood": {
-            "coliform_environmental_gram_negative": 0.76 if "resting" in route else 0.18,
-            "streptococci_environmental_gram_positive": 0.18 if "resting" in route else 0.22,
-            "contagious_staph_aureus": 0.06 if "resting" in route else 0.60,
-            "statement": "Environmental transmission pattern consistent with coliform/environmental challenge in resting area. Not a clinical diagnosis."
-            if "resting" in route
-            else "Contagious transmission pattern consistent with milking equipment cluster challenge. Not a clinical diagnosis.",
+            "coliform_environmental_gram_negative": 0.76 if likely_route == "resting_area" else (0.33 if likely_route == "no_common_route" else 0.18),
+            "streptococci_environmental_gram_positive": 0.18 if likely_route == "resting_area" else (0.33 if likely_route == "no_common_route" else 0.22),
+            "contagious_staph_aureus": 0.06 if likely_route == "resting_area" else (0.34 if likely_route == "no_common_route" else 0.60),
+            "statement": pathogen_statement,
         },
-        "recommended_actions": [
-            intervention,
-            "Verify teat pre-dip coverage and contact time prior to unit attachment",
-            f"Segregate {primary_cow} milking order to end of session",
-        ],
+        "recommended_actions": actions,
         "disclaimer": "Attribution reflects epidemiological transmission probability, not a clinical diagnosis.",
         "impact": {
             "total_affected_cows": total_affected,
