@@ -54,6 +54,25 @@ python3 -m unittest discover tests
 
 ## Executing the Pipeline
 
+### Via CLI Runner (Recommended)
+
+Run against canonical `joined_1min.parquet` if present on disk, or fall back automatically to deterministic synthetic MMCows fixtures (`is_synthetic=True`):
+
+```bash
+cd backend-analysis
+python3 -m analysis.run
+```
+
+Options:
+- `--parquet PATH`: Specify custom parquet path (defaults to `backend-cleaning/data/processed/joined_1min.parquet`).
+- `--out DIR`: Output directory for JSON/parquet payloads (defaults to `backend-analysis/data/output`).
+- `--cows C01,C02`: Filter specific animal IDs.
+- `--n-splits N`: Number of animal-disjoint cross-validation folds (default: 5).
+- `--no-fallback`: Strictly require the real parquet dataset without falling back.
+- `--export-vis-dir DIR`: Copy generated payload JSONs directly to `backend-visualization/`.
+
+### In Python Code
+
 ```python
 from analysis.pipeline import run_analysis_pipeline
 import pandas as pd
@@ -62,7 +81,7 @@ import pandas as pd
 df = pd.read_parquet("backend-cleaning/data/processed/joined_1min.parquet")
 
 # Run analysis and export payloads to output directory
-results = run_analysis_pipeline(df, output_dir="data/analysis_export", n_cv_splits=5, seed=0)
+results = run_analysis_pipeline(df, output_dir="data/output", n_cv_splits=5, seed=0)
 
 # Access summaries and benchmark metrics
 cow_summaries = results["cow_summaries"]
