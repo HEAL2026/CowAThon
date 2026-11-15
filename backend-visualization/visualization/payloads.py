@@ -595,13 +595,37 @@ def generate_pen_map(
             }
         ]
 
+    # Determine coordinate frame metadata for unambiguous client positioning
+    has_centered_coords = any(
+        (c.get("uwb_x_m") is not None and c["uwb_x_m"] < 0) or
+        (c.get("uwb_y_m") is not None and c["uwb_y_m"] < 0)
+        for c in cows_payload
+    ) or any(
+        (a.get("center_x_m") is not None and a["center_x_m"] < 0) or
+        (a.get("center_y_m") is not None and a["center_y_m"] < 0)
+        for a in (resting_areas or [])
+    )
+
+    grid_origin = "center" if has_centered_coords else "bottom_left"
+    x_min_m = -12.45 if has_centered_coords else 0.0
+    x_max_m = 12.45 if has_centered_coords else float(grid_w)
+    y_min_m = -9.31 if has_centered_coords else 0.0
+    y_max_m = 8.39 if has_centered_coords else float(grid_h)
+    coord_system = "centered" if has_centered_coords else "positive"
+
     return {
         "ts_utc": ts_utc,
         "barn_id": barn_id,
         "pen_id": pen_id,
+        "coordinate_system": coord_system,
         "grid": {
-            "width_m": float(grid_w),
-            "height_m": float(grid_h),
+            "origin": grid_origin,
+            "width_m": 24.9 if has_centered_coords else float(grid_w),
+            "height_m": 17.7 if has_centered_coords else float(grid_h),
+            "x_min_m": x_min_m,
+            "x_max_m": x_max_m,
+            "y_min_m": y_min_m,
+            "y_max_m": y_max_m,
             "cell_size_m": 1.0,
             "heatmap": heatmap,
         },

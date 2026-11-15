@@ -287,6 +287,42 @@ class TestS12Payloads(unittest.TestCase):
             self.assertIn("impact", run)
             self.assertEqual(len(run["resting_areas"]), 1)
 
+    def test_pen_map_centered_coordinate_system(self):
+        """Verifies pen map automatically detects centered MMCows coordinates and outputs origin='center'."""
+        centered_cows = [
+            {
+                "cow_id": "C01",
+                "uwb_x_m": -4.2,
+                "uwb_y_m": 2.1,
+                "zone": "cubicle_row_b",
+                "activity_state": "resting",
+                "out_of_pen": False,
+            },
+            {
+                "cow_id": "C02",
+                "uwb_x_m": 6.8,
+                "uwb_y_m": -3.5,
+                "zone": "cubicle_row_a",
+                "activity_state": "resting",
+                "out_of_pen": False,
+            },
+        ]
+        p = generate_pen_map(cows_data=centered_cows)
+        self.assertEqual(p["coordinate_system"], "centered")
+        self.assertEqual(p["grid"]["origin"], "center")
+        self.assertEqual(p["grid"]["x_min_m"], -12.45)
+        self.assertEqual(p["grid"]["x_max_m"], 12.45)
+        self.assertEqual(p["grid"]["y_min_m"], -9.31)
+        self.assertEqual(p["grid"]["y_max_m"], 8.39)
+
+    def test_pen_map_positive_coordinate_system(self):
+        """Verifies pen map defaults to positive coordinates for synthetic fixtures."""
+        p = generate_pen_map(ts_utc="2023-07-28T14:00:00Z")
+        self.assertEqual(p["coordinate_system"], "positive")
+        self.assertEqual(p["grid"]["origin"], "bottom_left")
+        self.assertEqual(p["grid"]["x_min_m"], 0.0)
+        self.assertEqual(p["grid"]["x_max_m"], 30.0)
+
 
 if __name__ == "__main__":
     unittest.main()
