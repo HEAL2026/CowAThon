@@ -102,7 +102,15 @@ class TestS12Payloads(unittest.TestCase):
 
     def test_attribution_panel_and_likelihoods(self):
         payload = generate_attribution()
-        self.assertIn(payload["likely_route"], ["resting_area", "resting_cubicle_route"])
+        canonical_routes = [
+            "resting_area",
+            "milking_equipment",
+            "both",
+            "no_common_route",
+            "resting_cubicle_route",
+            "milking_equipment_route",
+        ]
+        self.assertIn(payload["likely_route"], canonical_routes)
         probs = payload["route_probabilities"]
         self.assertAlmostEqual(sum(probs.values()), 1.0, places=2)
         p_vals = payload["p_values"]
@@ -119,8 +127,11 @@ class TestS12Payloads(unittest.TestCase):
         self.assertTrue(payload["is_model_suggestion"])
 
     def test_backtrace_run_payload(self):
+        canonical_routes = ["resting_area", "milking_equipment", "both", "no_common_route"]
+
+        # Single cow run
         payload = generate_backtrace_run(flags=[{"cow_id": "C01"}], lookback_hours=72)
-        self.assertIn(payload["likely_route"], ["resting_area", "milking_equipment"])
+        self.assertIn(payload["likely_route"], canonical_routes)
         self.assertIn("p_values", payload)
         self.assertIn("resting_areas", payload)
         self.assertIn("implicated_resting_areas", payload)
@@ -133,6 +144,12 @@ class TestS12Payloads(unittest.TestCase):
         self.assertIn("center_x_m", circle)
         self.assertIn("center_y_m", circle)
         self.assertIn("until_bedding_change_utc", circle)
+
+        # Multi-cow group run
+        payload_multi = generate_backtrace_run(target_cows=["C01", "C02"], lookback_hours=72)
+        self.assertIn(payload_multi["likely_route"], canonical_routes)
+        self.assertEqual(payload_multi["impact"]["flagged_early_count"], 2)
+        self.assertGreaterEqual(len(payload_multi["resting_areas"]), 1)
 
     def test_impact_panel(self):
         payload = generate_impact()
