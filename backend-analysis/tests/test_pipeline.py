@@ -48,6 +48,20 @@ class TestPipelineIntegration(unittest.TestCase):
             self.assertTrue(benchmark_file.exists())
             self.assertTrue(timeseries_file.exists())
 
+            # Check schema sidecars exist and are valid
+            ts_schema_file = out_path / "analyzed_timeseries.schema.json"
+            day_schema_file = out_path / "cow_day_features.schema.json"
+            self.assertTrue(ts_schema_file.exists())
+            self.assertTrue(day_schema_file.exists())
+            with open(ts_schema_file, "r", encoding="utf-8") as f:
+                ts_schema = json.load(f)
+            self.assertEqual(ts_schema["cadence"], "1m")
+            self.assertIn("watch_risk_score", ts_schema["columns"])
+            with open(day_schema_file, "r", encoding="utf-8") as f:
+                day_schema = json.load(f)
+            self.assertEqual(day_schema["cadence"], "1d")
+            self.assertIn("cbt_mean", day_schema["columns"])
+
             # Validate JSON loads cleanly
             with open(summary_file, "r", encoding="utf-8") as f:
                 loaded_summary = json.load(f)

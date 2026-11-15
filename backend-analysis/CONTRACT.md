@@ -323,3 +323,8 @@ Produced by `analysis.evaluate_backtrace_against_synthetic()`:
   "is_synthetic": true
 }
 ```
+
+## 5. Parquet Schema Sidecars (`.schema.json`)
+Every generated Parquet dataset ships an accompanying `.schema.json` sidecar matching the canonical `backend-cleaning` CONTRACT:
+- `analyzed_timeseries.schema.json`: Documents cadence (`1m`), primary keys (`cow_id`, `ts_utc`), row count, and per-column dtypes and null counts.
+- `cow_day_features.schema.json`: Documents cadence (`1d`), primary keys (`cow_id`, `date`), row count, and per-column dtypes and null counts.
