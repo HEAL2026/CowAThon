@@ -1,5 +1,7 @@
 # Exported payloads and local data
-data/
+data/*
+!data/benchmarks/
+!data/benchmarks/*
 
 # Python cache artifacts
 __pycache__/
