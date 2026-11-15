@@ -5,9 +5,11 @@ Uses 1-minute aggregated IMU features (neck_imu_magnitude_std or 3-axis stds) to
 - Posture / activity state (resting vs active)
 - Rumination proxy from characteristic low-amplitude cyclical neck motion
 - Behavioral anomaly score (0 - 30 points)
+- Empirical ground-truth concordance evaluation on labeled MMCows windows (2023-07-25)
 """
 
 from __future__ import annotations
+from typing import Any
 import numpy as np
 import pandas as pd
 
@@ -106,3 +108,91 @@ def calculate_behavior_anomaly_score(
         index=df.index,
         name="behavior_anomaly_score",
     )
+
+
+def validate_behavior_against_ground_truth(
+    df: pd.DataFrame,
+    behavior_mode_col: str = "behavior_mode",
+    behavior_mode_name_col: str = "behavior_mode_name",
+    lying_frac_col: str = "behavior_lying_frac",
+    posture_col: str = "posture_state",
+    ankle_lying_col: str = "lying",
+) -> dict[str, Any]:
+    """Validate posture and activity predictions against real MMCows ground-truth labels.
+
+    Evaluates:
+    - Posture concordance (lying/resting vs standing/active)
+    - Agreement between ankle accelerometer (lying) and vision ground truth
+    - Excludes unknown behavior (mode == 0) per official benchmark conventions.
+    """
+    has_labels = (
+        (behavior_mode_col in df.columns and df[behavior_mode_col].notna().any())
+        or (behavior_mode_name_col in df.columns and df[behavior_mode_name_col].notna().any())
+        or (lying_frac_col in df.columns and df[lying_frac_col].notna().any())
+    )
+
+    if not has_labels:
+        return {
+            "has_ground_truth_labels": False,
+            "note": "No ground-truth behavior annotations present in this window (annotations available for 2023-07-25).",
+        }
+
+    # Filter to annotated rows
+    mask = pd.Series(False, index=df.index)
+    if behavior_mode_col in df.columns:
+        mask = mask | (df[behavior_mode_col].notna() & (df[behavior_mode_col] != 0))
+    if behavior_mode_name_col in df.columns:
+        mask = mask | (df[behavior_mode_name_col].notna() & (df[behavior_mode_name_col] != "unknown"))
+    if lying_frac_col in df.columns:
+        mask = mask | df[lying_frac_col].notna()
+
+    labeled_df = df.loc[mask].copy()
+    if len(labeled_df) == 0:
+        return {"has_ground_truth_labels": False, "n_labeled_rows": 0}
+
+    # Ground truth binary lying
+    is_gt_lying = pd.Series(False, index=labeled_df.index)
+    if behavior_mode_col in labeled_df.columns:
+        is_gt_lying = is_gt_lying | (labeled_df[behavior_mode_col] == 7)
+    if behavior_mode_name_col in labeled_df.columns:
+        is_gt_lying = is_gt_lying | (labeled_df[behavior_mode_name_col] == "lying")
+    if lying_frac_col in labeled_df.columns:
+        is_gt_lying = is_gt_lying | (labeled_df[lying_frac_col] >= 0.5)
+
+    gt_arr = is_gt_lying.astype(int).values
+
+    # Sensor / model predictions
+    results: dict[str, Any] = {
+        "has_ground_truth_labels": True,
+        "n_labeled_rows": len(labeled_df),
+        "gt_lying_rate": round(float(np.mean(gt_arr)), 3),
+    }
+
+    # 1. Ankle sensor agreement (lying column vs vision ground truth)
+    if ankle_lying_col in labeled_df.columns and labeled_df[ankle_lying_col].notna().any():
+        ankle_pred = labeled_df[ankle_lying_col].fillna(0).astype(int).values
+        ankle_acc = float(np.mean(ankle_pred == gt_arr))
+        results["ankle_sensor_ground_truth_concordance"] = round(ankle_acc, 3)
+
+    # 2. IMU posture classification agreement
+    if posture_col in labeled_df.columns:
+        pred_resting = (labeled_df[posture_col] == "resting").astype(int).values
+        acc = float(np.mean(pred_resting == gt_arr))
+        tp = int(np.sum((gt_arr == 1) & (pred_resting == 1)))
+        fp = int(np.sum((gt_arr == 0) & (pred_resting == 1)))
+        fn = int(np.sum((gt_arr == 1) & (pred_resting == 0)))
+        tn = int(np.sum((gt_arr == 0) & (pred_resting == 0)))
+
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+        results["imu_posture_model"] = {
+            "accuracy": round(acc, 3),
+            "precision": round(precision, 3),
+            "recall": round(recall, 3),
+            "f1": round(f1, 3),
+            "confusion_matrix": {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
+        }
+
+    return results

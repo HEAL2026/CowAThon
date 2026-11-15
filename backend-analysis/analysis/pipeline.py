@@ -4,7 +4,8 @@ Runs:
 1. Feature extraction (THI, CBT strain, IMU activity, rumination proxy).
 2. Multimodal watch-list risk scoring and confidence estimation.
 3. Group-aware animal-disjoint cross-validation benchmarking against single-sensor baselines.
-4. Output payload generation for backend-visualization and frontend consumption.
+4. Empirical ground-truth behavior validation when annotated windows are present (2023-07-25).
+5. Output payload generation for backend-visualization and frontend consumption.
 """
 
 from __future__ import annotations
@@ -15,7 +16,12 @@ import pandas as pd
 
 from .env_thermal import calculate_thi, categorize_thi_strain, calculate_thermal_load
 from .cbt_strain import calculate_cbt_strain_score, detect_temperature_spikes
-from .behavior import calculate_activity_index, classify_posture_state, calculate_rumination_proxy
+from .behavior import (
+    calculate_activity_index,
+    classify_posture_state,
+    calculate_rumination_proxy,
+    validate_behavior_against_ground_truth,
+)
 from .risk_scorer import MultimodalRiskScorer
 from .baselines import evaluate_baselines_vs_multimodal
 
@@ -117,7 +123,11 @@ def run_analysis_pipeline(
         seed=seed,
     )
 
-    # 7. Write outputs if directory provided
+    # 7. Ground-truth behavior concordance validation
+    behavior_eval = validate_behavior_against_ground_truth(df_proc)
+    benchmarks["behavior_ground_truth_validation"] = behavior_eval
+
+    # 8. Write outputs if directory provided
     if output_dir is not None:
         out_path = Path(output_dir)
         out_path.mkdir(parents=True, exist_ok=True)
