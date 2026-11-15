@@ -2,10 +2,11 @@
 
 Runs:
 1. Feature extraction (THI, CBT strain, IMU activity, rumination proxy).
-2. Multimodal watch-list risk scoring and confidence estimation.
-3. Group-aware animal-disjoint cross-validation benchmarking against single-sensor baselines.
-4. Empirical ground-truth behavior validation when annotated windows are present (2023-07-25).
-5. Output payload generation for backend-visualization and frontend consumption.
+2. Stationary reference hardware detection (e.g. T13/T14).
+3. Multimodal watch-list risk scoring and confidence estimation.
+4. Group-aware animal-disjoint cross-validation benchmarking against single-sensor baselines.
+5. Empirical ground-truth behavior validation when annotated windows are present (2023-07-25).
+6. Output payload generation for backend-visualization and frontend consumption.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from .behavior import (
     classify_posture_state,
     calculate_rumination_proxy,
     validate_behavior_against_ground_truth,
+    detect_stationary_hardware_candidate,
 )
 from .risk_scorer import MultimodalRiskScorer
 from .baselines import evaluate_baselines_vs_multimodal
@@ -62,11 +64,20 @@ def run_analysis_pipeline(
     if cbt_col:
         df_proc["cbt_strain_score"] = calculate_cbt_strain_score(df_proc[cbt_col])
 
-    # 3. Behavioral IMU Features
+    # 3. Behavioral IMU Features & Hardware Candidate Detection
     if "activity_index" not in df_proc.columns:
         df_proc["activity_index"] = calculate_activity_index(df_proc)
-    if "posture_state" not in df_proc.columns:
-        df_proc["posture_state"] = classify_posture_state(df_proc["activity_index"])
+
+    # Detect stationary hardware candidates (T13/T14 on posts)
+    is_hardware = detect_stationary_hardware_candidate(df_proc)
+    df_proc["is_stationary_hardware"] = is_hardware
+
+    if "posture_state" not in df_proc.columns or is_hardware.any():
+        df_proc["posture_state"] = classify_posture_state(
+            df_proc["activity_index"],
+            is_stationary_hardware=is_hardware,
+        )
+
     if "rumination_proxy" not in df_proc.columns:
         df_proc["rumination_proxy"] = calculate_rumination_proxy(df_proc)
 
@@ -102,10 +113,12 @@ def run_analysis_pipeline(
                 "ambient_thi": round(float(thi_val), 1) if thi_val is not None and not pd.isna(thi_val) else None,
                 "thi_category": str(latest_row.get("thi_category", "unknown")),
                 "activity_index": round(float(latest_row.get("activity_index", 0.0)), 3),
+                "posture_state": str(latest_row.get("posture_state", "unknown")),
                 "rumination_proxy": round(float(latest_row.get("rumination_proxy", 0.0)), 1),
                 "daily_milk_yield_kg": round(float(milk_val), 1) if milk_val is not None and not pd.isna(milk_val) else None,
                 "milk_drop_pct": round(float(latest_row.get("milk_drop_pct", 0.0)), 1),
                 "out_of_pen": bool(latest_row.get("out_of_pen", False)),
+                "is_stationary_hardware": bool(latest_row.get("is_stationary_hardware", False)),
             },
             "modalities_present": score_info["modalities_present"],
             "missing_modalities": score_info["missing_modalities"],
@@ -114,9 +127,10 @@ def run_analysis_pipeline(
             "is_model_suggestion": True,
         }
 
-    # 6. Animal-Disjoint Cross-Validation Benchmarks
+    # 6. Animal-Disjoint Cross-Validation Benchmarks (filter out hardware tags from model CV)
+    cv_df = df_proc.loc[~df_proc["is_stationary_hardware"]].copy() if "is_stationary_hardware" in df_proc.columns else df_proc
     benchmarks = evaluate_baselines_vs_multimodal(
-        df_proc,
+        cv_df,
         target_col="is_elevated_risk",
         group_col="cow_id",
         n_splits=n_cv_splits,
