@@ -96,6 +96,52 @@ class TestPipelineIntegration(unittest.TestCase):
         self.assertTrue((t14_rows["posture_state"] == "stationary_hardware").all())
         self.assertTrue(t14_rows["is_stationary_hardware"].all())
 
+    def test_pipeline_adaptive_splits_for_small_herd(self):
+        # 4 cows with 5 requested splits should clamp to 4 folds without crashing
+        cows_4_df = generate_synthetic_mmcows_data(n_cows=4, n_minutes=30, seed=10)
+        result = run_analysis_pipeline(cows_4_df, n_cv_splits=5, seed=0)
+
+        benchmarks = result["benchmarks"]
+        self.assertFalse(benchmarks["cv_unavailable"])
+        self.assertEqual(benchmarks["n_groups"], 4)
+        self.assertEqual(benchmarks["n_splits"], 4)
+
+    def test_pipeline_undersized_herd_cv_degradation(self):
+        # 2 cows: below n=3 floor, skips CV and degrades confidence without crashing
+        cows_2_df = generate_synthetic_mmcows_data(n_cows=2, n_minutes=30, seed=11)
+        result = run_analysis_pipeline(cows_2_df, n_cv_splits=5, seed=0)
+
+        benchmarks = result["benchmarks"]
+        self.assertTrue(benchmarks["cv_unavailable"])
+        self.assertEqual(benchmarks["n_splits"], 0)
+        self.assertIn("Need at least 3", benchmarks["cv_unavailable_reason"])
+
+        # Confidence should be gracefully degraded
+        c01_summary = result["cow_summaries"]["C01"]
+        self.assertLessEqual(c01_summary["confidence_score"], 0.60)
+
+    def test_pipeline_all_hardware_fixture(self):
+        # Herd consisting entirely of hardware tags (zero live cows)
+        t_df = pd.DataFrame({
+            "ts_utc": pd.date_range("2023-07-25 08:00", periods=10, freq="min", tz="UTC"),
+            "cow_id": ["T13"] * 5 + ["T14"] * 5,
+            "indoor_thi": [68.0] * 10,
+            "cbt_c": [float("nan")] * 10,
+            "neck_imu_magnitude_std": [0.09] * 5 + [0.151] * 5,
+            "lying": [float("nan")] * 10,
+            "uwb_x_m": [5.1] * 10,
+            "uwb_y_m": [3.2] * 10,
+            "milk_yield_kg": [float("nan")] * 10,
+            "milk_drop_pct": [0.0] * 10,
+            "out_of_pen": [False] * 10,
+        })
+        result = run_analysis_pipeline(t_df, n_cv_splits=5, seed=0)
+        benchmarks = result["benchmarks"]
+        self.assertTrue(benchmarks["cv_unavailable"])
+        self.assertEqual(benchmarks["n_groups"], 0)
+        for cid in ["T13", "T14"]:
+            self.assertEqual(result["cow_summaries"][cid]["metrics"]["posture_state"], "stationary_hardware")
+
 
 if __name__ == "__main__":
     unittest.main()

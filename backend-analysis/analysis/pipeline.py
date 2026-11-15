@@ -33,6 +33,7 @@ def run_analysis_pipeline(
     output_dir: Path | str | None = None,
     n_cv_splits: int = 5,
     seed: int = 0,
+    is_synthetic: bool = False,
 ) -> dict[str, Any]:
     """Execute the full backend analysis pipeline.
 
@@ -41,6 +42,7 @@ def run_analysis_pipeline(
         output_dir: Optional directory to save output JSON/parquet artifacts.
         n_cv_splits: Number of folds for animal-disjoint cross-validation.
         seed: Random seed for deterministic reproducibility.
+        is_synthetic: Whether data is synthetic fixture fallback.
 
     Returns:
         Dictionary containing cow summaries, time series, and benchmark results.
@@ -125,17 +127,59 @@ def run_analysis_pipeline(
             "contributing_factors": score_info["contributing_factors"],
             "recommended_actions": score_info["recommended_actions"],
             "is_model_suggestion": True,
+            "is_synthetic": is_synthetic,
         }
 
     # 6. Animal-Disjoint Cross-Validation Benchmarks (filter out hardware tags from model CV)
     cv_df = df_proc.loc[~df_proc["is_stationary_hardware"]].copy() if "is_stationary_hardware" in df_proc.columns else df_proc
-    benchmarks = evaluate_baselines_vs_multimodal(
-        cv_df,
-        target_col="is_elevated_risk",
-        group_col="cow_id",
-        n_splits=n_cv_splits,
-        seed=seed,
-    )
+    n_live_cows = int(cv_df["cow_id"].nunique()) if "cow_id" in cv_df.columns else 0
+
+    if n_live_cows < 3:
+        # Herd size floor: Below 3 distinct animals, animal-disjoint group splitting cannot form robust folds
+        benchmarks = {
+            "dataset": "MMCows Challenge 1",
+            "evaluation_protocol": "insufficient_animals_for_cv",
+            "n_groups": n_live_cows,
+            "n_splits": 0,
+            "cv_unavailable": True,
+            "cv_unavailable_reason": f"Need at least 3 distinct animal IDs for group cross-validation; found {n_live_cows}.",
+            "baselines": {},
+            "multimodal_model": {},
+            "is_synthetic": is_synthetic,
+        }
+        # Gracefully degrade confidence on undersized cohorts
+        for cid, summary in cow_summaries.items():
+            if not summary["metrics"].get("is_stationary_hardware", False):
+                summary["confidence_score"] = round(min(summary["confidence_score"], 0.60), 2)
+                summary["contributing_factors"].append(
+                    f"Small herd cohort (n={n_live_cows}): animal-disjoint cross-validation skipped"
+                )
+    else:
+        # Adaptive splitting: clamp fold count to available herd size (e.g. 4-fold for 4 cows)
+        effective_splits = min(n_cv_splits, n_live_cows)
+        try:
+            benchmarks = evaluate_baselines_vs_multimodal(
+                cv_df,
+                target_col="is_elevated_risk",
+                group_col="cow_id",
+                n_splits=effective_splits,
+                seed=seed,
+            )
+            benchmarks["is_synthetic"] = is_synthetic
+            benchmarks["n_splits"] = effective_splits
+            benchmarks["cv_unavailable"] = False
+        except Exception as exc:
+            benchmarks = {
+                "dataset": "MMCows Challenge 1",
+                "evaluation_protocol": "error_during_cv",
+                "n_groups": n_live_cows,
+                "n_splits": 0,
+                "cv_unavailable": True,
+                "cv_unavailable_reason": str(exc),
+                "baselines": {},
+                "multimodal_model": {},
+                "is_synthetic": is_synthetic,
+            }
 
     # 7. Ground-truth behavior concordance validation
     behavior_eval = validate_behavior_against_ground_truth(df_proc)
