@@ -70,6 +70,7 @@
           <button class="view-tab active" data-view="barn"><span>⌂</span> Barn</button>
           <button class="view-tab" data-view="milking"><span>◫</span> Milking</button>
           <button class="view-tab alert-tab" data-view="alerts"><span>!</span> Alerts <b>4</b></button>
+          <button class="view-tab" data-view="messages"><span>✉</span> Messages <b>2</b></button>
         </nav>
 
         <section id="barn-view" class="view-panel">
@@ -137,7 +138,33 @@
               <div id="co-resters" class="co-resters"></div>
             </div>
           </div>
-          <section class="s12-dashboard">
+        </section>
+
+        <section id="messages-view" class="view-panel" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Shared care thread</p>
+              <h2>Messages with your vet</h2>
+            </div>
+            <span class="data-status">Demo conversation</span>
+          </div>
+          <div class="messages-layout">
+            <aside class="card message-threads">
+              <button class="message-thread active" data-thread="fern"><strong>Fern 221 · follow-up</strong><span>Dr. Patel · 12 min ago</span></button>
+              <button class="message-thread" data-thread="herd"><strong>Herd report · July 28</strong><span>You · yesterday</span></button>
+            </aside>
+            <section class="card conversation">
+              <div class="conversation-heading"><div><h3 id="conversation-title">Fern 221 · follow-up</h3><span class="muted">Farmer ↔ Dr. Maya Patel</span></div><button id="message-citation" class="secondary-button small">Cite selected</button></div>
+              <div id="message-list" class="message-list">
+                <article class="message received"><span class="message-author">Dr. Patel</span><p>Fern’s risk trend is worth checking before the next milking. Can you look at Rest zone B?</p><button class="citation" data-citation="Fern 221 · elevated risk model alert">Cite this</button></article>
+                <article class="message sent"><span class="message-author">You</span><p>I’ll check her and the bedding now.</p></article>
+                <article class="message received"><span class="message-author">Dr. Patel</span><p>Thanks. I’ve attached the herd-health report for our review.</p><button class="citation" data-citation="Herd health report · 10:00 AM">Cite report</button></article>
+              </div>
+              <div id="selected-citation" class="selected-citation" hidden></div>
+              <form id="message-form" class="message-form"><input id="message-input" placeholder="Write a message…" aria-label="Write a message" /><button class="primary-button small">Send</button></form>
+            </section>
+          </div>
+          <section class="s12-dashboard role-detail-panel" data-role-detail="true">
             <div class="card s12-card">
               <div class="card-title-row">
                 <div><p class="eyebrow">Model-supported review</p><h3>Outbreak backtrace</h3></div>
@@ -169,8 +196,9 @@
           </section>
           <div class="insight-strip">
             <span class="insight-icon">✦</span>
-            <p><strong>One thing to know:</strong> 3 cows are resting outside their usual zone. This can be an early behavior change—check the alerts before the next milking.</p>
-            <button class="text-button" data-view-target="alerts">View alerts →</button>
+            <p class="farmer-advice"><strong>Today’s advice:</strong> Check Fern 221 before the next milking and review the bedding in Rest zone B.</p>
+            <p class="vet-detail"><strong>Model context:</strong> 3 cows are resting outside their usual zone; review the alert history and resting-circle contacts.</p>
+            <button class="text-button" id="role-details-toggle">View model details →</button>
           </div>
         </section>
 
@@ -252,6 +280,7 @@
         <button class="mobile-nav-item active" data-view="barn"><span>⌂</span>Barn</button>
         <button class="mobile-nav-item" data-view="milking"><span>◫</span>Milking</button>
         <button class="mobile-nav-item" data-view="alerts"><span>!</span>Alerts <b>4</b></button>
+        <button class="mobile-nav-item" data-view="messages"><span>✉</span>Messages <b>2</b></button>
         <button class="mobile-nav-item" id="mobile-profile"><span>◎</span>Profile</button>
       </nav>
     </div>
