@@ -189,3 +189,15 @@ The current labeled release contains one farm collection day spanning a UTC
 date boundary, so this benchmark reserves the final chronological 20% across
 all ten cows rather than pretending that an unlabelled second day is a valid
 test set. Both models use non-overlapping 10-second evaluation windows.
+
+An unsupervised K-means baseline is available with:
+
+```bash
+python3 behavior/compare_kmeans.py
+```
+
+K-means is fit only on the first 80% of the timeline. Its cluster-to-state
+mapping is learned from training labels with a one-to-one assignment, and the
+final 20% remains untouched until scoring. This is a labeled interpretation
+of an unsupervised clustering baseline, not a supervised replacement for the
+RandomForest.
