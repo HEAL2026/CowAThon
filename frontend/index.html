@@ -76,7 +76,7 @@
         <section id="barn-view" class="view-panel">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">North Barn · 42 cows</p>
+              <p class="eyebrow" id="barn-cohort-eyebrow">North Barn · 16 cows (10 tracked)</p>
               <h2>Where are the cows spending time?</h2>
             </div>
             <div class="segmented-control">
@@ -96,6 +96,7 @@
                 <button id="problem-overlay" class="overlay-button"><span class="toggle"></span> Mastitis risk areas</button>
               </div>
               <div class="barn-polygon">
+                <canvas id="heatmap-canvas" class="heatmap-canvas" width="400" height="284" hidden></canvas>
                 <div class="feed-lane">Feed lane</div>
                 <div class="rest-zone zone-a">Rest zone A</div>
                 <div class="rest-zone zone-b">Rest zone B</div>
@@ -113,14 +114,37 @@
               <div id="cow-detail" class="cow-detail" hidden></div>
             </div>
             <aside class="card legend-card">
-              <div class="card-title-row"><h3>Color by</h3><span class="info-icon">i</span></div>
-              <label class="radio-row"><input type="radio" name="color-by" value="status" checked /> Lactation status <span class="legend-swatch status-swatch"></span></label>
-              <label class="radio-row"><input type="radio" name="color-by" value="health" /> Health index <span class="gradient-swatch health-gradient"></span></label>
-              <label class="radio-row"><input type="radio" name="color-by" value="behavior" /> Behavior anomaly <span class="gradient-swatch behavior-gradient"></span></label>
+              <div class="card-title-row"><h3>Color by</h3><span class="info-icon" title="Color coding details">i</span></div>
+              <div class="color-by-option active" data-mode-opt="status">
+                <label class="radio-row"><input type="radio" name="color-by" value="status" checked /> Lactation status <span class="legend-swatch status-swatch"></span></label>
+                <div class="color-scale-guide" data-for="status">
+                  <div class="guide-item"><span class="guide-dot healthy"></span> Green: Within baseline</div>
+                  <div class="guide-item"><span class="guide-dot pregnant"></span> Blue: Pregnant / fresh</div>
+                  <div class="guide-item"><span class="guide-dot estrus"></span> Purple: Estrus</div>
+                  <div class="guide-item"><span class="guide-dot watch"></span> Amber: Elevated risk · watch</div>
+                  <div class="guide-item"><span class="guide-dot urgent"></span> Red: Flagged / needs attention</div>
+                </div>
+              </div>
+              <div class="color-by-option" data-mode-opt="health">
+                <label class="radio-row"><input type="radio" name="color-by" value="health" /> Health index <span class="gradient-swatch health-gradient"></span></label>
+                <div class="color-scale-guide" data-for="health">
+                  <div class="guide-item"><span class="guide-dot healthy"></span> Green: High vitality (>75)</div>
+                  <div class="guide-item"><span class="guide-dot watch"></span> Amber: Moderate risk (50–75)</div>
+                  <div class="guide-item"><span class="guide-dot urgent"></span> Red: Low vitality / high risk (<50)</div>
+                </div>
+              </div>
+              <div class="color-by-option" data-mode-opt="behavior">
+                <label class="radio-row"><input type="radio" name="color-by" value="behavior" /> Behavior anomaly <span class="gradient-swatch behavior-gradient"></span></label>
+                <div class="color-scale-guide" data-for="behavior">
+                  <div class="guide-item"><span class="guide-dot healthy"></span> Green: Baseline activity (exposure ≤ 0.3)</div>
+                  <div class="guide-item"><span class="guide-dot watch"></span> Amber: Moderate exposure / idling (0.3–0.6)</div>
+                  <div class="guide-item"><span class="guide-dot urgent"></span> Red: High exposure anomaly (>0.6)</div>
+                </div>
+              </div>
               <hr />
-              <div class="metric-row"><span><i class="legend-dot healthy"></i> Within baseline</span><strong>35</strong></div>
-              <div class="metric-row"><span><i class="legend-dot watch"></i> Worth a look</span><strong>5</strong></div>
-              <div class="metric-row"><span><i class="legend-dot urgent"></i> Needs attention</span><strong>2</strong></div>
+              <div class="metric-row"><span><i class="legend-dot healthy"></i> Within baseline</span><strong id="legend-count-baseline">14</strong></div>
+              <div class="metric-row"><span><i class="legend-dot watch"></i> Worth a look</span><strong id="legend-count-watch">1</strong></div>
+              <div class="metric-row"><span><i class="legend-dot urgent"></i> Needs attention</span><strong id="legend-count-urgent">1</strong></div>
             </aside>
           </div>
           <div class="resting-filter-card card">
@@ -212,9 +236,9 @@
           </div>
           <div class="milking-layout">
             <div class="milking-diagram card">
-              <div class="diagram-header"><span>Rotary parlor · 12 stalls</span><span class="last-sync">Synced 2 min ago</span></div>
-              <div class="stall-ring">
-                <div class="ring-center"><strong>8 / 12</strong><span>in progress</span></div>
+              <div class="diagram-header"><span id="milking-parlor-title">Rotary parlor · 8 active stalls</span><span class="last-sync" id="milking-last-sync">Synced 2 min ago</span></div>
+              <div class="stall-ring" id="stall-ring">
+                <div class="ring-center"><strong id="milking-in-progress">8 / 8</strong><span>in progress</span></div>
                 <button class="stall stall-1 risk-high" data-stall="1">1</button>
                 <button class="stall stall-2 risk-low" data-stall="2">2</button>
                 <button class="stall stall-3 risk-low" data-stall="3">3</button>
@@ -232,13 +256,13 @@
               <div id="stall-detail" class="stall-detail">Select a stall to see recent cows and alerts.</div>
             </div>
             <aside class="card milk-summary">
-              <div class="card-title-row"><h3>Today's summary</h3><span class="trend-up">↑ 4.2%</span></div>
-              <div class="big-stat">2,846 <span>L</span></div>
-              <p class="muted">Across 3 milkings</p>
+              <div class="card-title-row"><h3>Today's summary</h3><span class="trend-up" id="milking-trend">↑ 4.2%</span></div>
+              <div class="big-stat" id="milking-total-yield">2,846 <span>L</span></div>
+              <p class="muted" id="milking-sessions-count">Across 3 milkings</p>
               <div class="summary-list">
-                <div><span>Average yield</span><strong>34.1 L / cow</strong></div>
-                <div><span>High-risk stalls</span><strong class="danger-text">3</strong></div>
-                <div><span>Last cleaning cycle</span><strong>10:16 AM</strong></div>
+                <div><span>Average yield</span><strong id="milking-avg-yield">34.1 L / cow</strong></div>
+                <div><span>High-risk stalls</span><strong id="milking-high-risk-stalls" class="danger-text">0</strong></div>
+                <div><span>Last cleaning cycle</span><strong id="milking-last-cleaning">10:16 AM</strong></div>
               </div>
               <button class="primary-button full-width" data-view-target="alerts">Review risk alerts</button>
             </aside>
