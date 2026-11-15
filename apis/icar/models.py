@@ -292,11 +292,14 @@ class BacktraceRun:
     status: str                         # "completed", "running", "failed"
     lookback_days: int
     summary: Dict[str, Any]
+    target_animal_ids: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
+        targets = self.target_animal_ids or ([self.target_animal_id] if self.target_animal_id else [])
         return {
             "runId": self.run_id,
             "targetAnimalId": self.target_animal_id,
+            "targetAnimalIds": targets,
             "initiatedAtUtc": self.initiated_at_utc,
             "status": self.status,
             "lookbackDays": self.lookback_days,
