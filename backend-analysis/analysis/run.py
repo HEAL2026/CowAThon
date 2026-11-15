@@ -192,7 +192,15 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
         vis_dir = Path(args.export_vis_dir)
         vis_dir.mkdir(parents=True, exist_ok=True)
         import shutil
-        for fname in ["cow_risk_summary.json", "benchmark_results.json", "backtrace_benchmark.json"]:
+        export_files = [
+            "cow_risk_summary.json",
+            "auto_flags.json",
+            "benchmark_results.json",
+            "backtrace_benchmark.json",
+            "analyzed_timeseries.schema.json",
+            "cow_day_features.schema.json",
+        ]
+        for fname in export_files:
             src = out_dir / fname
             if src.exists():
                 shutil.copy2(src, vis_dir / fname)

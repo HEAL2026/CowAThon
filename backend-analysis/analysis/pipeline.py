@@ -32,6 +32,34 @@ from .health_index import compute_health_index
 from .mastitis_risk import evaluate_acute_mastitis_risk
 
 
+def write_schema_sidecar(
+    df: pd.DataFrame,
+    out_dir: Path,
+    name: str,
+    cadence: str,
+    keys: list[str],
+) -> Path:
+    """Write <name>.schema.json sidecar matching canonical cleaning contract."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    sidecar = {
+        "table": name,
+        "cadence": cadence,
+        "keys": keys,
+        "rows": int(len(df)),
+        "columns": {
+            c: {
+                "dtype": str(df[c].dtype),
+                "null_count": int(df[c].isna().sum()),
+            }
+            for c in df.columns
+        },
+    }
+    path = out_dir / f"{name}.schema.json"
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(sidecar, f, indent=2, sort_keys=True)
+    return path
+
+
 def run_analysis_pipeline(
     df: pd.DataFrame,
     output_dir: Path | str | None = None,
@@ -255,10 +283,12 @@ def run_analysis_pipeline(
 
         timeseries_file = out_path / "analyzed_timeseries.parquet"
         df_proc.to_parquet(timeseries_file, index=False)
+        write_schema_sidecar(df_proc, out_path, "analyzed_timeseries", "1m", ["cow_id", "ts_utc"])
 
         if len(cow_day_df) > 0:
             cow_day_file = out_path / "cow_day_features.parquet"
             cow_day_df.to_parquet(cow_day_file, index=False)
+            write_schema_sidecar(cow_day_df, out_path, "cow_day_features", "1d", ["cow_id", "date"])
 
     return {
         "cow_summaries": cow_summaries,
