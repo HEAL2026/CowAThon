@@ -96,6 +96,19 @@ $$\text{watch\_risk\_score} = S_{\text{thermal}} + S_{\text{behavior}} + S_{\tex
 - **Production component ($S_{\text{production}}$, max 20)**: From sudden milk yield deviation below rolling baseline.
 - **Movement / Spatial component ($S_{\text{movement}}$, max 10)**: Prolonged displacement from comfort/ventilation zones, respecting `out_of_pen` milking trips.
 
+### 3.5 Dairy Health Vitality Index ($0 - 100$)
+Comprehensive welfare index aggregating 4 orthogonal physiological vitality components (each $0 - 25$ points, strictly summing to $100$):
+$$\text{health\_index} = V_{\text{thermal}} + V_{\text{behavior}} + V_{\text{activity}} + V_{\text{production}}$$
+- **Thermal Vitality ($V_{\text{thermal}}$, max 25)**: Starts at 25 points, penalized by CBT fever elevation ($z_{\text{cbt}} > 0$, up to 25 pt penalty).
+- **Behavior & Rest Vitality ($V_{\text{behavior}}$, max 25)**: Starts at 25 points, penalized by abnormal lying duration drop below baseline ($z_{\text{lying}} < 0$, up to 15 pt penalty) or depressed feeding duration ($z_{\text{feed}} < 0$, up to 10 pt penalty). Derived strictly from empirical ankle lying and classifier durations (`clf_lying_time_min`, `clf_feeding_time_min`).
+- **Activity & Kinetic Vitality ($V_{\text{activity}}$, max 25)**: Starts at 25 points, penalized by profound kinetic lethargy ($z_{\text{act}} < -1.0$) or extreme restlessness ($z_{\text{act}} > 2.5$).
+- **Production Vitality ($V_{\text{production}}$, max 25)**: Starts at 25 points, penalized by milk yield drop below rolling baseline ($z_{\text{yield}} < 0$, up to 25 pt penalty).
+- **Vitality Tiers**:
+  - `thriving`: $\text{health\_index} \ge 85.0$
+  - `stable_monitoring`: $65.0 \le \text{health\_index} < 85.0$
+  - `moderate_strain`: $45.0 \le \text{health\_index} < 65.0$
+  - `acute_attention`: $\text{health\_index} < 45.0$
+
 ---
 
 ## 4. Output Schemas (Consumed by Visualization & Frontend)
