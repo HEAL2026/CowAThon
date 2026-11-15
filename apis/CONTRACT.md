@@ -214,6 +214,39 @@ python -m apis export-feasibility --output backend-visualization/fixtures/integr
 # Query window records from an attached adapter
 python -m apis fetch --adapter milking_parlor_delaval --cow-ids C01 C02 --start 2023-07-25T00:00:00Z --end 2023-07-26T00:00:00Z
 
+# Run ICAR ADE Mock Vendor API Server on port 8001
+python -m apis serve-icar --port 8001
+
 # Run unit test suite
 python -m unittest discover -s apis/tests
 ```
+
+---
+
+## 6. S1 ICAR ADE Mock Vendor API Specification
+
+Provides commercial equipment replay feeds and interactive state endpoints matching ICAR ADE standard naming (`animal.id`, `eventDateTime`, `unitCode`, `is_synthetic`):
+
+### 6.1 Replay Telemetry Endpoints
+
+| Endpoint | Method | Params | Response Payload Shape |
+|---|---|---|---|
+| `/animals` | GET | `cows` | `{"animals": [{"animal": {"id": "C01", "officialTag": "..."}, "parity": 2, "daysInMilk": 120, ...}]}` |
+| `/locations` | GET | `start`, `end`, `cows` | `{"locations": [{"animal": {"id": "C01"}, "eventDateTime": "...", "unitCode": "...", "location": {"x_m": 12.4, "y_m": 8.1, "in_pen": true, "zone_id": "cubicle_row_b"}}]}` |
+| `/imu` | GET | `start`, `end`, `cows` | `{"imuObservations": [{"animal": {"id": "C01"}, "eventDateTime": "...", "kinematics": {"accelMagnitudeMean_mps2": 9.85, ...}}]}` |
+| `/behaviors` | GET | `start`, `end`, `cows`, `bucket_hours` | `{"behaviorBuckets": [{"animal": {"id": "C01"}, "period": {"startTime": "...", "endTime": "...", "durationMinutes": 120}, "metrics": {"lyingMinutes": 75.0, ...}}]}` |
+| `/milkvisits` | GET | `start`, `end`, `cows` | `{"milkVisits": [{"animal": {"id": "C01"}, "eventDateTime": "...", "unitCode": "STALL-02", "milking": {"yield_kg": 13.8, "duration_s": 380, "conductivity_ms_cm": 4.9}}]}` |
+| `/environment` | GET | `start`, `end` | `{"environment": [{"eventDateTime": "...", "stationId": "...", "indoorClimate": {"temperature_c": 23.5, "thi": 72.1}, "outdoorClimate": {...}}]}` |
+| `/bodytemp` | GET | `start`, `end`, `cows` | `{"bodyTemperatures": [{"animal": {"id": "C01"}, "eventDateTime": "...", "unitCode": "BOLUS-01", "bodyTemperature_c": 38.9}]}` |
+| `/healthevents` | GET | `start`, `end`, `cows` | `{"healthEvents": [{"animal": {"id": "C02"}, "eventDateTime": "...", "eventType": "elevated_cbt_warning", "severity": "watch", "source": "cbt_bolus"}]}` |
+
+### 6.2 Interactive State Endpoints
+
+| Endpoint | Method | Body / Params | Description |
+|---|---|---|---|
+| `/manual` | GET | `type`, `animal_id` | Retrieve manual farm logs (`bedding`, `sanitation`, `pregnancy`, `dim`, `parity`). |
+| `/manual` | POST | `{"entry_type": "...", "animal_id": "...", "details": {...}}` | Record new manual bedding changes, stall sanitation washes, or cow events. |
+| `/flags` | GET | `animal_id`, `status` | List watch-list flags (`status`: `"active"`, `"cleared"`). |
+| `/flags` | POST | `{"animal_id": "C02", "flag_type": "manual", "reason": "...", "flagged_by": "vet"}` | Add new manual or automated watch flag. |
+| `/backtrace` | POST | `{"animal_id": "C02", "lookback_days": 7}` | Execute outbreak transmission backtrace (evaluates resting cubicle co-resters vs milking stall sequence). |
+

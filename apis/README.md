@@ -32,6 +32,9 @@ without system rebuilds, maintaining graceful degradation when signals are absen
   Nedap/Allflex collar IMU, Tomorrow.io weather, and VAS PULSE herd management.
 - **Contract Conformance**: Strictly avoids duplicate cleaning or silent imputation; carries
   `*_is_imputed` flags, and labels all synthetic records with `is_synthetic = True`.
+- **S1 ICAR ADE Mock Vendor API Server**: Replays farm equipment feeds (`/animals`, `/locations`,
+  `/imu`, `/behaviors`, `/milkvisits`, `/environment`, `/bodytemp`, `/healthevents`) with standard
+  ICAR ADE naming, and handles interactive state endpoints (`/manual`, `/flags`, `/backtrace`).
 
 ---
 
@@ -40,7 +43,7 @@ without system rebuilds, maintaining graceful degradation when signals are absen
 ```
 apis/
   __init__.py           # Package exports (BaseAdapter, IntegrationRegistry, etc.)
-  __main__.py           # CLI interface (list, export-feasibility, fetch)
+  __main__.py           # CLI interface (list, export-feasibility, fetch, serve-icar)
   base.py               # Core interfaces, health states, and ObservationRecord
   registry.py           # Registry implementation and create_default_registry()
   fixtures.py           # Synthetic fixture generator and export helpers
@@ -55,11 +58,18 @@ apis/
     collar.py           # Nedap / Allflex collar IMU activity & pressure
     weather.py          # Tomorrow.io / Davis weather station (farm-level)
     herd.py             # VAS PULSE / DairyComp 305 herd management
-  tests/                # Full unit test suite (19/19 passing)
+  icar/                 # S1 ICAR ADE mock vendor services & HTTP server
+    __init__.py
+    models.py           # ICAR ADE standard domain models
+    store.py            # In-memory thread-safe state store for manual logs & flags
+    service.py          # Replay telemetry feeds & backtrace executor
+    server.py           # CORS-enabled HTTP REST server
+  tests/                # Full unit test suite (36/36 passing)
     __init__.py
     test_base.py
     test_registry.py
     test_adapters.py
+    test_icar.py
 ```
 
 ---
@@ -78,4 +88,7 @@ python -m apis export-feasibility
 
 # Fetch window records from DeLaval milking parlor mock
 python -m apis fetch --adapter milking_parlor_delaval --cow-ids C01 C02
+
+# Run ICAR ADE Mock Vendor API Server (port 8001)
+python -m apis serve-icar --port 8001
 ```
