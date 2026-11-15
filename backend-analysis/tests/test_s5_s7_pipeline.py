@@ -137,6 +137,34 @@ class TestS5S7Pipeline(unittest.TestCase):
             self.assertTrue((out_path / "auto_flags.json").exists())
             self.assertTrue((out_path / "cow_day_features.parquet").exists())
 
+    def test_optional_mendeley_physiology_and_composition_columns(self):
+        # Create DataFrame with Mendeley 954f6g36sb/2 columns and without standard cbt_c / cbt
+        df_ext = self.df.drop(columns=["cbt_c", "cbt"]).copy()
+        df_ext["rectal_temp_c"] = 39.5
+        df_ext["respiration_rate_bpm"] = 65.0
+        df_ext["pulse_rate_bpm"] = 72.0
+        df_ext["dmi_kg"] = 24.5
+        df_ext["fat_pct"] = 3.8
+        df_ext["protein_pct"] = 3.2
+
+        day_df = aggregate_cow_day_features(df_ext)
+        self.assertEqual(len(day_df), 4)
+
+        # Check rectal_temp_c fallback into cbt_mean
+        c01 = day_df[day_df["cow_id"] == "C01"].iloc[0]
+        self.assertEqual(c01["cbt_mean"], 39.5)
+        self.assertEqual(c01["respiration_rate_bpm_mean"], 65.0)
+        self.assertEqual(c01["pulse_rate_bpm_mean"], 72.0)
+        self.assertEqual(c01["dmi_kg"], 24.5)
+        self.assertEqual(c01["fat_pct"], 3.8)
+        self.assertEqual(c01["protein_pct"], 3.2)
+
+        # Verify pipeline calculates cbt_strain_score from rectal_temp_c
+        with tempfile.TemporaryDirectory() as tmpdir:
+            res = run_analysis_pipeline(df_ext, output_dir=Path(tmpdir), n_cv_splits=4, seed=0)
+            self.assertIn("cbt_strain_score", res["analyzed_df"].columns)
+            self.assertGreater(res["analyzed_df"]["cbt_strain_score"].mean(), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

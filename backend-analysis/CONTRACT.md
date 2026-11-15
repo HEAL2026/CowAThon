@@ -20,6 +20,11 @@ Analysis consumes the canonical processed joined table produced by `backend-clea
   - `lying`: Ankle sensor binary indicator ($0$ = standing/walking, $1$ = lying).
   - `out_of_pen`: Boolean flag denoting scheduled milking excursion trips (04–05h and 15–16h local), where coordinate nulls represent a known state rather than missing sensor data.
   - `<col>_is_imputed`, `<col>_age_s`: Missingness and staleness tracking flags.
+- **Optional External Physiology & Nutrition Inputs** (e.g. Mendeley `doi:10.17632/954f6g36sb.2` or commercial vendor telemetry; optional pass-through, MMCows pipeline remains completely self-contained when absent):
+  - `rectal_temp_c`: Alternative core body temperature in °C (serves as fallback for CBT strain when `cbt_c` is absent).
+  - `respiration_rate_bpm`, `pulse_rate_bpm`: Physiological respiration and pulse rate in breaths/beats per minute.
+  - `dmi_kg`: Daily dry matter intake in kg.
+  - `fat_pct`, `protein_pct`: Milk solids composition percentages.
 
 ---
 

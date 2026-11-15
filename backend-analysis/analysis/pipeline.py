@@ -65,8 +65,14 @@ def run_analysis_pipeline(
         df_proc["thi"] = calculate_thi(df_proc["temp_c"], df_proc["rh_pct"])
         df_proc["thi_category"] = categorize_thi_strain(df_proc["thi"])
 
-    # 2. CBT Strain
-    cbt_col = "cbt_c" if "cbt_c" in df_proc.columns else ("cbt" if "cbt" in df_proc.columns else None)
+    # 2. CBT Strain (with rectal_temp_c fallback from external sources)
+    cbt_col = "cbt_c" if "cbt_c" in df_proc.columns else (
+        "cbt" if "cbt" in df_proc.columns else (
+            "rectal_temp_c" if "rectal_temp_c" in df_proc.columns else (
+                "rectal_temp" if "rectal_temp" in df_proc.columns else None
+            )
+        )
+    )
     if cbt_col:
         df_proc["cbt_strain_score"] = calculate_cbt_strain_score(df_proc[cbt_col])
 
