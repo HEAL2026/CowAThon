@@ -517,6 +517,39 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p_empty["resting_areas"], [])
         self.assertEqual(p_empty["implicated_circles"], [])
 
+    def test_attribution_provenance_and_fallback_semantics(self):
+        """
+        Verifies attribution payload provenance and fallback semantics:
+        1) is_synthetic is explicitly set and preserved on returned payload;
+        2) Real analysis attribution preserves real resting areas and is_synthetic=False;
+        3) Fallback fixture emits is_synthetic=True and deterministic resting areas;
+        4) get_attribution_data() accurately returns (payload, is_synthetic).
+        """
+        # 1. Real attribution data from analysis output
+        real_backtrace = {
+            "likely_route": "resting_area",
+            "p_values": {"resting_permutation_p": 0.012, "milking_permutation_p": 0.35},
+            "implicated_resting_areas": [
+                {"area_id": "real_area_01", "center_x_m": -3.2, "center_y_m": 1.1, "radius_m": 1.5}
+            ],
+            "is_synthetic": False,
+        }
+        p_real = generate_attribution(attribution_data=real_backtrace, is_synthetic=False)
+        self.assertFalse(p_real["is_synthetic"])
+        self.assertEqual(p_real["implicated_resting_areas"][0]["center_x_m"], -3.2)
+        self.assertEqual(p_real["implicated_resting_areas"][0]["center_y_m"], 1.1)
+
+        # 2. Fallback attribution fixture
+        p_fallback = generate_attribution(attribution_data=None, is_synthetic=True)
+        self.assertTrue(p_fallback["is_synthetic"])
+        self.assertIn("implicated_resting_areas", p_fallback)
+        self.assertEqual(len(p_fallback["implicated_resting_areas"]), 1)
+
+        # 3. data_loader get_attribution_data fallback
+        p_loaded, is_synth = get_attribution_data()
+        self.assertIsInstance(is_synth, bool)
+        self.assertEqual(p_loaded["is_synthetic"], is_synth)
+
 
 if __name__ == "__main__":
     unittest.main()

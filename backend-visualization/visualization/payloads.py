@@ -913,6 +913,7 @@ def generate_attribution(
             data["ts_utc"] = ts_utc
         if lookback_hours:
             data["lookback_hours"] = lookback_hours
+        data["is_synthetic"] = is_synthetic
         return data
 
     return {
