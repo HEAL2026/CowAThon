@@ -191,6 +191,91 @@ class TestS5S7Pipeline(unittest.TestCase):
         res_cool = compute_health_index(base, herd_context=cool_context)
         self.assertFalse(res_cool["herd_context"]["heat_confounded"])
 
+    def test_behavior_baseline_deviation_and_missing_history_fallback(self):
+        # 1. Normal baseline adherence
+        normal_base = {
+            "primary_baseline_tier": "own_history",
+            "overall_baseline_confidence": 0.92,
+            "history_days_count": 8,
+            "metrics": {
+                "clf_lying_time_min": {
+                    "current_value": 670.0,
+                    "baseline_mean": 665.0,
+                    "baseline_std": 50.0,
+                    "effective_z_score": 0.1,
+                },
+                "clf_feeding_time_min": {
+                    "current_value": 245.0,
+                    "baseline_mean": 240.0,
+                    "baseline_std": 30.0,
+                    "effective_z_score": 0.15,
+                },
+                "daily_milk_yield_kg": {"effective_z_score": 0.0},
+                "cbt_mean": {"effective_z_score": 0.0},
+            },
+        }
+        res_normal = compute_health_index(normal_base)
+        b_norm = res_normal["components"]["behavior"]
+        self.assertEqual(b_norm["score"], 35.0)
+        self.assertEqual(b_norm["deviation_direction"], "normal")
+        self.assertEqual(b_norm["baseline_tier"], "own_history")
+        self.assertEqual(b_norm["baseline_reference"]["history_days_count"], 8)
+        self.assertEqual(b_norm["lying_deviation"]["direction"], "normal")
+        self.assertEqual(b_norm["feeding_deviation"]["direction"], "normal")
+
+        # 2. Abnormal excessive deviation (excessive lying / lethargy + feeding drop)
+        # Demonstrating that excessive lying is NOT treated as intrinsically healthy
+        abnormal_base = {
+            "primary_baseline_tier": "own_history",
+            "overall_baseline_confidence": 0.90,
+            "history_days_count": 7,
+            "metrics": {
+                "clf_lying_time_min": {
+                    "current_value": 850.0,
+                    "baseline_mean": 660.0,
+                    "baseline_std": 60.0,
+                    "effective_z_score": 3.0,  # +3.0 z-score excessive recumbency
+                },
+                "clf_feeding_time_min": {
+                    "current_value": 150.0,
+                    "baseline_mean": 240.0,
+                    "baseline_std": 30.0,
+                    "effective_z_score": -3.0,  # -3.0 z-score anorexia
+                },
+                "daily_milk_yield_kg": {"effective_z_score": 0.0},
+                "cbt_mean": {"effective_z_score": 0.0},
+            },
+        }
+        res_abnormal = compute_health_index(abnormal_base)
+        b_abnorm = res_abnormal["components"]["behavior"]
+        self.assertLess(b_abnorm["score"], 20.0)
+        self.assertEqual(b_abnorm["lying_deviation"]["direction"], "above_baseline")
+        self.assertGreater(b_abnorm["lying_deviation"]["penalty"], 0.0)
+        self.assertEqual(b_abnorm["feeding_deviation"]["direction"], "below_baseline")
+
+        # 3. Missing history cold-start fallback (cohort / literature_prior tier)
+        cold_start_base = {
+            "primary_baseline_tier": "cohort",
+            "overall_baseline_confidence": 0.40,
+            "history_days_count": 0,
+            "metrics": {
+                "lying_time_min": {
+                    "current_value": 600.0,
+                    "baseline_mean": 660.0,
+                    "baseline_std": 80.0,
+                    "effective_z_score": -0.75,
+                },
+                "daily_milk_yield_kg": {"effective_z_score": 0.0},
+                "cbt_mean": {"effective_z_score": 0.0},
+            },
+        }
+        res_cold = compute_health_index(cold_start_base)
+        b_cold = res_cold["components"]["behavior"]
+        self.assertEqual(b_cold["baseline_tier"], "cohort")
+        self.assertEqual(b_cold["baseline_reference"]["history_days_count"], 0)
+        self.assertEqual(b_cold["confidence"], round(0.40 * 0.5, 2))  # only 1 behavior input
+        self.assertEqual(b_cold["coverage"], 0.5)
+
     def test_acute_mastitis_risk_and_autoflag(self):
         # Healthy cow: low risk, no auto flag
         normal_base = {
