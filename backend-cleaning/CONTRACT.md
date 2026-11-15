@@ -97,41 +97,60 @@ prototype behaves when evidence is weak or modalities are absent. Policy:
 different rates, so cleaning produces **one interim table per modality** at
 its native rate, then **one joined table** at a single declared cadence.
 
-### 5.1 Interim tables, native rate
+### 5.1 Raw layout and interim tables, native rate
 
-One table per modality in `data/interim/`, each keyed `cow_id` + `ts_utc`,
-each with its own schema sidecar:
+Raw lives at `data/raw/sensor_data/main_data/<section>/…`, fetched by
+[scripts/fetch_mmcows.py](scripts/fetch_mmcows.py) straight out of the
+official HuggingFace `sensor_data.zip` (RGB excluded). Every raw file keys on
+`timestamp` = Unix epoch seconds; the barn is `America/Chicago`; the span is
+2023-07-21 12:30 → 2023-08-04 07:00 local. Two ID schemes: `Cxx` = cow
+(C01–C16), `Txx` = collar tag; T01–T10 map one-to-one onto C01–C10. T13 and
+T14 are the dataset's two **stationary reference tags** (official README), not
+cows: their uwb rows are kept apart in `uwb_unmapped` (useful as a drift
+check on the UWB system), their collar rows skipped and listed in
+`ingest.report.json`.
 
-| Table | Holds |
-|---|---|
-| `frames` | multi-view RGB **index** — one row per (view, timestamp), with a relative path into `data/raw/`. Never the pixels. |
-| `uwb` | UWB location: `x_m`, `y_m`, plus whatever quality flag the source carries |
-| `neck_imu` | neck-mounted inertial + magnetic channels |
-| `pressure` | ambient pressure |
-| `cbt` | core body temperature |
-| `ankle` | ankle sensing |
-| `indoor_env` | indoor temperature, relative humidity, `thi` |
-| `outdoor_env` | outdoor weather |
-| `milk_yield` | daily milk yield, one row per cow-day |
+One interim table per section in `data/interim/`, each keyed `cow_id`
+(C-scheme string, or null for barn/outdoor tables) + `ts_utc`, each with a
+`<table>.schema.json` sidecar. Raw column names are kept where they already
+carry units; conversions are listed.
 
-`frames` carries a path, not image bytes. Image volume dominates ingestion
-cost, so nothing downstream re-decodes frames it does not need — `model/`
-reads bytes lazily from the path.
+| Table | Rate | Cows | Columns (after cleaning) | From raw |
+|---|---|---|---|---|
+| `milk` | daily | C01–C16 | `milk_yield_kg`, `dim` | `milk_weight_kg`, `DIM` |
+| `behavior` | 1 s | C01–C16, **2023‑07‑25 only** | `behavior` (code), `behavior_name`, `behavior_known` | `behavior_labels/individual/Cxx_0725.csv`. Ground truth. Legend (official benchmark code): 0 unknown, 1 walking, 2 standing, 3 feed_up, 4 feed_down, 5 licking, 6 drinking, 7 lying. **0 is not a class**: kept, flagged `behavior_known=False`, excluded from any mode/count. Code 7 agrees with the ankle `lying` channel 99.3 % of minutes |
+| `cbt` | 1 min | C01–C10 | `cbt_c` | `temperature_C` |
+| `thi` | 1 min | barn | `sensor_id` (S01–S06, `avg`), `indoor_temp_c`, `indoor_rh_pct`, `indoor_thi` | `temperature_C`, `humidity_per`, `THI`. `average.csv` is headed `temperature_F` but holds °C — cleaning verifies the unit against the file's own THI column instead of trusting the header |
+| `ankle` | 1 min | C01–C10 | `lying` (0/1) | `lying`; `datetime` string dropped |
+| `uwb` | 15 s | C01–C10 | `uwb_x_m`, `uwb_y_m`, `uwb_z_m`, `out_of_pen`, `uwb_suspect` | `coord_*_cm` / 100; null coords → `out_of_pen=True`, row kept. Frame is pen-centred (x ±10 m, y −8.7…5.7 m, z neck height); a reading outside x ±12, y [−9, 8], z [−0.5, 3] m is a ranging error → `uwb_suspect=True`, row kept (~0.4 %) |
+| `uwb_unmapped` | 15 s | T13, T14 | as `uwb` plus `tag_id` | quarantine |
+| `collar_1min` | 1 min | C01–C10 | `neck_imu_magnitude_mean`, `neck_imu_magnitude_std`, `neck_imu_n`, `collar_pressure_hpa`, `collar_pressure_n` | per-minute aggregate of the 10 Hz `immu` (|accel| in m/s²) and `pressure` (`pressure_Pa` / 100). The 10 Hz rows (7 + 4 GB) are **not** re-materialised; `data/raw/.../immu` and `pressure` are the native-rate source |
+| `weather` | 5 min | outdoor | `outdoor_temp_c`, `outdoor_dewpoint_c`, `outdoor_rh_pct`, `outdoor_wind_dir`, `outdoor_wind_mps`, `outdoor_gust_mps`, `outdoor_pressure_hpa`, `outdoor_precip_rate_mm_h`, `outdoor_precip_mm`, `outdoor_uv`, `outdoor_solar_wm2` | `.xlsx` cells are strings with imperial units (`"60.7 °F"`, `"29.65 in"`, `"2.3 mph"`); date comes from the filename |
 
-### 5.2 Joined table and the cadence question
+`out_of_pen` is a **state**, not missingness: the cows leave the pen for
+milking twice a day (~04–05h and ~15–16h local) and UWB has nothing to
+report. It is never forward-filled across and never counted as imputed.
 
-`data/processed/joined_<cadence>.parquet`, keyed `cow_id` + `ts_utc`, with
-the cadence written into both the filename and the sidecar so nobody has to
-guess what a row means.
+### 5.2 Joined table: `joined_1min`
 
-**Open decision, and it is mine to make — I will post it before it lands:**
-the join cadence. Milk yield is daily while IMU is sub-second, so any single
-cadence either forward-fills slow channels or aggregates fast ones. Starting
-point is **1 minute**, with fast channels aggregated (mean/min/max/std per
-window) and slow channels forward-filled with `*_is_imputed` set, since the
-prompt's heat-load and behavior questions live at minutes, not milliseconds.
+`data/processed/joined_1min.parquet` + `joined_1min.schema.json`. One row =
+one cow × one minute, keys `cow_id` (C01–C10) + `ts_utc`. Cadence is in the
+filename and the sidecar; consumers read it from the sidecar rather than
+hardcoding it.
 
-Consumers should read the cadence from the sidecar rather than hardcoding it.
+| Group | Columns | How it gets to 1 min |
+|---|---|---|
+| body | `cbt_c` | native |
+| barn env | `indoor_temp_c`, `indoor_rh_pct`, `indoor_thi` | native (the S01–S06 average; per-sensor stays in interim) |
+| outdoor | `outdoor_temp_c`, `outdoor_dewpoint_c`, `outdoor_rh_pct`, `outdoor_wind_mps`, `outdoor_gust_mps`, `outdoor_pressure_hpa`, `outdoor_precip_mm`, `outdoor_uv`, `outdoor_solar_wm2` | 5 min → forward-filled, `_is_imputed` set |
+| production | `milk_yield_kg`, `dim` | daily → carried through the local day, `_is_imputed` set |
+| behaviour / location | `lying`, `uwb_x_m`, `uwb_y_m`, `uwb_z_m`, `out_of_pen`, `uwb_suspect_frac` | `lying` native; uwb 15 s → 1-min mean excluding suspect samples; `out_of_pen` = any null in the minute; `uwb_suspect_frac` = share of the minute's samples that were out of bounds |
+| collar | `neck_imu_magnitude_mean`, `neck_imu_magnitude_std`, `collar_pressure_hpa` | 10 Hz → per-minute |accel| mean/std, pressure mean |
+| ground truth (07/25 only, else null) | `behavior_mode`, `behavior_mode_name`, `behavior_known_frac`, `behavior_lying_frac` | 1 s labels → dominant known code in the minute, share of the minute labelled at all, share of known seconds that are `lying`. Labels for C11–C16 are in interim `behavior` only (no sensors → not on the grid) |
+| provenance | `<col>_is_imputed` for every filled column; `<col>_age_s` for every slow channel (seconds since the last real observation) | — |
+
+Fast channels are aggregated, slow channels are forward-filled and flagged —
+never the reverse — and nothing is filled across an `out_of_pen` gap.
 
 ### 5.3 What each consumer can rely on
 
@@ -139,13 +158,13 @@ Not instructions — availability. Each owner decides how their folder uses
 this; these are the guarantees they can count on, and the gotchas worth
 knowing about.
 
-- **For `model/`** — `frames` gives the frame index; the sensor tables join to
-  it on `cow_id` + `ts_utc` for labels and context.
-- **For `backend-analysis/`** — `joined_<cadence>` is the analysis-ready
+- **For `model/`** — the interim tables at native rate, and `joined_1min` for
+  labels and context; RGB is out of scope for now so there is no frame index.
+- **For `backend-analysis/`** — `joined_1min` is the analysis-ready
   table. `assert_no_group_leakage` is available if you want a cheap guard
   before training.
-- **For `backend-visualization/`** — `joined_<cadence>` plus the daily
-  `milk_yield` table. Worth knowing: a modality can be legitimately absent
+- **For `backend-visualization/`** — `joined_1min` plus the daily
+  `milk` table. Worth knowing: a modality can be legitimately absent
   for a given cow-window, so the sidecar is the reliable source of what
   exists in a given run.
 - **For `frontend/`** — nothing here is a direct dependency; the data path
