@@ -143,6 +143,34 @@ Dictionary keyed by `cow_id`:
       "weight": 35.0,
       "z_lying": -0.5,
       "z_feeding": 0.0,
+      "baseline_tier": "own_history",
+      "baseline_reference": {
+        "lying_baseline_mean_min": 680.0,
+        "lying_baseline_std_min": 45.0,
+        "feeding_baseline_mean_min": 250.0,
+        "feeding_baseline_std_min": 35.0,
+        "history_days_count": 8
+      },
+      "deviation_direction": "below_baseline",
+      "deviation_magnitude": 0.5,
+      "lying_deviation": {
+        "z_score": -0.5,
+        "direction": "below_baseline",
+        "magnitude": 0.5,
+        "current_min": 657.5,
+        "baseline_mean_min": 680.0,
+        "penalty": 5.0
+      },
+      "feeding_deviation": {
+        "z_score": 0.0,
+        "direction": "normal",
+        "magnitude": 0.0,
+        "current_min": 250.0,
+        "baseline_mean_min": 250.0,
+        "penalty": 0.0
+      },
+      "coverage": 1.0,
+      "confidence": 0.92,
       "inputs_used": ["clf_lying_time_min", "clf_feeding_time_min"],
       "provenance": "real_classifier"
     },

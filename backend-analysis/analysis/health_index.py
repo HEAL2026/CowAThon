@@ -51,7 +51,10 @@ def compute_health_index(
 
     # ---------------------------------------------------------
     # 1. Behavior Vitality (0–35 points)
-    # Lying duration (max 20 points) + Feeding duration (max 15 points)
+    # Measured as deviation from each cow's established baseline:
+    # Lying duration (max 20 points) + Feeding duration (max 15 points).
+    # Abnormal deviations in either direction are penalized (neither excessive
+    # recumbency nor hyperphagia is treated as intrinsically healthy).
     # ---------------------------------------------------------
     z_lying, m_lying = get_metric_info("clf_lying_time_min")
     lying_input_name = "clf_lying_time_min"
@@ -68,21 +71,59 @@ def compute_health_index(
     behavior_inputs: list[str] = []
     behavior_provenances: list[str] = []
     behavior_base_avail = 0.0
-    behavior_penalty = 0.0
+    lying_penalty = 0.0
+    feed_penalty = 0.0
 
+    lying_dir = "normal"
+    lying_mag = 0.0
     if z_lying is not None:
         behavior_inputs.append(lying_input_name)
         behavior_provenances.append("real_classifier" if "clf" in lying_input_name else "real_sensor")
         behavior_base_avail += 20.0
-        if z_lying < 0.0:
-            behavior_penalty += min(20.0, abs(z_lying) * 10.0)
+        lying_mag = round(abs(z_lying), 2)
+        if z_lying < -0.2:
+            lying_dir = "below_baseline"
+            lying_penalty = min(20.0, abs(z_lying) * 10.0)
+        elif z_lying > 1.5:
+            # Excessive recumbency / lethargy / downer risk
+            lying_dir = "above_baseline"
+            lying_penalty = min(15.0, (z_lying - 1.5) * 7.5)
+        elif z_lying > 0.2:
+            lying_dir = "above_baseline"
 
+    feed_dir = "normal"
+    feed_mag = 0.0
     if z_feed is not None:
         behavior_inputs.append(feed_input_name)
         behavior_provenances.append("real_classifier" if "clf" in feed_input_name else "real_sensor")
         behavior_base_avail += 15.0
-        if z_feed < 0.0:
-            behavior_penalty += min(15.0, abs(z_feed) * 7.5)
+        feed_mag = round(abs(z_feed), 2)
+        if z_feed < -0.2:
+            feed_dir = "below_baseline"
+            feed_penalty = min(15.0, abs(z_feed) * 7.5)
+        elif z_feed > 2.0:
+            # Abnormal feeding spike / restless intake
+            feed_dir = "above_baseline"
+            feed_penalty = min(10.0, (z_feed - 2.0) * 5.0)
+        elif z_feed > 0.2:
+            feed_dir = "above_baseline"
+
+    # Behavior-level coverage and confidence
+    b_cov = round(len(behavior_inputs) / 2.0, 2)
+    b_tier = baseline_info.get("primary_baseline_tier", "literature_prior")
+    b_conf_base = float(
+        baseline_info.get("overall_baseline_confidence", baseline_info.get("confidence", 1.0))
+    )
+    b_conf = round(b_conf_base * b_cov, 2)
+
+    # Composite deviation direction and magnitude
+    if lying_dir == "below_baseline" or feed_dir == "below_baseline":
+        b_dev_dir = "below_baseline"
+    elif lying_dir == "above_baseline" or feed_dir == "above_baseline":
+        b_dev_dir = "above_baseline"
+    else:
+        b_dev_dir = "normal"
+    b_dev_mag = max(lying_mag, feed_mag)
 
     if not behavior_inputs:
         comp_behavior = {
@@ -90,11 +131,25 @@ def compute_health_index(
             "weight": 35.0,
             "z_lying": None,
             "z_feeding": None,
+            "baseline_tier": b_tier,
+            "baseline_reference": {
+                "lying_baseline_mean_min": None,
+                "lying_baseline_std_min": None,
+                "feeding_baseline_mean_min": None,
+                "feeding_baseline_std_min": None,
+                "history_days_count": baseline_info.get("history_days_count", 0),
+            },
+            "deviation_direction": "absent",
+            "deviation_magnitude": None,
+            "lying_deviation": None,
+            "feeding_deviation": None,
+            "coverage": 0.0,
+            "confidence": 0.0,
             "inputs_used": [],
             "provenance": "absent",
         }
     else:
-        score_b = round(max(0.0, behavior_base_avail - behavior_penalty), 1)
+        score_b = round(max(0.0, behavior_base_avail - (lying_penalty + feed_penalty)), 1)
         if all(p == "real_classifier" for p in behavior_provenances):
             prov_b = "real_classifier"
         elif all(p == "real_sensor" for p in behavior_provenances):
@@ -107,6 +162,34 @@ def compute_health_index(
             "weight": 35.0,
             "z_lying": round(z_lying, 2) if z_lying is not None else None,
             "z_feeding": round(z_feed, 2) if z_feed is not None else None,
+            "baseline_tier": b_tier,
+            "baseline_reference": {
+                "lying_baseline_mean_min": m_lying.get("baseline_mean") if m_lying else None,
+                "lying_baseline_std_min": m_lying.get("baseline_std") if m_lying else None,
+                "feeding_baseline_mean_min": m_feed.get("baseline_mean") if m_feed else None,
+                "feeding_baseline_std_min": m_feed.get("baseline_std") if m_feed else None,
+                "history_days_count": baseline_info.get("history_days_count", 0),
+            },
+            "deviation_direction": b_dev_dir,
+            "deviation_magnitude": b_dev_mag,
+            "lying_deviation": {
+                "z_score": round(z_lying, 2) if z_lying is not None else None,
+                "direction": lying_dir,
+                "magnitude": lying_mag,
+                "current_min": m_lying.get("current_value") if m_lying else None,
+                "baseline_mean_min": m_lying.get("baseline_mean") if m_lying else None,
+                "penalty": round(lying_penalty, 1),
+            } if z_lying is not None else None,
+            "feeding_deviation": {
+                "z_score": round(z_feed, 2) if z_feed is not None else None,
+                "direction": feed_dir,
+                "magnitude": feed_mag,
+                "current_min": m_feed.get("current_value") if m_feed else None,
+                "baseline_mean_min": m_feed.get("baseline_mean") if m_feed else None,
+                "penalty": round(feed_penalty, 1),
+            } if z_feed is not None else None,
+            "coverage": b_cov,
+            "confidence": b_conf,
             "inputs_used": behavior_inputs,
             "provenance": prov_b,
         }
