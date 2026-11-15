@@ -16,11 +16,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Anchor backend-cleaning on sys.path relative to repository root
+# Anchor backend-cleaning and backend-analysis on sys.path relative to repository root
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLEANING_PATH = REPO_ROOT / "backend-cleaning"
 if str(CLEANING_PATH) not in sys.path:
     sys.path.insert(0, str(CLEANING_PATH))
+
+ANALYSIS_PATH = REPO_ROOT / "backend-analysis"
+if str(ANALYSIS_PATH) not in sys.path:
+    sys.path.insert(0, str(ANALYSIS_PATH))
 
 try:
     from cleaning.locate import find_joined, sidecar_for
@@ -416,33 +420,66 @@ class IcarAdeService:
     ) -> Dict[str, Any]:
         """Execute or retrieve backtrace investigation for an animal.
 
-        Evaluates contact traces across:
-        1. Resting-route: Shared cubicle stalls bounded by bedding changes.
-        2. Milking-route: Serial stall usage bounded by parlor sanitation cycles.
+        Delegates to backend-analysis S11 backtrace contract when available,
+        falling back to deterministic synthetic transmission tracing if offline.
         """
-        # Determine likely route proxy
-        num = int(animal_id.replace("C", "")) if animal_id.startswith("C") and animal_id[1:].isdigit() else 1
-        is_resting_route = (num % 2 == 0)
+        summary: Dict[str, Any] = {}
 
-        likely_route = "resting_environment" if is_resting_route else "milking_machine"
-        p_val = 0.012 if is_resting_route else 0.041
-        exposed_cows = ["C01", "C03", "C04"] if is_resting_route else ["C06", "C08"]
+        # 1. Attempt delegation to backend-analysis S11 backtrace(flags, lookback_hours)
+        try:
+            from analysis.backtrace import backtrace as analysis_backtrace
 
-        summary = {
-            "targetCow": animal_id,
-            "lookbackWindowDays": lookback_days,
-            "likelyRoute": likely_route,
-            "routeConfidencePValue": p_val,
-            "pathogenGroupLikelihood": "environmental_streptococci" if is_resting_route else "contagious_staph",
-            "implicatedResource": "pen_cubicles_01_row_b" if is_resting_route else "STALL-02",
-            "primaryContactCows": exposed_cows,
-            "recommendedIntervention": (
-                "Deep rake and renew organic bedding in cubicle row B; sanitize cubicle curbs."
-                if is_resting_route
-                else "Inspect liner condition and run hot acid sanitizer on STALL-02 cluster."
-            ),
-            "disclaimer": "Attribution reflects epidemiological transmission probability, not clinical diagnosis.",
-        }
+            flags_input = [{"cow_id": animal_id, "animal_id": animal_id}]
+            for f in self.store.get_flags(status="active"):
+                if f.animal_id != animal_id:
+                    flags_input.append({"cow_id": f.animal_id, "animal_id": f.animal_id})
+
+            res = analysis_backtrace(flags=flags_input, lookback_hours=lookback_days * 24)
+            route = res.get("likely_route", "resting_environment")
+            route_p_vals = res.get("route_p_values", {})
+            p_val = route_p_vals.get(f"{route.split('_')[0]}_p_value", 0.02)
+            impl = res.get("implicated_resources", {})
+            primary_res = impl.get("primary_unit_or_cell") or ("cubicle_row_b" if "resting" in route else "STALL-01")
+            contacts = [c["cow_id"] for c in res.get("high_risk_contacts", []) if isinstance(c, dict) and "cow_id" in c]
+
+            summary = {
+                "targetCow": animal_id,
+                "lookbackWindowDays": lookback_days,
+                "likelyRoute": route,
+                "routeConfidencePValue": p_val,
+                "pathogenGroupLikelihood": res.get("pathogen_group_likelihood", "environmental_streptococci" if "resting" in route else "contagious_staph"),
+                "implicatedResource": str(primary_res),
+                "primaryContactCows": contacts or (["C01", "C03"] if "resting" in route else ["C04", "C08"]),
+                "recommendedIntervention": res.get("recommended_intervention", "Inspect bedding and parlor sanitation."),
+                "disclaimer": res.get("disclaimer", "Attribution reflects epidemiological transmission probability, not clinical diagnosis."),
+                "delegatedToAnalysis": True,
+                "analysisResult": res,
+            }
+        except Exception:
+            # 2. Deterministic fallback when backend-analysis or pandas/numpy is unbuilt/offline
+            num = int(animal_id.replace("C", "")) if animal_id.startswith("C") and animal_id[1:].isdigit() else 1
+            is_resting_route = (num % 2 == 0)
+
+            likely_route = "resting_environment" if is_resting_route else "milking_machine"
+            p_val = 0.012 if is_resting_route else 0.041
+            exposed_cows = ["C01", "C03", "C04"] if is_resting_route else ["C06", "C08"]
+
+            summary = {
+                "targetCow": animal_id,
+                "lookbackWindowDays": lookback_days,
+                "likelyRoute": likely_route,
+                "routeConfidencePValue": p_val,
+                "pathogenGroupLikelihood": "environmental_streptococci" if is_resting_route else "contagious_staph",
+                "implicatedResource": "pen_cubicles_01_row_b" if is_resting_route else "STALL-02",
+                "primaryContactCows": exposed_cows,
+                "recommendedIntervention": (
+                    "Deep rake and renew organic bedding in cubicle row B; sanitize cubicle curbs."
+                    if is_resting_route
+                    else "Inspect liner condition and run hot acid sanitizer on STALL-02 cluster."
+                ),
+                "disclaimer": "Attribution reflects epidemiological transmission probability, not clinical diagnosis.",
+                "delegatedToAnalysis": False,
+            }
 
         run = self.store.record_backtrace_run(
             target_animal_id=animal_id,

@@ -192,6 +192,7 @@ class TestIcarAdeService(unittest.TestCase):
         self.assertEqual(run["status"], "completed")
         self.assertIn("likelyRoute", run["summary"])
         self.assertIn("disclaimer", run["summary"])
+        self.assertIn("delegatedToAnalysis", run["summary"])
 
 
 if __name__ == "__main__":
