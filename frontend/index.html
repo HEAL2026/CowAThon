@@ -80,7 +80,7 @@
         <nav class="view-tabs" aria-label="Primary views">
           <button class="view-tab active" data-view="barn"><span>⌂</span> Barn</button>
           <button class="view-tab" data-view="milking"><span>◫</span> Milking</button>
-          <button class="view-tab alert-tab" data-view="alerts"><span>!</span> Alerts <b>4</b></button>
+          <button class="view-tab alert-tab" data-view="alerts"><span>!</span> Alerts <b>1</b></button>
           <button class="view-tab" data-view="messages"><span>✉</span> Messages <b>6</b></button>
         </nav>
 
@@ -103,7 +103,10 @@
           <div class="barn-grid">
             <div class="barn-map card" id="barn-map">
               <div class="map-toolbar">
-                <span class="map-legend"><i class="legend-dot healthy"></i> Cow location</span>
+                <span class="map-legend">
+                  <span class="legend-item"><i class="legend-dot healthy"></i> Cow location</span>
+                  <span class="legend-item" id="legend-resting-oval"><span class="legend-oval-dot"></span> Red oval: Shared resting risk area</span>
+                </span>
                 <button id="problem-overlay" class="overlay-button"><span class="toggle"></span> Mastitis risk areas</button>
               </div>
               <div id="heatmap-gradient-key" class="heatmap-gradient-key" hidden>
@@ -185,24 +188,24 @@
               <div class="action-item urgent">
                 <span class="action-num">1</span>
                 <div>
-                  <strong>Inspect Fern 221 before milking</strong>
-                  <p>Lying duration anomaly in Rest zone B indicates elevated mastitis risk (exposure score 0.85). Perform California Mastitis Test (CMT) &amp; inspect rear quarters.</p>
+                  <strong>Check Fern 221's udder before milking</strong>
+                  <p>Fern rested in Rest Zone B for 42 minutes (longer than usual) and rumination slowed down. Feel her rear udder for heat or swelling, and milk her last.</p>
                 </div>
                 <button class="primary-button small" id="farmer-action-btn-1" type="button">Locate on map</button>
               </div>
               <div class="action-item warning">
                 <span class="action-num">2</span>
                 <div>
-                  <strong>Sanitize Rest Zone B cubicle bedding</strong>
-                  <p>Environmental bedding contamination hotspot identified. Condition bedding and replace soiled material to break environmental transmission cycle.</p>
+                  <strong>Clean and re-bed Rest Zone B stalls</strong>
+                  <p>Stalls B1–B8 have damp bedding. Shovel out wet manure and spread clean, dry sawdust with barn lime to stop germs from spreading.</p>
                 </div>
                 <button class="secondary-button small" id="farmer-action-btn-2" type="button">Highlight zone</button>
               </div>
               <div class="action-item info">
                 <span class="action-num">3</span>
                 <div>
-                  <strong>Service &amp; flush Stall 6 cluster</strong>
-                  <p>Elevated milk conductivity observed in recent cycle. Run sanitize flush on cluster #6 before milking next cohort.</p>
+                  <strong>Rinse Stall 6 milking cluster</strong>
+                  <p>Milk conductivity was slightly high on the last cow. Run a quick wash cycle on cluster #6 before the next group enters.</p>
                 </div>
                 <button class="secondary-button small" id="farmer-action-btn-3" type="button">View stall</button>
               </div>
@@ -210,10 +213,11 @@
             <div class="farmer-chat-container">
               <div class="quick-questions">
                 <span class="quick-label">Ask advisor:</span>
-                <button class="quick-chip" type="button" data-query="What should I do first this morning?">What should I do first this morning?</button>
-                <button class="quick-chip" type="button" data-query="Explain Fern's alert">Explain Fern's alert</button>
-                <button class="quick-chip" type="button" data-query="How do I sanitize Rest zone B?">How do I sanitize Rest zone B?</button>
-                <button class="quick-chip" type="button" data-query="Which milking stalls need service?">Which milking stalls need service?</button>
+                <button class="quick-chip" type="button" data-query="What should I check first this morning?">Morning priorities</button>
+                <button class="quick-chip" type="button" data-query="Why is Fern 221 flagged?">Fern 221 udder</button>
+                <button class="quick-chip" type="button" data-query="How do I clean Rest Zone B?">Clean Zone B stalls</button>
+                <button class="quick-chip" type="button" data-query="Which milking stalls need attention?">Milking stall 6</button>
+                <button class="quick-chip" type="button" data-query="Is Luna 095 in heat?">Luna 095 breeding window</button>
               </div>
               <form id="farmer-inline-chat-form" class="farmer-chat-form">
                 <input id="farmer-inline-chat-input" placeholder="Ask AI advisor what to do on the farm today..." aria-label="Ask AI advisor" />
@@ -426,12 +430,12 @@
 
             <aside class="assistant card">
               <div class="assistant-heading"><div class="assistant-avatar">✦</div><div><h3>Herdwise assistant</h3><span class="online-label">Connected to farm models</span></div></div>
-              <div class="assistant-message" id="assistant-summary-msg">I analyzed your herd data for Aug 4 (Now). 1 cow requires urgent inspection before milking, and Rest zone B has elevated environmental mastitis risk.</div>
+              <div class="assistant-message" id="assistant-summary-msg">I checked your herd updates for Aug 4 (Now). 1 cow (Fern 221) needs a quick udder check before milking, and Rest Zone B needs fresh bedding today.</div>
               <div class="suggestion-row">
-                <button class="suggestion">What should I do first this morning?</button>
-                <button class="suggestion">Explain Fern's alert</button>
-                <button class="suggestion">How do I sanitize Rest zone B?</button>
-                <button class="suggestion">Show differential diagnosis</button>
+                <button class="suggestion">What should I check first this morning?</button>
+                <button class="suggestion">How is Fern 221 doing?</button>
+                <button class="suggestion">How do I clean Rest Zone B?</button>
+                <button class="suggestion">Is Luna 095 in heat?</button>
               </div>
               <form id="assistant-form" class="assistant-input"><input id="assistant-input" placeholder="Ask about your herd..." aria-label="Ask the herd assistant" /><button aria-label="Send question">↑</button></form>
               <p id="assistant-response" class="assistant-response" hidden></p>
@@ -443,7 +447,7 @@
       <nav class="mobile-nav" aria-label="Mobile navigation">
         <button class="mobile-nav-item active" data-view="barn"><span>⌂</span>Barn</button>
         <button class="mobile-nav-item" data-view="milking"><span>◫</span>Milking</button>
-        <button class="mobile-nav-item" data-view="alerts"><span>!</span>Alerts <b>4</b></button>
+        <button class="mobile-nav-item" data-view="alerts"><span>!</span>Alerts <b>1</b></button>
         <button class="mobile-nav-item" data-view="messages"><span>✉</span>Messages <b>6</b></button>
         <button class="mobile-nav-item" id="mobile-profile"><span>◎</span>Profile</button>
       </nav>

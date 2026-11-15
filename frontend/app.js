@@ -457,6 +457,12 @@ function renderRestingOverlays(payload) {
     circle.style.height = `${Math.max(1, heightPct)}%`;
     const cutoff = area.until_bedding_change_utc ? ` · until bedding change ${area.until_bedding_change_utc}` : "";
     circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius · Model-estimated mastitis exposure area (not a diagnosis)${cutoff}`;
+
+    const labelTag = document.createElement("span");
+    labelTag.className = "resting-circle-tag";
+    labelTag.textContent = "Shared resting risk area";
+    circle.append(labelTag);
+
     target.append(circle);
   });
   const contacts = new Set(
@@ -671,7 +677,7 @@ function renderAlerts() {
   const stalls = state.milking?.stalls || [];
   const attribution = state.s12.attribution || {};
 
-  // 1. Critical Alerts (Urgent Priority)
+  // 1. Single Critical Alert (Urgent Priority) — Limited to 1 to convey zero notification overload
   const criticalItems = [];
 
   // Cow Fern 221 / acute mastitis risk
@@ -684,42 +690,15 @@ function renderAlerts() {
 
   criticalItems.push({
     id: "alert-fern",
-    type: "Urgent · Clinical Risk",
-    title: `${cowName} has a sharp health-index change (Mastitis Risk ${riskScore}%)`,
-    desc: "Activity is down 38% and continuous lying bout duration in Rest zone B is 42 min. Model-predicted environmental mastitis risk.",
+    type: "Urgent · Needs attention today",
+    title: `${cowName} has a sharp health change (Mastitis Risk ${riskScore}%)`,
+    desc: "Fern rested in Rest Zone B for 42 minutes (longer than usual) and rumination dropped by 38%. Feel her rear udder for warmth or swelling, and milk her last.",
     time: "12 min ago",
-    badge: "Auto-dispatched to Dr. Patel",
-    actionLabel: "Inspect cow now",
+    badge: "Sent to Dr. Patel",
+    actionLabel: "Find cow on map",
     actionTarget: "barn",
     cowId: cowId,
-  });
-
-  // Bedding Hotspot Alert
-  if (attribution.likely_route === "resting_area" || state.s12.penMap?.resting_areas?.length) {
-    criticalItems.push({
-      id: "alert-bedding",
-      type: "Urgent · Environmental Vector",
-      title: "Rest Zone B cubicle bedding contamination hotspot",
-      desc: "Lying exposure permutation p = 0.024 (*). Multiple contacts (C01, C03, C04) in shared bedding cells. High environmental pathogen risk (E. coli / Strep. uberis).",
-      time: "24 min ago",
-      badge: "Bedding renewal required",
-      actionLabel: "Highlight zone on map",
-      actionTarget: "barn-overlay",
-    });
-  }
-
-  // Milking Stall Alert
-  const flaggedStall = stalls.find((s) => s.last_completed_cycle?.flagged_risk) || { stall_number: 6 };
-  criticalItems.push({
-    id: "alert-stall",
-    type: "Watch · Parlor Hygiene",
-    title: `Stall ${flaggedStall.stall_number} has elevated conductivity`,
-    desc: "Consecutive cycles recorded milk conductivity above barn baseline. Run sanitize flush cycle before next group.",
-    time: "34 min ago",
-    badge: "Sanitize cluster",
-    actionLabel: "View stall in parlor",
-    actionTarget: "milking",
-    stallNum: flaggedStall.stall_number,
+    cowName: cowName,
   });
 
   criticalList.innerHTML = criticalItems.map((item) => `
@@ -730,38 +709,14 @@ function renderAlerts() {
         <h3>${item.title}</h3>
         <p>${item.desc}</p>
         <div class="alert-actions">
-          <button class="primary-button small alert-act-btn" data-target="${item.actionTarget}" data-cow="${item.cowId || ''}" data-stall="${item.stallNum || ''}">${item.actionLabel}</button>
-          <button class="secondary-button small alert-assign-btn">Notify Dr. Patel</button>
+          <button class="primary-button small alert-act-btn" data-target="${item.actionTarget}" data-cow="${item.cowId || ''}" data-stall="">${item.actionLabel}</button>
+          <button class="secondary-button small alert-assign-btn" data-cow-id="${item.cowId || ''}" data-cow-name="${item.cowName || ''}">Notify Dr. Patel</button>
           <button class="text-button alert-ack-btn">Acknowledge</button>
         </div>
       </div>
       <time>${item.time}</time>
     </article>
   `).join("");
-
-  // Wire critical alert action buttons
-  criticalList.querySelectorAll(".alert-act-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const target = btn.dataset.target;
-      if (target === "barn") {
-        showView("barn");
-        if (btn.dataset.cow) {
-          const dot = findCowDot(btn.dataset.cow);
-          if (dot) dot.click();
-        }
-      } else if (target === "barn-overlay") {
-        showView("barn");
-        const overlayBtn = document.querySelector("#problem-overlay");
-        if (overlayBtn && !state.overlay) overlayBtn.click();
-      } else if (target === "milking") {
-        showView("milking");
-        if (btn.dataset.stall) {
-          const stallBtn = document.querySelector(`.stall[data-stall="${btn.dataset.stall}"]`);
-          if (stallBtn) stallBtn.click();
-        }
-      }
-    });
-  });
 
   criticalList.querySelectorAll(".alert-assign-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -789,17 +744,43 @@ function renderAlerts() {
     });
   });
 
+  const flaggedStall = stalls.find((s) => s.last_completed_cycle?.flagged_risk) || { stall_number: 6 };
+
   // 2. Stacked Routine Activity Inbox (Non-urgent events grouped to eliminate notification overload)
   const stackedItems = [
     {
+      id: "stack-bedding",
+      icon: "⌂",
+      title: "Rest Zone B Bedding Sanitation",
+      count: "Action needed",
+      summaryHtml: `
+        <div class="stacked-item">
+          <div><strong>Stalls B1–B8 have damp bedding</strong> — Scrape out wet manure and spread fresh dry sawdust with lime before tonight's rest.</div>
+          <button class="secondary-button small alert-act-btn" data-target="barn-overlay">Show on map</button>
+        </div>
+      `,
+    },
+    {
+      id: "stack-parlor",
+      icon: "◫",
+      title: "Milking Parlor & Stall 6 Check",
+      count: "Cluster rinse",
+      summaryHtml: `
+        <div class="stacked-item">
+          <div><strong>Stall ${flaggedStall.stall_number} conductivity flagged</strong> — Milk conductivity was slightly elevated on last cycle. Run a quick wash cycle on cluster #${flaggedStall.stall_number} before next group.</div>
+          <button class="secondary-button small alert-act-btn" data-target="milking" data-stall="${flaggedStall.stall_number}">View in parlor</button>
+        </div>
+      `,
+    },
+    {
       id: "stack-estrus",
       icon: "♀",
-      title: "Estrus & Reproductive Events",
+      title: "Estrus & Breeding Window",
       count: "1 cow",
       summaryHtml: `
         <div class="stacked-item">
-          <div><strong>Luna 095 (C04)</strong> — Heightened night mobility (+62%), restless bout pattern (42 min).</div>
-          <span class="stacked-badge badge-watch">Optimal insemination window</span>
+          <div><strong>Luna 095 (C04)</strong> — Nighttime step activity +62%, pacing near loafing lane. Standing heat confirmed; optimal breeding window is around 4:00 PM today.</div>
+          <span class="stacked-badge badge-watch">Ready for breeding</span>
         </div>
       `,
     },
@@ -810,7 +791,7 @@ function renderAlerts() {
       count: "8 stalls active",
       summaryHtml: `
         <div class="stacked-item">
-          <div><strong>Parlor throughput nominal</strong> — 34.1 kg avg yield per cow, flow rate 2.7–3.2 kg/min.</div>
+          <div><strong>Parlor throughput normal</strong> — 34.1 kg average yield per cow, flow rate 2.7–3.2 kg/min. Daisy 108 fresh cow yield steady at 34.6 kg.</div>
           <span class="stacked-badge badge-normal">Within target</span>
         </div>
       `,
@@ -818,12 +799,12 @@ function renderAlerts() {
     {
       id: "stack-cohort",
       icon: "◎",
-      title: "Uninstrumented Cohort Telemetry",
+      title: "Herd Visual Check (Uninstrumented)",
       count: "6 cows (C11–C16)",
       summaryHtml: `
         <div class="stacked-item">
-          <div><strong>Visual welfare protocol</strong> — Head count confirmed in feeding alley; zero physical distress.</div>
-          <span class="stacked-badge badge-normal">Monitored</span>
+          <div><strong>All 16 herd cows confirmed present</strong> — Cows C11 through C16 eating normally at feed bunk; zero signs of physical distress.</div>
+          <span class="stacked-badge badge-normal">Confirmed</span>
         </div>
       `,
     },
@@ -834,7 +815,7 @@ function renderAlerts() {
       count: "8 cows baseline",
       summaryHtml: `
         <div class="stacked-item">
-          <div><strong>Standard resting bouts</strong> — Bessie 01, Daisy 108, Mabel 187, Poppy 164, Rose 204, Willow 131 logging >20 min bouts.</div>
+          <div><strong>Normal resting patterns</strong> — Bessie 01, Daisy 108, Mabel 187, Poppy 164, Rose 204, Willow 131 logging steady >20 min resting bouts.</div>
           <span class="stacked-badge badge-normal">Normal</span>
         </div>
       `,
@@ -856,13 +837,37 @@ function renderAlerts() {
     </details>
   `).join("");
 
+  // Wire all alert action buttons (both critical and stacked)
+  document.querySelectorAll(".alert-act-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.target;
+      if (target === "barn") {
+        showView("barn");
+        if (btn.dataset.cow) {
+          const dot = findCowDot(btn.dataset.cow);
+          if (dot) dot.click();
+        }
+      } else if (target === "barn-overlay") {
+        showView("barn");
+        const overlayBtn = document.querySelector("#problem-overlay");
+        if (overlayBtn && !state.overlay) overlayBtn.click();
+      } else if (target === "milking") {
+        showView("milking");
+        if (btn.dataset.stall) {
+          const stallBtn = document.querySelector(`.stall[data-stall="${btn.dataset.stall}"]`);
+          if (stallBtn) stallBtn.click();
+        }
+      }
+    });
+  });
+
   if (summaryEyebrow) {
-    summaryEyebrow.textContent = `${criticalItems.length} critical · ${stackedItems.length} routine stacked · ${formatDisplayTime(state.currentTsUtc)}`;
+    summaryEyebrow.textContent = `1 critical alert · ${stackedItems.length} routine updates grouped below · ${formatDisplayTime(state.currentTsUtc)}`;
   }
 
   // Update tabs
   document.querySelectorAll("[data-view='alerts'] b, .alert-tab b").forEach((b) => {
-    b.textContent = String(criticalItems.length);
+    b.textContent = "1";
   });
 }
 
@@ -974,7 +979,7 @@ document.querySelectorAll(".mode-button").forEach((button) => {
     if (gradientKey) gradientKey.hidden = (state.mode !== "heatmap");
     document.querySelector(".map-legend").innerHTML = state.mode === "heatmap"
       ? '<span class="map-legend-heatmap">Idle density: <span class="guide-dot healthy"></span> &lt;30m <span class="guide-dot watch"></span> 30–60m <span class="guide-dot urgent"></span> &gt;60m</span>'
-      : '<i class="legend-dot healthy"></i> Cow location';
+      : '<span class="legend-item"><i class="legend-dot healthy"></i> Cow location</span><span class="legend-item" id="legend-resting-oval"><span class="legend-oval-dot"></span> Red oval: Shared resting risk area</span>';
     renderHeatmap(state.s12.penMap?.grid?.heatmap);
   });
 });
@@ -1448,36 +1453,58 @@ function handleAdvisorQuery(rawQuery) {
   const q = (rawQuery || "").toLowerCase();
   if (q.includes("first") || q.includes("morning") || q.includes("today") || q.includes("priorities")) {
     return "<strong>Today's 3 morning priorities (Aug 4):</strong><br>" +
-      "1. <strong>Inspect Fern 221 (C03)</strong> in Rest zone B before milking; examine rear udder quarters and run a California Mastitis Test (CMT).<br>" +
-      "2. <strong>Sanitize Rest zone B cubicle bedding</strong>; scrape moist manure and apply dry lime/disinfectant bedding to prevent environmental pathogen spread.<br>" +
-      "3. <strong>Service Stall 6 cluster</strong> in Parlor 1; run a sanitize rinse cycle before the next group.";
+      "1. <strong>Check Fern 221's udder:</strong> Feel her rear udder for heat or swelling before milking, and milk her last.<br>" +
+      "2. <strong>Clean Rest Zone B stalls:</strong> Shovel out wet manure from stalls B1–B8 and spread clean, dry sawdust with barn lime.<br>" +
+      "3. <strong>Rinse Stall 6 cluster:</strong> Run a quick wash cycle on cluster #6 before the next group enters.";
   }
-  if (q.includes("fern") || q.includes("c03") || q.includes("alert")) {
-    return "<strong>Fern 221 (C03) Clinical Status:</strong><br>" +
-      "• <strong>Risk:</strong> High mastitis risk score (0.85) flagged by behavioral anomaly model.<br>" +
-      "• <strong>Observation:</strong> 42 minutes of restless idling in Rest zone B; rumination activity down 38%.<br>" +
-      "• <strong>Action:</strong> Milk last in rotation, inspect teats for heat/swelling, and log CMT score.";
+  if (q.includes("fern") || q.includes("c03") || q.includes("udder") || q.includes("alert")) {
+    return "<strong>Fern 221 (C03) Status:</strong><br>" +
+      "• <strong>What was seen:</strong> Fern rested for 42 minutes in a damp stall in Rest Zone B, and her rumination dropped by 38%.<br>" +
+      "• <strong>What to do:</strong> Feel her rear udder before milking. Strip a couple squirts into a cup to check for watery milk or clots.<br>" +
+      "• <strong>Milking order:</strong> Milk Fern last so other cows stay clean.";
   }
   if (q.includes("bedding") || q.includes("zone b") || q.includes("sanitize") || q.includes("clean")) {
-    return "<strong>Rest Zone B Bedding Sanitation Protocol:</strong><br>" +
-      "• Remove all soiled organic matter from cubicle stalls B1 through B8.<br>" +
-      "• Dust stall beds with hydrated lime or antibacterial bedding conditioner.<br>" +
-      "• Re-bed with 3+ inches of clean kiln-dried sawdust or inorganic sand.<br>" +
-      "• <em>Goal:</em> Eliminate environmental reservoirs of <em>E. coli</em> and <em>Strep. uberis</em>.";
+    return "<strong>Cleaning Rest Zone B Stalls:</strong><br>" +
+      "• Scrape out wet bedding and manure from cubicles B1 through B8.<br>" +
+      "• Sprinkle barn lime to dry out the floor, then lay at least 3 inches of clean, dry sawdust.<br>" +
+      "• <em>Why it matters:</em> Keeps teats dry and clean while cows rest to prevent mastitis.";
   }
   if (q.includes("stall") || q.includes("parlor") || q.includes("milking") || q.includes("service")) {
-    return "<strong>Milking Parlor Guidance:</strong><br>" +
-      "• <strong>Stall 6:</strong> Conductivity reading elevated in the last cycle. Run cluster sanitize cycle before the next group.<br>" +
-      "• <strong>Order:</strong> Milk healthy baseline cows first; milk watch cows (Fern 221, Bessie 01) last to prevent cluster cross-transmission.<br>" +
-      "• <strong>Post-Dip:</strong> Maintain 0.5% iodine teat dip across all stalls.";
+    return "<strong>Milking Parlor Tasks:</strong><br>" +
+      "• <strong>Stall 6:</strong> Milk conductivity was slightly elevated on the last cow. Run a quick wash cycle on cluster #6 before the next group enters.<br>" +
+      "• <strong>Milking order:</strong> Milk healthy cows first, and milk watch cows (Fern 221, Bessie 01) last.<br>" +
+      "• <strong>Teat dip:</strong> Maintain 0.5% post-milking teat dip across all stalls.";
   }
-  if (q.includes("differential") || q.includes("diagnosis") || q.includes("pathogen")) {
-    return "<strong>Differential Diagnosis Context:</strong><br>" +
-      "• <strong>Environmental Route (84% Likelihood):</strong> <em>E. coli</em>, <em>S. uberis</em> via contaminated bedding in Rest Zone B. Significant resting permutation p = 0.024.<br>" +
-      "• <strong>Contagious Route (16% Likelihood):</strong> <em>Staph. aureus</em> via milking clusters. Non-significant permutation p = 0.412.<br>" +
-      "• <strong>Pre-visit Action:</strong> Confirm with CMT test; prepare intramammary antibiotics if CMT is positive.";
+  if (q.includes("luna") || q.includes("c04") || q.includes("heat") || q.includes("estrus") || q.includes("breed")) {
+    return "<strong>Luna 095 (C04) Heat Check:</strong><br>" +
+      "• <strong>Activity:</strong> Nighttime walking activity is up +62% and she spent 42 minutes pacing.<br>" +
+      "• <strong>Breeding window:</strong> She is in standing heat. Optimal breeding / AI window is around 4:00 PM today (12 hours after first standing activity).";
   }
-  return "<strong>Herdwise Advisor:</strong> Based on current telemetry for North Barn (16 cows, 10 tracked), the primary focus is environmental mastitis prevention. Focus on Fern 221 udder inspection and Rest zone B bedding sanitation.";
+  if (q.includes("bessie") || q.includes("c01") || q.includes("contact") || q.includes("index")) {
+    return "<strong>Bessie 01 (C01) Check:</strong><br>" +
+      "• <strong>Why she's tracked:</strong> Bessie shared cubicle B4 with Fern 221 before Fern showed elevated risk.<br>" +
+      "• <strong>Status:</strong> Morning yield was normal, but keep a close eye on her udder for the next 48 hours.";
+  }
+  if (q.includes("daisy") || q.includes("c02") || q.includes("calv")) {
+    return "<strong>Daisy 108 (C02) Fresh Cow Check:</strong><br>" +
+      "• <strong>Day 5 post-calving:</strong> Morning yield in Stall 2 was strong at 34.6 L, rumination steady at 480 min/day.<br>" +
+      "• <strong>Status:</strong> Doing great. Continue fresh cow transition ration and keep her bedding dry in Zone A.";
+  }
+  if (q.includes("poppy") || q.includes("c06")) {
+    return "<strong>Poppy 164 (C06) Status:</strong><br>" +
+      "• Milked in Stall 6 right after the sensor flag. Filter came back clean, but watch her conductivity during the next milking.";
+  }
+  if (q.includes("mabel") || q.includes("c05")) {
+    return "<strong>Mabel 187 (C05) Status:</strong><br>" +
+      "• Spent 4+ hours resting quietly in Zone A. She was a bit slow to get up—check her front right hoof for any stone or bruise.";
+  }
+  if (q.includes("differential") || q.includes("diagnosis") || q.includes("pathogen") || q.includes("cause")) {
+    return "<strong>What is causing the risk?</strong><br>" +
+      "• <strong>Most likely (84%):</strong> Dirty or wet bedding in Rest Zone B. Bacteria in damp bedding can enter teats when cows lie down.<br>" +
+      "• <strong>Less likely (16%):</strong> Transfer from a milking cluster in the parlor. Washing milking units between cows prevents this.<br>" +
+      "• <strong>Action:</strong> Check Fern's udder, clean out stalls B1–B8, and milk Fern last.";
+  }
+  return "<strong>AI Herd Advisor:</strong> For North Barn (16 cows, 10 tracked), your top focus today is checking Fern 221's udder and cleaning damp bedding in Rest Zone B.";
 }
 
 // Inline farmer advisor form
