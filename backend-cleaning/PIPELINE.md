@@ -112,4 +112,8 @@ Two reports and two guards, so the numbers downstream are defensible:
   unit slips.
 
 Rebuild everything from raw: `python3 -m cleaning` (≈3 min, or ≈6 s with
-`--skip-heavy` to leave out the 10 Hz aggregate).
+`--skip-heavy` to leave out the 10 Hz aggregate). Consumers find the table
+with `cleaning.locate.find_joined()` and fall back to their own fixtures when
+it is absent, which is why the dashboard can run offline and still say so;
+`python3 -m cleaning export --cows C01,C02 --days 2` cuts a shareable slice,
+derived rather than source, since the raw data is not ours to redistribute.
