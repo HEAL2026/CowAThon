@@ -340,3 +340,130 @@ def get_watch_list_data() -> Tuple[List[Dict[str, Any]], bool]:
         },
     ]
     return default_flagged, True
+
+
+def load_bedding_data() -> List[Dict[str, Any]]:
+    """Loads bedding change intervals from data/placeholder/bedding.json."""
+    candidates = [
+        REPO_ROOT / "data" / "placeholder" / "bedding.json",
+        Path("data/placeholder/bedding.json"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+    return []
+
+
+def load_milk_visits_data() -> List[Dict[str, Any]]:
+    """Loads per-milking-visit records from data/placeholder/milk.json."""
+    candidates = [
+        REPO_ROOT / "data" / "placeholder" / "milk.json",
+        Path("data/placeholder/milk.json"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+    return []
+
+
+def get_pen_map_data() -> Tuple[Dict[str, Any], bool]:
+    """
+    Constructs the 2D pen map payload using real lying bouts if available.
+    Returns (pen_map_payload, is_synthetic).
+    """
+    from visualization.payloads import generate_pen_map
+
+    # Check for real lying bouts table in backend-cleaning/data/processed/lying_bouts.parquet
+    bouts_candidates = [
+        REPO_ROOT / "backend-cleaning" / "data" / "processed" / "lying_bouts.parquet",
+        Path("backend-cleaning/data/processed/lying_bouts.parquet"),
+    ]
+    bouts = None
+    is_synthetic = True
+    for p in bouts_candidates:
+        if p.is_file():
+            try:
+                import pandas as pd
+                df = pd.read_parquet(str(p))
+                bouts = df.to_dict(orient="records")
+                is_synthetic = False
+                break
+            except Exception:
+                pass
+
+    payload = generate_pen_map(lying_bouts=bouts, is_synthetic=is_synthetic)
+    return payload, is_synthetic
+
+
+def get_herd_health_data() -> Tuple[Dict[str, Any], bool]:
+    """
+    Retrieves herd health payload with health index and mastitis risk components.
+    Consumes backend-analysis auto_flags.json or cow_risk_summary.json if present.
+    Returns (herd_health_payload, is_synthetic).
+    """
+    from visualization.payloads import generate_herd_health
+
+    candidates = [
+        REPO_ROOT / "backend-analysis" / "data" / "output" / "auto_flags.json",
+        REPO_ROOT / "backend-analysis" / "data" / "auto_flags.json",
+        Path("backend-analysis/data/output/auto_flags.json"),
+    ]
+    flags_data = None
+    is_synthetic = True
+    for p in candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    flags_data = json.load(f)
+                is_synthetic = False
+                break
+            except Exception:
+                pass
+
+    payload = generate_herd_health(is_synthetic=is_synthetic)
+    return payload, is_synthetic
+
+
+def get_attribution_data() -> Tuple[Dict[str, Any], bool]:
+    """
+    Retrieves outbreak attribution panel payload.
+    Returns (attribution_payload, is_synthetic).
+    """
+    from visualization.payloads import generate_attribution
+
+    candidates = [
+        REPO_ROOT / "backend-analysis" / "data" / "output" / "backtrace_result.json",
+        REPO_ROOT / "backend-analysis" / "data" / "backtrace_result.json",
+        Path("backend-analysis/data/output/backtrace_result.json"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                is_synthetic = bool(data.get("is_synthetic", False))
+                return data, is_synthetic
+            except Exception:
+                pass
+
+    payload = generate_attribution(is_synthetic=True)
+    return payload, True
+
+
+def get_impact_data() -> Tuple[Dict[str, Any], bool]:
+    """
+    Retrieves economic and transmission prevention impact payload.
+    Returns (impact_payload, is_synthetic).
+    """
+    from visualization.payloads import generate_impact
+    payload = generate_impact(is_synthetic=True)
+    return payload, True
+

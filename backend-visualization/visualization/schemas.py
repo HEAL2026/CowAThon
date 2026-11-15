@@ -147,3 +147,48 @@ class SystemIntegrationItem:
 @dataclass
 class IntegrationsFeasibilityPayload:
     systems: List[Dict[str, Any]]
+
+
+@dataclass
+class PenMapPayload:
+    ts_utc: str
+    barn_id: str
+    pen_id: str
+    grid: Dict[str, Any]
+    cows: List[Dict[str, Any]]
+    implicated_elements: Dict[str, Any]
+    is_synthetic: bool = False
+
+
+@dataclass
+class HerdHealthTablePayload:
+    ts_utc: str
+    cows: List[Dict[str, Any]]
+    is_synthetic: bool = False
+
+
+@dataclass
+class AttributionPanelPayload:
+    ts_utc: str
+    lookback_hours: int
+    likely_route: str
+    route_probabilities: Dict[str, float]
+    p_values: Dict[str, float]
+    transmission_source: Dict[str, Any]
+    pathogen_group_likelihood: Dict[str, Any]
+    recommended_actions: List[str]
+    is_model_suggestion: bool = True
+    is_synthetic: bool = False
+
+
+@dataclass
+class ImpactPanelPayload:
+    ts_utc: str
+    cohort_size: int
+    total_affected_cows: int
+    flagged_early_count: int
+    early_detection_rate_pct: float
+    mean_lead_time_hours: float
+    estimated_milk_saved_kg: float
+    transmission_prevented_cases_est: float
+    is_synthetic: bool = False
