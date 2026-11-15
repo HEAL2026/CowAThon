@@ -72,6 +72,12 @@ def cmd_fetch(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve_icar(args: argparse.Namespace) -> int:
+    from apis.icar.server import run_server
+    run_server(port=args.port, host=args.host)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="External Farm APIs Integration Layer CLI (@uiobio)")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -94,6 +100,11 @@ def main() -> int:
     p_fetch.add_argument("--output", "-o", type=str, help="Output file path")
     p_fetch.add_argument("--attach-all", action="store_true", help="Attach all systems")
 
+    # serve-icar
+    p_serve = subparsers.add_parser("serve-icar", help="Run ICAR ADE mock vendor HTTP server")
+    p_serve.add_argument("--port", "-p", type=int, default=8001, help="Port to bind (default: 8001)")
+    p_serve.add_argument("--host", type=str, default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
+
     args = parser.parse_args()
     if args.command == "list":
         return cmd_list(args)
@@ -101,6 +112,8 @@ def main() -> int:
         return cmd_export_feasibility(args)
     elif args.command == "fetch":
         return cmd_fetch(args)
+    elif args.command == "serve-icar":
+        return cmd_serve_icar(args)
     return 0
 
 
