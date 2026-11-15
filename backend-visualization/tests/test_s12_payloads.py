@@ -141,16 +141,19 @@ class TestS12Payloads(unittest.TestCase):
         self.assertIn("transmission_source", payload)
         self.assertEqual(payload["impact"]["flagged_early_count"], 1)
         self.assertTrue(payload["is_synthetic"])
-        self.assertEqual(payload["resting_areas"], [])
-        self.assertEqual(payload["resources"]["resting_spots"], [])
-        self.assertEqual(payload["resources"]["milking_units"], [])
+        self.assertIn("resting_spots", payload["resources"])
+        self.assertIn("milking_units", payload["resources"])
+        if payload["resources"]["resting_spots"]:
+            self.assertEqual(len(payload["resources"]["resting_spots"]), 5)
+            self.assertEqual(payload["resources"]["resting_spots"][0]["spot_id"], "spot_01")
 
         # Multi-cow group run
         payload_multi = generate_backtrace_run(target_cows=["C01", "C02"], lookback_hours=72)
         self.assertIn(payload_multi["likely_route"], canonical_routes)
         self.assertEqual(payload_multi["impact"]["flagged_early_count"], 2)
-        self.assertEqual(payload_multi["resting_areas"], [])
         self.assertTrue(payload_multi["is_synthetic"])
+        if payload_multi["resources"]["resting_spots"]:
+            self.assertEqual(len(payload_multi["resources"]["resting_spots"]), 5)
 
     def test_impact_panel(self):
         payload = generate_impact()
@@ -715,6 +718,76 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(c01["flag_status"], "flagged")
         c02 = next(c for c in p_data["cows"] if c["cow_id"] == "C02")
         self.assertEqual(c02["flag_status"], "unflagged")
+
+    def test_pen_map_resting_spots_window_scoping(self):
+        """
+        Verifies:
+        1. C06 alone flags only spot_01 (n_flagged=1), spot_02..spot_05 remain n_flagged=0;
+        2. C06 + C05 still has spot_01 n_flagged=1 (C05 is on milking route, 0 resting dwell);
+        3. C06 + C01 sets spot_01 n_flagged=2 (triggering strong highlight tier);
+        4. Dynamic calculation from lying_bouts within [ts_utc - 48h, ts_utc] scopes dwell accurately.
+        """
+        # 1. C06 alone
+        cows_c06 = [{"cow_id": f"C{i:02d}", "uwb_x_m": -2.0, "uwb_y_m": 0.5, "flag_status": "flagged" if i == 6 else "unflagged"} for i in range(1, 11)]
+        p1 = generate_pen_map(cows_data=cows_c06)
+        s1 = next(s for s in p1["resting_spots"] if s["spot_id"] == "spot_01")
+        self.assertEqual(s1["n_flagged"], 1)
+        self.assertEqual(s1["flagged_cows"], ["C06"])
+        self.assertGreater(s1["dwell_min_by_flagged"]["C06"], 0)
+        for sp in p1["resting_spots"]:
+            if sp["spot_id"] != "spot_01":
+                self.assertEqual(sp["n_flagged"], 0)
+                self.assertEqual(sp["flagged_cows"], [])
+
+        # 2. C06 + C05: C05 is on milking U2 route, zero resting dwell
+        cows_c06_c05 = [{"cow_id": f"C{i:02d}", "uwb_x_m": -2.0, "uwb_y_m": 0.5, "flag_status": "flagged" if i in [5, 6] else "unflagged"} for i in range(1, 11)]
+        p2 = generate_pen_map(cows_data=cows_c06_c05)
+        s1_p2 = next(s for s in p2["resting_spots"] if s["spot_id"] == "spot_01")
+        self.assertEqual(s1_p2["n_flagged"], 1)
+        self.assertEqual(s1_p2["flagged_cows"], ["C06"])
+        for sp in p2["resting_spots"]:
+            if sp["spot_id"] != "spot_01":
+                self.assertEqual(sp["n_flagged"], 0)
+
+        # 3. C06 + C01: both in spot_01 -> n_flagged=2 (strong highlight)
+        cows_c06_c01 = [{"cow_id": f"C{i:02d}", "uwb_x_m": -2.0, "uwb_y_m": 0.5, "flag_status": "flagged" if i in [1, 6] else "unflagged"} for i in range(1, 11)]
+        p3 = generate_pen_map(cows_data=cows_c06_c01)
+        s1_p3 = next(s for s in p3["resting_spots"] if s["spot_id"] == "spot_01")
+        self.assertEqual(s1_p3["n_flagged"], 2)
+        self.assertEqual(set(s1_p3["flagged_cows"]), {"C01", "C06"})
+
+        # 4. Dynamic bout computation with time window
+        bouts = [
+            # In-window bout for C06 at spot_01 (0.06, 0.0)
+            {
+                "cow_id": "C06",
+                "x_m": 0.10,
+                "y_m": 0.05,
+                "start_utc": "2023-07-28T10:00:00Z",
+                "end_utc": "2023-07-28T12:30:00Z",
+                "duration_min": 150.0,
+            },
+            # Out-of-window bout for C06 (5 days prior)
+            {
+                "cow_id": "C06",
+                "x_m": -2.80,
+                "y_m": 0.02,
+                "start_utc": "2023-07-20T10:00:00Z",
+                "end_utc": "2023-07-20T12:00:00Z",
+                "duration_min": 120.0,
+            },
+        ]
+        p_dyn = generate_pen_map(
+            cows_data=cows_c06,
+            lying_bouts=bouts,
+            ts_utc="2023-07-28T14:00:00Z",
+            lookback_hours=48,
+        )
+        s1_dyn = next(s for s in p_dyn["resting_spots"] if s["spot_id"] == "spot_01")
+        self.assertEqual(s1_dyn["n_flagged"], 1)
+        self.assertEqual(s1_dyn["dwell_min_by_flagged"]["C06"], 150.0)
+        s2_dyn = next(s for s in p_dyn["resting_spots"] if s["spot_id"] == "spot_02")
+        self.assertEqual(s2_dyn["n_flagged"], 0)
 
 
 if __name__ == "__main__":

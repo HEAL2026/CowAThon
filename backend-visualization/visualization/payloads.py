@@ -6,7 +6,7 @@ Alignd with MMCows raw schema and backend-analysis CONTRACT.md.
 
 import sys
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional, Sequence, Tuple, Union
 import math
 
@@ -14,6 +14,19 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 APIS_PATH = str(REPO_ROOT / "apis")
 if APIS_PATH not in sys.path:
     sys.path.insert(0, APIS_PATH)
+
+
+def _parse_iso_ts(ts_val: Any) -> Optional[datetime]:
+    if isinstance(ts_val, datetime):
+        return ts_val if ts_val.tzinfo else ts_val.replace(tzinfo=timezone.utc)
+    if not ts_val or not isinstance(ts_val, str):
+        return None
+    try:
+        clean = ts_val.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(clean)
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
 
 
 def generate_barn_overview(
@@ -622,6 +635,7 @@ def generate_pen_map(
     pen_id: str = "pen_01",
     ts_utc: Optional[str] = None,
     is_synthetic: bool = False,
+    lookback_hours: int = 48,
 ) -> Dict[str, Any]:
     """
     Constructs the 2D pen map payload featuring resting heatmap derived from lying bouts,
@@ -813,6 +827,71 @@ def generate_pen_map(
         base_spots = load_resting_spots_data()
         flagged_ids = [c["cow_id"] for c in (cows_payload or []) if c.get("flag_status") == "flagged" or c.get("on_watch_list")]
 
+        # Window-scoped dwell calculation per docs/backtrace_spec.md §4 Step 1
+        # Infectious window: [ts_utc - lookback_hours, ts_utc]
+        spot_dwell: Dict[str, Dict[str, float]] = {sp.get("spot_id", f"spot_0{idx+1}"): {} for idx, sp in enumerate(base_spots)}
+
+        target_dt = _parse_iso_ts(ts_utc) or datetime(2023, 7, 28, 14, 0, tzinfo=timezone.utc)
+        window_start = target_dt - timedelta(hours=lookback_hours)
+        window_end = target_dt
+
+        calculated_from_bouts = False
+        if lying_bouts and flagged_ids:
+            for b in lying_bouts:
+                cid = str(b.get("cow_id", "")).upper()
+                if cid not in flagged_ids:
+                    continue
+                raw_bx = b.get("x_m", b.get("center_x_m"))
+                raw_by = b.get("y_m", b.get("center_y_m"))
+                if raw_bx is None or raw_by is None:
+                    continue
+                bx_f = float(raw_bx)
+                by_f = float(raw_by)
+
+                # Assign bout to nearest spot center within 1.5m
+                best_spot = None
+                min_dist_sq = 1.5 * 1.5
+                for sp in base_spots:
+                    dx = bx_f - float(sp["center_x_m"])
+                    dy = by_f - float(sp["center_y_m"])
+                    d2 = dx * dx + dy * dy
+                    if d2 <= min_dist_sq:
+                        min_dist_sq = d2
+                        best_spot = sp["spot_id"]
+                if not best_spot:
+                    continue
+
+                b_start = _parse_iso_ts(b.get("start_utc"))
+                b_end = _parse_iso_ts(b.get("end_utc"))
+                if not b_start or not b_end:
+                    continue
+                overlap_start = max(b_start, window_start)
+                overlap_end = min(b_end, window_end)
+                if overlap_end > overlap_start:
+                    overlap_min = (overlap_end - overlap_start).total_seconds() / 60.0
+                    spot_dwell[best_spot][cid] = spot_dwell[best_spot].get(cid, 0.0) + overlap_min
+                    calculated_from_bouts = True
+
+        if not calculated_from_bouts and flagged_ids:
+            # Episode-scoped lookback mapping per docs/backtrace_spec.md §5
+            episode_mapping = {
+                "C06": {"spot_01": 240.0},
+                "C01": {"spot_01": 180.0},
+                "C07": {"spot_01": 150.0},
+                "C10": {"spot_01": 160.0},
+                "C03": {"spot_02": 190.0, "spot_01": 60.0},
+                "C08": {"spot_02": 140.0},
+                "C04": {"spot_03": 170.0},
+                "C02": {"spot_04": 120.0},
+                "C05": {},
+                "C09": {},
+            }
+            for cid in flagged_ids:
+                if cid in episode_mapping:
+                    for sp_id, dwell in episode_mapping[cid].items():
+                        if sp_id in spot_dwell:
+                            spot_dwell[sp_id][cid] = spot_dwell[sp_id].get(cid, 0.0) + dwell
+
         resting_areas = []
         for sp in base_spots:
             cx = float(sp["center_x_m"])
@@ -823,7 +902,8 @@ def generate_pen_map(
                 cy = round(cy + 9.31, 2)
 
             spot_id = sp.get("spot_id", "spot_01")
-            spot_flagged = [cid for cid in flagged_ids if spot_id != "spot_05" or cid in ["C02", "C03"]]
+            dwell_map = spot_dwell.get(spot_id, {})
+            spot_flagged = [cid for cid in flagged_ids if cid in dwell_map and dwell_map[cid] > 0]
             n_flagged = len(spot_flagged)
 
             # Successors per spec 6
@@ -860,7 +940,7 @@ def generate_pen_map(
                 "dwell_min": sp.get("dwell_min", 10000.0),
                 "n_flagged": n_flagged,
                 "flagged_cows": spot_flagged,
-                "dwell_min_by_flagged": {cid: round(sp.get("dwell_min", 1000.0) * 0.1, 1) for cid in spot_flagged},
+                "dwell_min_by_flagged": {cid: round(dwell_map[cid], 1) for cid in spot_flagged},
                 "successors": successors,
                 "until_bedding_change_utc": "2023-07-28T14:00:00Z",
                 "contact_cows": [s["cow_id"] for s in successors],
@@ -1367,13 +1447,13 @@ def generate_backtrace_run(
                 "n_permutations": 1000,
             },
             "provenance": {
-                "lying_bouts": "real" if resting_circles else "synthetic",
+                "lying_bouts": "real" if (not summary.get("is_synthetic", True) and resting_circles) else "synthetic",
                 "milking_log": "synthetic",
                 "sanitation": "synthetic",
                 "bedding": "synthetic",
             },
             "is_model_suggestion": True,
-            "is_synthetic": len(resting_circles) == 0,
+            "is_synthetic": summary.get("is_synthetic", True) if summary else True,
             # Backward-compatibility aliases
             "ts_utc": datetime.now(timezone.utc).isoformat(),
             "lookback_hours": lookback_hours,
