@@ -24,8 +24,11 @@ button { cursor: pointer; }
 .brand-mark-mini-img { width: 22px; height: 22px; border-radius: 50%; object-fit: contain; background: white; padding: 1px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); flex-shrink: 0; }
 .assistant-avatar-img { width: 38px; height: 38px; border-radius: 50%; object-fit: contain; background: white; padding: 2px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); flex-shrink: 0; }
 .header-actions { display: flex; align-items: center; gap: 20px; }
-.status-pill { color: #bde8cf; font-size: 12px; }.demo-badge { color: #f9d98b; border: 1px solid #8e7750; border-radius: 20px; padding: 4px 8px; font-size: 10px; font-weight: 800; }.demo-badge { color: #f9d98b; border: 1px solid #8e7750; border-radius: 20px; padding: 4px 8px; font-size: 10px; font-weight: 800; }
+.status-pill { color: #bde8cf; font-size: 12px; cursor: default; }
+.status-pill.offline { color: #f9d98b; }
+.demo-badge { color: #f9d98b; border: 1px solid #8e7750; border-radius: 20px; padding: 4px 8px; font-size: 10px; font-weight: 800; }
 .status-dot, .online-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4cd38e; margin-right: 5px; }
+.status-dot.warning-dot { background: #e6a23c; }
 .avatar-button { background: #235a50; color: white; border: 1px solid #47776d; border-radius: 50%; width: 36px; height: 36px; font-size: 12px; font-weight: 700; }
 .app-shell { max-width: 1280px; padding: 42px 5vw 110px; margin: auto; }
 .welcome-row, .section-heading, .time-heading, .card-title-row, .diagram-header, .assistant-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }

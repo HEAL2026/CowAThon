@@ -171,6 +171,80 @@ async function fetchInteractiveApi(path, options = {}) {
   return response.json();
 }
 
+function generateFallbackHeatmapGrid() {
+  const rows = 15;
+  const cols = 30;
+  const grid = [];
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+    for (let c = 0; c < cols; c++) {
+      let val = 0.0;
+      // Cubicle row A (stalls y: 2 to 5, x: 5 to 25)
+      if (r >= 2 && r <= 5 && c >= 5 && c <= 25) {
+        val = 0.65;
+      }
+      // Cubicle row B (stalls y: 9 to 12, x: 5 to 25)
+      if (r >= 9 && r <= 12 && c >= 5 && c <= 25) {
+        val = 0.82;
+      }
+      // Primary contamination hotspot around Rest Zone B Cubicle 4 (r: 10, c: 17)
+      const distB4 = Math.hypot(r - 10, c - 17);
+      if (distB4 <= 3.5) {
+        val = Math.max(val, 0.95 - distB4 * 0.1);
+      }
+      // Moderate idling near feed lane entrance (r: 7, c: 10)
+      const distFeed = Math.hypot(r - 7, c - 10);
+      if (distFeed <= 2.5) {
+        val = Math.max(val, 0.45 - distFeed * 0.08);
+      }
+      row.push(Number(val.toFixed(2)));
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+const FALLBACK_PEN_MAP = {
+  ts_utc: "2023-08-04T11:59:00Z",
+  barn_id: "north-barn",
+  pen_id: "pen-1",
+  coordinate_system: "positive",
+  grid: {
+    origin: "bottom_left",
+    width_m: 30.0,
+    height_m: 15.0,
+    x_min_m: 0.0,
+    x_max_m: 30.0,
+    y_min_m: 0.0,
+    y_max_m: 15.0,
+    cell_size_m: 1.0,
+    heatmap: generateFallbackHeatmapGrid(),
+  },
+  cows: [
+    { cow_id: "C01", display_name: "Cow C01", uwb_x_m: 8.2, uwb_y_m: 3.8, zone: "cubicle_row_a", activity_state: "resting", exposure_score: 0.92, is_source_candidate: true, flag_status: "flagged", is_instrumented: true },
+    { cow_id: "C02", display_name: "Cow C02", uwb_x_m: 15.5, uwb_y_m: 4.1, zone: "cubicle_row_a", activity_state: "resting", exposure_score: 0.76, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+    { cow_id: "C03", display_name: "Cow C03", uwb_x_m: 17.8, uwb_y_m: 10.5, zone: "cubicle_row_b", activity_state: "resting", exposure_score: 0.85, is_source_candidate: false, flag_status: "flagged", is_instrumented: true },
+    { cow_id: "C04", display_name: "Cow C04", uwb_x_m: 10.4, uwb_y_m: 7.2, zone: "feed_alley", activity_state: "active", exposure_score: 0.28, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+    { cow_id: "C05", display_name: "Cow C05", uwb_x_m: 6.5, uwb_y_m: 11.2, zone: "cubicle_row_b", activity_state: "resting", exposure_score: 0.45, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+    { cow_id: "C06", display_name: "Cow C06", uwb_x_m: 21.0, uwb_y_m: 4.5, zone: "cubicle_row_a", activity_state: "resting", exposure_score: 0.15, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+    { cow_id: "C07", display_name: "Cow C07", uwb_x_m: 12.8, uwb_y_m: 10.8, zone: "cubicle_row_b", activity_state: "resting", exposure_score: 0.12, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+    { cow_id: "C08", display_name: "Cow C08", uwb_x_m: 16.8, uwb_y_m: 11.8, zone: "cubicle_row_b", activity_state: "resting", exposure_score: 0.08, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+    { cow_id: "C09", display_name: "Cow C09", uwb_x_m: 23.4, uwb_y_m: 4.2, zone: "cubicle_row_a", activity_state: "resting", exposure_score: 0.05, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+    { cow_id: "C10", display_name: "Cow C10", uwb_x_m: 7.8, uwb_y_m: 4.6, zone: "cubicle_row_a", activity_state: "resting", exposure_score: 0.05, is_source_candidate: false, flag_status: "unflagged", is_instrumented: true },
+  ],
+  resting_areas: [
+    {
+      zone_id: "Rest Zone B - Stall 4",
+      center_x_m: 17.5,
+      center_y_m: 10.5,
+      radius_m: 1.5,
+      contact_cow_ids: ["C01", "C03", "C04"],
+      is_synthetic: true,
+    },
+  ],
+  is_synthetic: true,
+};
+
 function renderFlagGroup() {
   const target = document.querySelector("#flag-group");
   const entries = [...state.groupFlags.entries()];
@@ -185,9 +259,22 @@ function renderFlagGroup() {
 
 function setDataStatus(message, tone = "") {
   const status = document.querySelector("#s12-data-status");
-  if (!status) return;
-  status.textContent = message;
-  status.className = `data-status ${tone}`.trim();
+  if (status) {
+    status.textContent = message;
+    status.className = `data-status ${tone}`.trim();
+  }
+  const connStatus = document.querySelector("#connection-status");
+  if (connStatus) {
+    if (tone === "connected") {
+      connStatus.innerHTML = '<span class="status-dot"></span> Live data';
+      connStatus.className = "status-pill live";
+      connStatus.title = `Connected to live API on ${apiBase}`;
+    } else if (tone === "fallback") {
+      connStatus.innerHTML = '<span class="status-dot warning-dot"></span> Demo fallback · API offline';
+      connStatus.className = "status-pill offline";
+      connStatus.title = "Start backend server: python backend-visualization/visualization/server.py --port 8000";
+    }
+  }
 }
 
 function cowLabel(record) {
@@ -924,12 +1011,10 @@ async function loadS12Data(tsUtc = state.currentTsUtc) {
     setDataStatus("API connected", "connected");
   } catch (error) {
     renderAlerts();
-    setDataStatus("Demo fallback · API unavailable", "fallback");
-    document.querySelector("#backtrace-status").textContent = "The visualization service is unavailable; demo panels remain visible.";
+    setDataStatus("Demo fallback · API offline", "fallback");
+    document.querySelector("#backtrace-status").textContent = "The visualization service is offline; using high-fidelity local demo fixtures. Run python backend-visualization/visualization/server.py --port 8000 for live data.";
     if (!state.s12.penMap) {
-      document.querySelectorAll(".cow-dot:not(.api-cow)").forEach((dot) => {
-        dot.hidden = false;
-      });
+      renderPenMap(FALLBACK_PEN_MAP);
     }
   }
 }
@@ -1023,7 +1108,7 @@ document.querySelectorAll(".mode-button").forEach((button) => {
     document.querySelector(".map-legend").innerHTML = state.mode === "heatmap"
       ? '<span class="map-legend-heatmap">Idle density (fixed stall grid): <span class="guide-dot healthy"></span> &lt;30m <span class="guide-dot watch"></span> 30–60m <span class="guide-dot urgent"></span> &gt;60m</span>'
       : `<span class="legend-item"><i class="legend-dot healthy"></i> Cow location</span><span class="legend-item" id="legend-resting-oval" ${state.overlay ? "" : "hidden"}><span class="legend-oval-dot"></span> Red oval: Shared resting risk area (Model estimate · Non-clinical)</span>`;
-    renderHeatmap(state.s12.penMap?.grid?.heatmap);
+    renderHeatmap(state.s12.penMap?.grid?.heatmap || FALLBACK_PEN_MAP.grid.heatmap);
   });
 });
 
