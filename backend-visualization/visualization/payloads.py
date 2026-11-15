@@ -692,6 +692,7 @@ def generate_attribution(
     is_synthetic: bool = False,
     resting_areas: Optional[List[Dict[str, Any]]] = None,
     impact_data: Optional[Dict[str, Any]] = None,
+    lookback_hours: int = 72,
 ) -> Dict[str, Any]:
     """
     Constructs the attribution panel payload indicating transmission route probabilities,
@@ -737,11 +738,15 @@ def generate_attribution(
             data["implicated_circles"] = default_resting_areas
         if "impact" not in data:
             data["impact"] = default_impact
+        if ts_utc:
+            data["ts_utc"] = ts_utc
+        if lookback_hours:
+            data["lookback_hours"] = lookback_hours
         return data
 
     return {
         "ts_utc": ts_utc,
-        "lookback_hours": 72,
+        "lookback_hours": lookback_hours,
         "likely_route": "resting_area",
         "likely_route_alias": "resting_cubicle_route",
         "route_probabilities": {

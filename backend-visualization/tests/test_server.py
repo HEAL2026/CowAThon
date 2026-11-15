@@ -96,6 +96,40 @@ class TestVisualizationServer(unittest.TestCase):
         code_err, err_data = VisualizationAPIHandler.route_post_request("/api/unknown", {})
         self.assertEqual(code_err, 404)
 
+    def test_handler_route_request_with_query_params(self):
+        # /api/pen-map with ts_utc and pen_id
+        code, data = VisualizationAPIHandler.route_request(
+            "/api/pen-map",
+            {"ts_utc": "2023-07-29T10:00:00Z", "pen_id": "pen_02"},
+        )
+        self.assertEqual(code, 200)
+        self.assertEqual(data["ts_utc"], "2023-07-29T10:00:00Z")
+        self.assertEqual(data["pen_id"], "pen_02")
+
+        # /api/herd-health with ts_utc
+        code, data = VisualizationAPIHandler.route_request(
+            "/api/herd-health",
+            {"ts_utc": "2023-07-29T10:00:00Z"},
+        )
+        self.assertEqual(code, 200)
+        self.assertEqual(data["ts_utc"], "2023-07-29T10:00:00Z")
+
+        # /api/attribution with lookback_hours
+        code, data = VisualizationAPIHandler.route_request(
+            "/api/attribution",
+            {"lookback_hours": "48"},
+        )
+        self.assertEqual(code, 200)
+        self.assertEqual(data["lookback_hours"], 48)
+
+        # /api/impact with ts_utc
+        code, data = VisualizationAPIHandler.route_request(
+            "/api/impact",
+            {"ts_utc": "2023-07-29T10:00:00Z"},
+        )
+        self.assertEqual(code, 200)
+        self.assertEqual(data["ts_utc"], "2023-07-29T10:00:00Z")
+
     def test_live_http_server_and_cors(self):
         server = create_server("127.0.0.1", 0)  # Bind ephemeral port
         port = server.server_address[1]
@@ -114,6 +148,14 @@ class TestVisualizationServer(unittest.TestCase):
                 self.assertIn("POST", allow_methods)
                 body = json.loads(resp.read().decode("utf-8"))
                 self.assertEqual(body["status"], "healthy")
+
+            # Test live GET with query string over wire
+            query_url = f"http://127.0.0.1:{port}/api/pen-map?ts_utc=2023-07-29T10:00:00Z&pen_id=pen_02"
+            with urlopen(Request(query_url), timeout=3.0) as resp:
+                self.assertEqual(resp.status, 200)
+                q_data = json.loads(resp.read().decode("utf-8"))
+                self.assertEqual(q_data["ts_utc"], "2023-07-29T10:00:00Z")
+                self.assertEqual(q_data["pen_id"], "pen_02")
 
             # Test live POST /backtrace over wire
             post_url = f"http://127.0.0.1:{port}/backtrace"

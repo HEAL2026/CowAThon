@@ -10,7 +10,7 @@ import re
 import argparse
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from typing import Tuple, Dict, Any, Optional
 
 # Ensure repository packages are resolvable regardless of cwd
@@ -60,7 +60,9 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
-        status_code, payload = self.route_request(path)
+        query = parse_qs(parsed.query)
+        params = {k: v[0] if len(v) == 1 else v for k, v in query.items()}
+        status_code, payload = self.route_request(path, params)
 
         body = json.dumps(payload, indent=2).encode("utf-8")
         self.send_response(status_code)
@@ -132,7 +134,16 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
         return 404, {"error": f"POST endpoint '{path}' not found", "status": 404}
 
     @classmethod
-    def route_request(cls, path: str) -> Tuple[int, Dict[str, Any]]:
+    def route_request(cls, path: str, params: Optional[Dict[str, Any]] = None) -> Tuple[int, Dict[str, Any]]:
+        params = params or {}
+        ts_utc = params.get("ts_utc") or params.get("timestamp")
+        pen_id = params.get("pen_id") or "pen_01"
+        lookback_hours = (
+            int(params["lookback_hours"])
+            if "lookback_hours" in params and str(params["lookback_hours"]).isdigit()
+            else 72
+        )
+
         if path in ("", "/api/health"):
             return 200, {
                 "status": "healthy",
@@ -159,6 +170,7 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
                 indoor_thi=env.get("indoor_thi", 74.2),
                 indoor_temp_c=env.get("indoor_temp_c", 26.8),
                 indoor_humidity_pct=env.get("indoor_humidity_pct", 66.0),
+                ts_utc=ts_utc,
                 is_synthetic=is_synthetic,
             )
 
@@ -180,22 +192,22 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
             return 200, generate_integrations_feasibility()
 
         if path == "/api/pen-map":
-            payload, is_synth = get_pen_map_data()
+            payload, is_synth = get_pen_map_data(ts_utc=ts_utc, pen_id=pen_id)
             payload["is_synthetic"] = is_synth
             return 200, payload
 
         if path == "/api/herd-health":
-            payload, is_synth = get_herd_health_data()
+            payload, is_synth = get_herd_health_data(ts_utc=ts_utc)
             payload["is_synthetic"] = is_synth
             return 200, payload
 
         if path in ("/api/attribution", "/backtrace", "/api/backtrace"):
-            payload, is_synth = get_attribution_data()
+            payload, is_synth = get_attribution_data(ts_utc=ts_utc, lookback_hours=lookback_hours)
             payload["is_synthetic"] = is_synth
             return 200, payload
 
         if path == "/api/impact":
-            payload, is_synth = get_impact_data()
+            payload, is_synth = get_impact_data(ts_utc=ts_utc)
             payload["is_synthetic"] = is_synth
             return 200, payload
 
@@ -203,7 +215,8 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
         if cow_match:
             cid = cow_match.group(1).upper()
             if cid in COW_IDS:
-                pts, is_synth = get_cow_timeseries_data(cid, days=7)
+                days = int(params.get("days", 7)) if "days" in params and str(params["days"]).isdigit() else 7
+                pts, is_synth = get_cow_timeseries_data(cid, days=days)
                 co_resters = [
                     {
                         "cow_id": "C02" if cid == "C01" else "C01",
