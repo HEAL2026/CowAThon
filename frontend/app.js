@@ -18,6 +18,7 @@ const state = {
     attribution: null,
     impact: null,
   },
+  milking: null,
 };
 
 const timeLabel = document.querySelector("#time-label");
@@ -323,15 +324,99 @@ function ensureCowDot(record, index) {
   return dot;
 }
 
+function updateLegendCounts() {
+  const records = state.s12.penMap?.cows || [...state.cowRecords.values()];
+  if (!records.length) return;
+
+  let urgentCount = 0;
+  let watchCount = 0;
+  let baselineCount = 0;
+
+  records.forEach((record) => {
+    const fill = getCowDotFill(record, state.colorByMode);
+    if (fill === "#d75f51") urgentCount++;
+    else if (fill === "#e6a23c") watchCount++;
+    else baselineCount++;
+  });
+
+  const baselineEl = document.querySelector("#legend-count-baseline");
+  const watchEl = document.querySelector("#legend-count-watch");
+  const urgentEl = document.querySelector("#legend-count-urgent");
+
+  if (baselineEl) baselineEl.textContent = String(baselineCount);
+  if (watchEl) watchEl.textContent = String(watchCount);
+  if (urgentEl) urgentEl.textContent = String(urgentCount);
+}
+
+function updateColorScaleGuides() {
+  document.querySelectorAll(".color-by-option").forEach((opt) => {
+    const input = opt.querySelector('input[name="color-by"]');
+    opt.classList.toggle("active", Boolean(input && input.checked));
+  });
+}
+
+function renderHeatmap(heatmapData) {
+  const canvas = document.querySelector("#heatmap-canvas");
+  if (!canvas) return;
+
+  if (state.mode !== "heatmap" || !heatmapData || !Array.isArray(heatmapData) || !heatmapData.length) {
+    canvas.hidden = true;
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const rows = heatmapData.length;
+  const cols = heatmapData[0].length;
+  canvas.width = cols * 24;
+  canvas.height = rows * 24;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const cellW = canvas.width / cols;
+  const cellH = canvas.height / rows;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const val = Math.max(0, Math.min(1, Number(heatmapData[r][c] || 0)));
+      if (val > 0.01) {
+        const alpha = Math.min(0.85, val * 0.95);
+        let color = `rgba(79, 190, 137, ${alpha})`;
+        if (val > 0.60) {
+          color = `rgba(215, 95, 81, ${alpha})`;
+        } else if (val > 0.30) {
+          color = `rgba(230, 162, 60, ${alpha})`;
+        }
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(c * cellW + cellW / 2, r * cellH + cellH / 2, cellW * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  canvas.hidden = false;
+}
+
 function renderPenMap(payload) {
   state.s12.penMap = payload;
   const records = payload?.cows || [];
   // Hide all dots first so unobserved/out-of-pen/absent cows do not persist
   document.querySelectorAll(".cow-dot").forEach((dot) => { dot.hidden = true; });
   records.forEach((record, index) => ensureCowDot(record, index));
+
+  const eyebrow = document.querySelector("#barn-cohort-eyebrow");
+  if (eyebrow) {
+    const total = records.length || 16;
+    const tracked = records.filter((r) => r.is_instrumented !== false).length || 10;
+    eyebrow.textContent = `North Barn · ${total} cows (${tracked} tracked)`;
+  }
+
   const polygon = document.querySelector(".barn-polygon");
   polygon.classList.toggle("api-risk-overlay", records.some((record) => record.flag_status === "flagged" || Number(record.exposure_score || 0) > 0.35));
   renderRestingOverlays(payload);
+  updateLegendCounts();
+  renderHeatmap(payload?.grid?.heatmap);
 }
 
 function renderRestingOverlays(payload) {
@@ -367,7 +452,7 @@ function renderRestingOverlays(payload) {
     circle.style.width = `${Math.max(1, widthPct)}%`;
     circle.style.height = `${Math.max(1, heightPct)}%`;
     const cutoff = area.until_bedding_change_utc ? ` · until bedding change ${area.until_bedding_change_utc}` : "";
-    circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius${cutoff}`;
+    circle.title = `${area.zone_id || area.cell_id || `Resting area ${index + 1}`} · ${radius} m radius · Model-estimated mastitis exposure area (not a diagnosis)${cutoff}`;
     target.append(circle);
   });
   const contacts = new Set(
@@ -501,6 +586,65 @@ function updateDataBadge(payloads) {
   document.querySelector("#connection-status").innerHTML = `<span class="status-dot"></span> ${allSynthetic ? "Demo service" : "API connected"}`;
 }
 
+function renderMilkingStalls(payload) {
+  if (!payload || !payload.stalls) return;
+  const stalls = payload.stalls;
+  state.milking = payload;
+
+  const titleEl = document.querySelector("#milking-parlor-title");
+  if (titleEl) titleEl.textContent = `Rotary parlor · ${stalls.length} stalls`;
+
+  const inProgress = stalls.filter((s) => s.state === "active").length;
+  const inProgressEl = document.querySelector("#milking-in-progress");
+  if (inProgressEl) inProgressEl.textContent = `${inProgress} / ${stalls.length}`;
+
+  const lastSyncEl = document.querySelector("#milking-last-sync");
+  if (lastSyncEl && payload.ts_utc) {
+    lastSyncEl.textContent = `Synced ${formatDisplayTime(payload.ts_utc)}`;
+  }
+
+  let totalYield = 0;
+  let activeYieldCount = 0;
+  let highRiskCount = 0;
+
+  stalls.forEach((stall) => {
+    const stallBtn = document.querySelector(`.stall[data-stall="${stall.stall_number}"]`);
+    if (!stallBtn) return;
+
+    const isHighRisk = Boolean(stall.last_completed_cycle?.flagged_risk);
+    const isWatch = Boolean(stall.last_completed_cycle?.cow_id && (state.modelWatchList.has(stall.last_completed_cycle.cow_id) || state.manualWatchList.has(stall.last_completed_cycle.cow_id)));
+    if (isHighRisk) highRiskCount++;
+
+    stallBtn.classList.toggle("risk-high", isHighRisk);
+    stallBtn.classList.toggle("risk-watch", !isHighRisk && isWatch);
+    stallBtn.classList.toggle("risk-low", !isHighRisk && !isWatch);
+    stallBtn.classList.toggle("stall-idle", stall.state === "idle");
+
+    if (stall.session_yield_kg != null) {
+      totalYield += Number(stall.session_yield_kg);
+      activeYieldCount++;
+    }
+  });
+
+  const highRiskEl = document.querySelector("#milking-high-risk-stalls");
+  if (highRiskEl) highRiskEl.textContent = String(highRiskCount);
+
+  if (activeYieldCount > 0) {
+    const avgYield = (totalYield / activeYieldCount).toFixed(1);
+    const avgYieldEl = document.querySelector("#milking-avg-yield");
+    if (avgYieldEl) avgYieldEl.textContent = `${avgYield} kg / cow`;
+  }
+}
+
+async function loadMilkingData() {
+  try {
+    const data = await fetchApi("/api/milking-stalls");
+    renderMilkingStalls(data);
+  } catch (error) {
+    // Retain demo layout if endpoint is unavailable
+  }
+}
+
 async function loadS12Data(tsUtc = state.currentTsUtc) {
   try {
     const params = new URLSearchParams();
@@ -517,6 +661,7 @@ async function loadS12Data(tsUtc = state.currentTsUtc) {
     renderHerdHealth(herdHealth);
     renderAttribution(attribution);
     renderImpact(impact);
+    loadMilkingData();
     updateDataBadge([penMap, herdHealth, attribution, impact]);
     setDataStatus("API connected", "connected");
   } catch (error) {
@@ -539,6 +684,9 @@ function showView(view) {
   document.querySelectorAll(".view-tab, .mobile-nav-item").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
   });
+  if (view === "milking") {
+    loadMilkingData();
+  }
 }
 
 function applyRolePresentation() {
@@ -570,6 +718,7 @@ document.querySelectorAll(".mode-button").forEach((button) => {
     document.querySelector(".map-legend").innerHTML = state.mode === "heatmap"
       ? "Gradient shows time spent idling"
       : '<i class="legend-dot healthy"></i> Cow location';
+    renderHeatmap(state.s12.penMap?.grid?.heatmap);
   });
 });
 
@@ -577,6 +726,8 @@ document.querySelector("#problem-overlay").addEventListener("click", (event) => 
   state.overlay = !state.overlay;
   event.currentTarget.classList.toggle("on", state.overlay);
   document.querySelector(".barn-polygon").classList.toggle("risk-overlay", state.overlay);
+  const target = document.querySelector("#resting-overlays");
+  if (target) target.classList.toggle("active-overlay", state.overlay);
 });
 
 document.querySelectorAll(".cow-dot").forEach(attachCowDot);
@@ -584,6 +735,7 @@ document.querySelectorAll(".cow-dot").forEach(attachCowDot);
 document.querySelectorAll('input[name="color-by"]').forEach((input) => {
   input.addEventListener("change", () => {
     state.colorByMode = input.value;
+    updateColorScaleGuides();
     document.querySelectorAll(".cow-dot").forEach((dot) => {
       const rec = state.cowRecords.get(dot.dataset.cow);
       if (rec) {
@@ -595,6 +747,7 @@ document.querySelectorAll('input[name="color-by"]').forEach((input) => {
         dot.classList.toggle("dot-healthy", fill === "#4fbe89");
       }
     });
+    updateLegendCounts();
   });
 });
 
@@ -790,8 +943,17 @@ if (dateBtn) {
 
 document.querySelectorAll(".stall").forEach((stall) => {
   stall.addEventListener("click", () => {
+    const stallNum = Number(stall.dataset.stall);
+    const stallData = state.milking?.stalls?.find((s) => Number(s.stall_number) === stallNum);
+    const detailEl = document.querySelector("#stall-detail");
+    if (stallData) {
+      const activeCow = stallData.current_cow_id ? `Active: Cow ${stallData.current_cow_id} · ${stallData.session_yield_kg ?? "—"} kg (${stallData.flow_rate_kg_min ?? "—"} kg/min)` : "Stall is currently idle";
+      const lastCycle = stallData.last_completed_cycle ? `Last cow: ${stallData.last_completed_cycle.cow_id} · ${stallData.last_completed_cycle.yield_kg ?? "—"} kg · ${stallData.last_completed_cycle.flagged_risk ? "Model risk flag" : "Within baseline"}` : "No completed cycle recorded";
+      detailEl.innerHTML = `<strong>Stall ${stallNum} (${stallData.state})</strong><br><span>${activeCow}<br>${lastCycle}</span>`;
+      return;
+    }
     const highRisk = stall.classList.contains("risk-high");
-    document.querySelector("#stall-detail").innerHTML = `<strong>Stall ${stall.dataset.stall}</strong> · ${highRisk ? "High mastitis risk" : "Within baseline"}<br><span>${highRisk ? "2 cows flagged in the last cycle: Fern 221, Poppy 164." : "Last cow: Daisy 108 · 34.6 L · 10:21 AM."}</span>`;
+    detailEl.innerHTML = `<strong>Stall ${stall.dataset.stall}</strong> · ${highRisk ? "Model-flagged exposure risk" : "Within baseline"}<br><span>${highRisk ? "2 cows flagged in recent cycles: Fern 221, Poppy 164." : "Last cow: Daisy 108 · 34.6 L · 10:21 AM."}</span>`;
   });
 });
 
@@ -860,6 +1022,7 @@ document.querySelectorAll(".role-button").forEach((button) => {
 });
 
 applyRolePresentation();
+updateColorScaleGuides();
 showView("barn");
 if (timeLabel) timeLabel.textContent = formatDisplayTime(state.currentTsUtc);
 loadS12Data(state.currentTsUtc);
