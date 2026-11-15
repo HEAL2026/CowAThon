@@ -1,0 +1,20 @@
+# Thresholds and windows for backend-cleaning. Everything a reviewer might
+# ask "why that number?" about lives here, not in code.
+
+cadence: 1min
+tz_barn: America/Chicago
+
+lying_bouts:
+  min_duration_min: 5        # brief S3: bout = continuous lying >= 5 min
+  resting_min_duration_min: 20   # brief S8: resting occupancy for tracing uses >= 20 min
+  location: median           # in-pen UWB fixes during the bout, suspect fixes excluded
+
+gaps:
+  mark_after_min: 5          # brief S3: mark, don't fill, gaps > 5 min in native channels
+
+uwb:
+  bounds_m: {x: [-12, 12], y: [-9, 8], z: [-0.5, 3]}   # see CONTRACT.md 5.1
+
+slow_channel_stale_after_s:
+  weather: 1800
+  thi: 600

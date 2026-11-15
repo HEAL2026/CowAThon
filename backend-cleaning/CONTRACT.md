@@ -162,6 +162,21 @@ hardcoding it.
 Fast channels are aggregated, slow channels are forward-filled and flagged —
 never the reverse — and nothing is filled across an `out_of_pen` gap.
 
+### 5.2a Derived tables beside `joined_1min` (brief S3)
+
+| Table | Keys | Columns | Notes |
+|---|---|---|---|
+| `lying_bouts` | `cow_id`, `start_utc` | `end_utc` (exclusive), `duration_min`, `x_m`, `y_m`, `z_m`, `n_fixes`, `in_pen_frac` | continuous `lying==1` ≥ 5 min (config); location = median of in‑pen, in‑bounds UWB fixes during the bout. Resting‑route tracing uses ≥ 20 min (config) |
+| `location_1min` | `cow_id`, `ts_utc` | `x_med_m`, `y_med_m`, `z_med_m`, `n_fixes` | per‑minute **median** of in‑pen fixes (joined carries the mean) |
+| `manual` | `cow_id` | `parity`, `dim`, `dim_from_milk`, `dim_best`, `dim_matches_milk`, `parity_uncertain`, `in_milk`, `last_freshen_utc`, `last_preg_check_utc`, `preg_result_code`, `pregnant_confirmed`, `lame_dx_last_60d`, `clinical_mastitis_lifetime`, `last_clinical_mastitis_utc`, `source`, `is_synthetic=False` | the brief's "manual" module, **derived from the real farm event log** as of the first sensor row. `dim_best` prefers the farm's DIM counter (shipped in `milk`) — the log misses a calving for C09. `pregnant_confirmed` = preg‑check code F/M only; code kept raw |
+| `mastitis_events` | `cow_id`, `ts_utc` | `event_detail`, `description`, `quarter`, `in_sensor_window`, `days_from_window_end` | real clinical‑mastitis diagnoses / cultures / withholds, lifetime. **0 inside the sensor window**; C12 diagnosed 2023‑09‑02/04 (RF, Gram+), 29 days after. Validation anchors, never training labels |
+| `health_records` (interim) | `cow_id`, `ts_utc` | `event`, `event_detail`, `description` | the full event log, 3,503 rows, 16 cows, 2014–2024 |
+
+`joined_1min` additionally carries `in_pen` (bool) and, for `cbt_c`, `lying`,
+`uwb_x_m`, `neck_imu_magnitude_mean`, a `<col>_gap_min` column: the length of
+the missing run the row sits in when it exceeds 5 min (config), else 0.
+Marked, never filled.
+
 **Finding this table.** `cleaning.locate.find_joined()` is the one resolver:
 it honours `$MMCOWS_JOINED` (a parquet path, or a directory holding one) and
 otherwise returns the default processed path, or `None` when the table has not
