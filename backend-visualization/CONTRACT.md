@@ -49,6 +49,12 @@ Not in scope (owned elsewhere):
 6. **Synthetic / Mock Labeling:**
    - Any fixture or mock payload generated when running offline or in demo mode
      carries `"is_synthetic": true` and `"data_source": "mock | mmcows_cleaned"`.
+7. **Query Parameter Threading (Reconciled with `apis/CONTRACT.md` §7.2):**
+   - `ts_utc`: ISO-8601 UTC timestamp (e.g. `?ts_utc=2023-07-28T14:00:00Z`).
+   - `pen_id`: Pen identifier (e.g. `&pen_id=pen_01`).
+   - `lookback_hours`: Lookback window in hours (e.g. `&lookback_hours=72`).
+   - `days`: Timeseries duration in days for cow detail (e.g. `&days=7`).
+   All HTTP GET endpoints parse query parameters and pass them through to underlying payload shapers.
 
 ---
 

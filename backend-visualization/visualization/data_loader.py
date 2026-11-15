@@ -374,7 +374,10 @@ def load_milk_visits_data() -> List[Dict[str, Any]]:
     return []
 
 
-def get_pen_map_data() -> Tuple[Dict[str, Any], bool]:
+def get_pen_map_data(
+    ts_utc: Optional[str] = None,
+    pen_id: Optional[str] = None,
+) -> Tuple[Dict[str, Any], bool]:
     """
     Constructs the 2D pen map payload using real lying bouts and
     analysis resting circles (1.5m radius) if available.
@@ -424,12 +427,14 @@ def get_pen_map_data() -> Tuple[Dict[str, Any], bool]:
         lying_bouts=bouts,
         resting_areas=resting_areas,
         contact_events=contact_events,
+        pen_id=pen_id or "pen_01",
+        ts_utc=ts_utc,
         is_synthetic=is_synthetic,
     )
     return payload, is_synthetic
 
 
-def get_herd_health_data() -> Tuple[Dict[str, Any], bool]:
+def get_herd_health_data(ts_utc: Optional[str] = None) -> Tuple[Dict[str, Any], bool]:
     """
     Retrieves herd health payload with health index and mastitis risk components.
     Consumes backend-analysis auto_flags.json or cow_risk_summary.json if present.
@@ -520,11 +525,14 @@ def get_herd_health_data() -> Tuple[Dict[str, Any], bool]:
                     "is_synthetic": False,
                 })
 
-    payload = generate_herd_health(cows_health_data=cows_health, is_synthetic=is_synthetic)
+    payload = generate_herd_health(cows_health_data=cows_health, ts_utc=ts_utc, is_synthetic=is_synthetic)
     return payload, is_synthetic
 
 
-def get_attribution_data() -> Tuple[Dict[str, Any], bool]:
+def get_attribution_data(
+    ts_utc: Optional[str] = None,
+    lookback_hours: Optional[int] = None,
+) -> Tuple[Dict[str, Any], bool]:
     """
     Retrieves outbreak attribution panel payload.
     Returns (attribution_payload, is_synthetic).
@@ -542,15 +550,20 @@ def get_attribution_data() -> Tuple[Dict[str, Any], bool]:
                 with open(p, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 is_synthetic = bool(data.get("is_synthetic", False))
-                return generate_attribution(attribution_data=data, is_synthetic=is_synthetic), is_synthetic
+                return generate_attribution(
+                    attribution_data=data,
+                    ts_utc=ts_utc,
+                    lookback_hours=lookback_hours or 72,
+                    is_synthetic=is_synthetic,
+                ), is_synthetic
             except Exception as e:
                 logger.warning("Failed to parse backtrace_result at %s: %s", p, e)
 
-    payload = generate_attribution(is_synthetic=True)
+    payload = generate_attribution(ts_utc=ts_utc, lookback_hours=lookback_hours or 72, is_synthetic=True)
     return payload, True
 
 
-def get_impact_data() -> Tuple[Dict[str, Any], bool]:
+def get_impact_data(ts_utc: Optional[str] = None) -> Tuple[Dict[str, Any], bool]:
     """
     Retrieves economic and transmission prevention impact payload.
     Returns (impact_payload, is_synthetic).
@@ -579,9 +592,12 @@ def get_impact_data() -> Tuple[Dict[str, Any], bool]:
                     "transmission_prevented_cases_est": float(summary.get("transmission_prevented_cases_est", 3.0)),
                     "is_synthetic": False,
                 }
-                return generate_impact(impact_data=impact_payload, is_synthetic=False), False
+                return generate_impact(impact_data=impact_payload, ts_utc=ts_utc, is_synthetic=False), False
             except Exception as e:
                 logger.warning("Failed to parse impact data at %s: %s", p, e)
+
+    payload = generate_impact(ts_utc=ts_utc, is_synthetic=True)
+    return payload, True
 
     payload = generate_impact(is_synthetic=True)
     return payload, True
