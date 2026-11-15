@@ -11,6 +11,7 @@ Runs:
 
 from __future__ import annotations
 import json
+import sys
 from pathlib import Path
 from typing import Any
 import pandas as pd
@@ -30,6 +31,26 @@ from .cow_day_features import aggregate_cow_day_features
 from .tiered_baselines import compute_tiered_baselines
 from .health_index import compute_health_index
 from .mastitis_risk import evaluate_acute_mastitis_risk
+from .backtrace import backtrace
+
+
+def find_behavior_minute_path() -> Path | None:
+    """Locate behavior_minute.parquet from model/behavior/apply.py if present."""
+    repo_root = Path(__file__).resolve().parents[2]
+    candidate = repo_root / "backend-cleaning" / "data" / "processed" / "behavior_minute.parquet"
+    if candidate.is_file():
+        return candidate
+    cleaning_dir = repo_root / "backend-cleaning"
+    if str(cleaning_dir) not in sys.path:
+        sys.path.insert(0, str(cleaning_dir))
+    try:
+        from cleaning.locate import PROCESSED_DIR
+        p = PROCESSED_DIR / "behavior_minute.parquet"
+        if p.is_file():
+            return p
+    except Exception:
+        pass
+    return None
 
 
 def write_schema_sidecar(
@@ -80,6 +101,18 @@ def run_analysis_pipeline(
         Dictionary containing cow summaries, time series, and benchmark results.
     """
     df_proc = df.copy()
+
+    # 0. Merge behavior classifier predictions if available
+    bm_path = find_behavior_minute_path()
+    if bm_path is not None and "behavior_name" not in df_proc.columns:
+        try:
+            df_bm = pd.read_parquet(bm_path)
+            if "cow_id" in df_bm.columns and "ts_utc" in df_bm.columns:
+                df_bm["ts_utc"] = pd.to_datetime(df_bm["ts_utc"], utc=True)
+                cols_to_merge = [c for c in ["cow_id", "ts_utc", "behavior", "behavior_name", "prob"] if c in df_bm.columns]
+                df_proc = df_proc.merge(df_bm[cols_to_merge], on=["cow_id", "ts_utc"], how="left")
+        except Exception:
+            pass
 
     # 1. Environmental THI
     if "indoor_thi" in df_proc.columns:
@@ -264,7 +297,39 @@ def run_analysis_pipeline(
     behavior_eval = validate_behavior_against_ground_truth(df_proc)
     benchmarks["behavior_ground_truth_validation"] = behavior_eval
 
-    # 8. Write outputs if directory provided
+    # 8. S8–S11 Outbreak Backtrace Result (for auto-flags or prioritized watch cows)
+    trace_flags = auto_flags if auto_flags else [
+        {"cow_id": cid} for cid, s in cow_summaries.items()
+        if s.get("watch_risk_score", 0.0) >= 50.0
+    ]
+    if not trace_flags and cow_summaries:
+        trace_flags = [{"cow_id": list(cow_summaries.keys())[0]}]
+
+    try:
+        backtrace_result = backtrace(
+            flags=trace_flags,
+            lookback_hours=72,
+            is_synthetic=is_synthetic,
+        )
+    except Exception as exc:
+        backtrace_result = {
+            "investigation_id": "trace_error",
+            "flagged_cows": [f["cow_id"] for f in trace_flags if isinstance(f, dict) and "cow_id" in f],
+            "likely_route": "no_common_route",
+            "p_values": {"resting_route": 1.0, "milking_equipment": 1.0},
+            "implicated_units_or_cells": [],
+            "implicated_resting_areas": [],
+            "implicated_circles": [],
+            "implicated_resources": {"primary_unit_or_cell": None, "all": [], "resting_areas": []},
+            "exposed_cows": [],
+            "high_risk_contacts": [],
+            "recommended_actions": [],
+            "is_model_suggestion": True,
+            "is_synthetic": is_synthetic,
+            "error": str(exc),
+        }
+
+    # 9. Write outputs if directory provided
     if output_dir is not None:
         out_path = Path(output_dir)
         out_path.mkdir(parents=True, exist_ok=True)
@@ -276,6 +341,10 @@ def run_analysis_pipeline(
         flags_file = out_path / "auto_flags.json"
         with open(flags_file, "w", encoding="utf-8") as f:
             json.dump(auto_flags, f, indent=2)
+
+        backtrace_file = out_path / "backtrace_result.json"
+        with open(backtrace_file, "w", encoding="utf-8") as f:
+            json.dump(backtrace_result, f, indent=2)
 
         benchmark_file = out_path / "benchmark_results.json"
         with open(benchmark_file, "w", encoding="utf-8") as f:
@@ -293,6 +362,7 @@ def run_analysis_pipeline(
     return {
         "cow_summaries": cow_summaries,
         "auto_flags": auto_flags,
+        "backtrace_result": backtrace_result,
         "benchmarks": benchmarks,
         "analyzed_df": df_proc,
         "cow_day_df": cow_day_df,

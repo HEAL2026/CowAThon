@@ -26,6 +26,8 @@ class TestPipelineIntegration(unittest.TestCase):
 
             # Check return structure
             self.assertIn("cow_summaries", result)
+            self.assertIn("auto_flags", result)
+            self.assertIn("backtrace_result", result)
             self.assertIn("benchmarks", result)
             self.assertIn("analyzed_df", result)
 
@@ -41,12 +43,22 @@ class TestPipelineIntegration(unittest.TestCase):
 
             # Verify exported files exist
             summary_file = out_path / "cow_risk_summary.json"
+            flags_file = out_path / "auto_flags.json"
+            backtrace_file = out_path / "backtrace_result.json"
             benchmark_file = out_path / "benchmark_results.json"
             timeseries_file = out_path / "analyzed_timeseries.parquet"
 
             self.assertTrue(summary_file.exists())
+            self.assertTrue(flags_file.exists())
+            self.assertTrue(backtrace_file.exists())
             self.assertTrue(benchmark_file.exists())
             self.assertTrue(timeseries_file.exists())
+
+            with open(backtrace_file, "r", encoding="utf-8") as f:
+                bt_data = json.load(f)
+            self.assertIn("likely_route", bt_data)
+            self.assertIn("implicated_resting_areas", bt_data)
+            self.assertTrue(bt_data["is_model_suggestion"])
 
             # Check schema sidecars exist and are valid
             ts_schema_file = out_path / "analyzed_timeseries.schema.json"

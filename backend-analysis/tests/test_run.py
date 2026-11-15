@@ -76,6 +76,27 @@ class TestAnalysisRunCLI(unittest.TestCase):
             self.assertEqual(sorted(list(summary.keys())), ["C01", "C03"])
             self.assertFalse(summary["C01"]["is_synthetic"])
 
+    def test_run_cli_export_vis_dir_includes_backtrace_result(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            out_dir = tmp_path / "output"
+            vis_dir = tmp_path / "vis_export"
+
+            code = run_cli([
+                "--out", str(out_dir),
+                "--export-vis-dir", str(vis_dir),
+                "--quiet",
+            ])
+            self.assertEqual(code, 0)
+
+            backtrace_file = vis_dir / "backtrace_result.json"
+            self.assertTrue(backtrace_file.exists())
+            with open(backtrace_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self.assertIn("likely_route", data)
+            self.assertIn("implicated_resting_areas", data)
+            self.assertTrue(data["is_model_suggestion"])
+
 
 if __name__ == "__main__":
     unittest.main()

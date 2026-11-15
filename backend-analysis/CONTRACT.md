@@ -327,7 +327,9 @@ Produced by `analysis.evaluate_backtrace_against_synthetic()`:
 }
 ```
 
-## 5. Parquet Schema Sidecars (`.schema.json`)
+## 5. Parquet Schema Sidecars & Export Bundles (`.schema.json`, `backtrace_result.json`)
 Every generated Parquet dataset ships an accompanying `.schema.json` sidecar matching the canonical `backend-cleaning` CONTRACT:
 - `analyzed_timeseries.schema.json`: Documents cadence (`1m`), primary keys (`cow_id`, `ts_utc`), row count, and per-column dtypes and null counts.
 - `cow_day_features.schema.json`: Documents cadence (`1d`), primary keys (`cow_id`, `date`), row count, and per-column dtypes and null counts.
+
+Additionally, pipeline execution exports `backtrace_result.json` (adhering to Schema §4.4) for direct ingestion by `backend-visualization/visualization/data_loader.py` to prevent synthetic fallback across pen-map, attribution, and impact endpoints.
