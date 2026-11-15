@@ -18,6 +18,7 @@ downstream does.
 |---|---|---|
 | `barn_id` | string | |
 | `pen_id` | string | MMCows has one pen |
+| `zone_id` | string | **Aster: per zone** (e.g. `cubicle_row_a`, `cubicle_row_b`); resting traces are bounded per zone between `changed_at` rows |
 | `bedding_type` | string | e.g. `sand`, `straw`, `sawdust`, `recycled_manure_solids` |
 | `changed_at` | timestamp UTC | **the bedding window boundary**; all bedding in the barn changes at once (brief §1) |
 | `bacterial_count` | float, opt | CFU/g, if measured |
@@ -34,9 +35,10 @@ the same pen. Resting-route exposure (S8) is only counted **within** a window.
 |---|---|---|
 | `cow_id` | string | |
 | `milking_time` | timestamp UTC | start of the visit |
-| `unit_id` | string | milking unit / stall |
+| `unit_id` | string | milking unit |
+| `stall_number` | string, opt | **Aster: present**, per-visit rows confirmed |
 | `yield_kg` | float | MMCows gives **daily** `milk_yield_kg`; per‑visit yield is synthetic unless Aster's data has it |
-| `conductivity_ms` | float, opt | mS/cm; cow‑level, or per quarter as `conductivity_lf/rf/lr/rr_ms` |
+| `cond_lf`, `cond_lr`, `cond_rf`, `cond_rr`, `cond_max` | float, opt | mS/cm, **per quarter** (Aster), `cond_max` = max over quarters; ICAR ADE / DeLaval / Lely naming |
 | `scc_kcells_ml` | float, opt | somatic cell count, thousand cells/mL |
 | `fat_pct`, `protein_pct`, `lactose_pct` | float, opt | |
 | `blood_flag` | bool, opt | |
@@ -112,7 +114,14 @@ in `data/interim/` (uwb 15 s, labels 1 s; 10 Hz IMU stays in raw CSV).
 sanitation, conductivity/SCC, mastitis cases, bedding changes. Health records
 exist in `sub_data/health_records` (16 small files) and are being pulled.
 
-## Open questions for Aster
+## Answers from Aster (board, 2026‑11‑15)
+
+1. Bedding per **zone** (`zone_id`), not whole barn — resting traces bounded per zone.
+2. Milk: **per‑visit rows with `unit_id` / `stall_number`** — `milking_log` can be real, not synthetic.
+3. Conductivity **per quarter** `cond_lf/lr/rf/rr` + `cond_max`.
+4. Licence stated as CC‑BY‑4.0. (MMCows itself is CC BY‑NC‑SA 4.0; the two are not the same — keep the attributions separate in the README.)
+
+## Original open questions (kept for the record)
 
 1. Is bedding one `changed_at` series for the whole barn (brief assumption), or per pen?
 2. Does the milk data have per‑visit rows with `unit_id`? If not, `milking_log` is fully synthetic and I will say so in every payload.
