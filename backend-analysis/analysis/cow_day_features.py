@@ -67,8 +67,15 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
     dmi_col = "dmi_kg" if "dmi_kg" in df_proc.columns else (
         "dmi" if "dmi" in df_proc.columns else None
     )
-    fat_col = "fat_pct" if "fat_pct" in df_proc.columns else None
-    prot_col = "protein_pct" if "protein_pct" in df_proc.columns else None
+    fat_col = "milk_fat_pct" if "milk_fat_pct" in df_proc.columns else (
+        "fat_pct" if "fat_pct" in df_proc.columns else None
+    )
+    prot_col = "milk_protein_pct" if "milk_protein_pct" in df_proc.columns else (
+        "protein_pct" if "protein_pct" in df_proc.columns else None
+    )
+    lact_col = "milk_lactose_pct" if "milk_lactose_pct" in df_proc.columns else (
+        "lactose_pct" if "lactose_pct" in df_proc.columns else None
+    )
 
     # Group by cow_id and date
     records = []
@@ -205,14 +212,28 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
             rec["dmi_kg"] = None
 
         if fat_col and group[fat_col].notna().any():
-            rec["fat_pct"] = round(float(group[fat_col].dropna().iloc[-1]), 2)
+            v_fat = round(float(group[fat_col].dropna().iloc[-1]), 2)
+            rec["milk_fat_pct"] = v_fat
+            rec["fat_pct"] = v_fat
         else:
+            rec["milk_fat_pct"] = None
             rec["fat_pct"] = None
 
         if prot_col and group[prot_col].notna().any():
-            rec["protein_pct"] = round(float(group[prot_col].dropna().iloc[-1]), 2)
+            v_prot = round(float(group[prot_col].dropna().iloc[-1]), 2)
+            rec["milk_protein_pct"] = v_prot
+            rec["protein_pct"] = v_prot
         else:
+            rec["milk_protein_pct"] = None
             rec["protein_pct"] = None
+
+        if lact_col and group[lact_col].notna().any():
+            v_lact = round(float(group[lact_col].dropna().iloc[-1]), 2)
+            rec["milk_lactose_pct"] = v_lact
+            rec["lactose_pct"] = v_lact
+        else:
+            rec["milk_lactose_pct"] = None
+            rec["lactose_pct"] = None
 
         records.append(rec)
 

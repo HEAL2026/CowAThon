@@ -144,8 +144,9 @@ class TestS5S7Pipeline(unittest.TestCase):
         df_ext["respiration_rate_bpm"] = 65.0
         df_ext["pulse_rate_bpm"] = 72.0
         df_ext["dmi_kg"] = 24.5
-        df_ext["fat_pct"] = 3.8
-        df_ext["protein_pct"] = 3.2
+        df_ext["milk_fat_pct"] = 3.8
+        df_ext["milk_protein_pct"] = 3.2
+        df_ext["milk_lactose_pct"] = 4.8
 
         day_df = aggregate_cow_day_features(df_ext)
         self.assertEqual(len(day_df), 4)
@@ -156,8 +157,12 @@ class TestS5S7Pipeline(unittest.TestCase):
         self.assertEqual(c01["respiration_rate_bpm_mean"], 65.0)
         self.assertEqual(c01["pulse_rate_bpm_mean"], 72.0)
         self.assertEqual(c01["dmi_kg"], 24.5)
+        self.assertEqual(c01["milk_fat_pct"], 3.8)
         self.assertEqual(c01["fat_pct"], 3.8)
+        self.assertEqual(c01["milk_protein_pct"], 3.2)
         self.assertEqual(c01["protein_pct"], 3.2)
+        self.assertEqual(c01["milk_lactose_pct"], 4.8)
+        self.assertEqual(c01["lactose_pct"], 4.8)
 
         # Verify pipeline calculates cbt_strain_score from rectal_temp_c
         with tempfile.TemporaryDirectory() as tmpdir:
