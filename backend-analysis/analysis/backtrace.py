@@ -46,10 +46,12 @@ def run_permutation_attribution_test(
     lookback_hours: int = 72,
     n_permutations: int = 200,
     seed: int = 42,
+    reference_time: pd.Timestamp | str | None = None,
 ) -> dict[str, Any]:
     """Execute permutation test to attribute transmission route and compute empirical p-values."""
     flag_set = set(flagged_cows)
     rng = np.random.default_rng(seed)
+    ref_t = pd.to_datetime(reference_time, utc=True) if reference_time is not None else None
 
     # 1. Observed test statistics
     res_obs = calculate_resting_exposure(
@@ -57,12 +59,14 @@ def run_permutation_attribution_test(
         bedding_df=bedding_df,
         flagged_cows=flag_set,
         lookback_hours=lookback_hours,
+        reference_time=ref_t,
     )
     milk_obs = calculate_milking_exposure(
         milking_log_df=milking_log_df,
         sanitation_df=sanitation_df,
         flagged_cows=flag_set,
         lookback_hours=lookback_hours,
+        reference_time=ref_t,
     )
 
     def compute_case_contact_score(contact_events: list[dict[str, Any]], cases: set[str]) -> float:
@@ -111,6 +115,7 @@ def run_permutation_attribution_test(
                 bedding_df=bedding_df,
                 flagged_cows=shuffled_flags,
                 lookback_hours=lookback_hours,
+                reference_time=ref_t,
             )
             t_perm_rest = compute_case_contact_score(res_perm.get("contact_events", []), shuffled_flags)
             if t_perm_rest >= t_resting_obs:
@@ -125,6 +130,7 @@ def run_permutation_attribution_test(
                 sanitation_df=sanitation_df,
                 flagged_cows=shuffled_flags,
                 lookback_hours=lookback_hours,
+                reference_time=ref_t,
             )
             t_perm_milk = compute_case_contact_score(milk_perm.get("contact_events", []), shuffled_flags)
             if t_perm_milk >= t_milking_obs:
@@ -328,6 +334,7 @@ def backtrace(
     sanitation_df: pd.DataFrame | None = None,
     n_permutations: int = 200,
     seed: int = 42,
+    reference_time: pd.Timestamp | str | None = None,
 ) -> dict[str, Any]:
     """Execute outbreak backtrace investigation across resting and milking transmission routes.
 
@@ -340,6 +347,8 @@ def backtrace(
         sanitation_df: Optional DataFrame of parlor unit sanitations.
         n_permutations: Number of random permutations for empirical p-values (default: 200).
         seed: Random seed for permutation reproducibility.
+        reference_time: Optional explicit timestamp anchoring the investigation window.
+                        If None, inferred from flag timestamps or latest events of flagged cows.
 
     Returns:
         BacktraceResult dictionary adhering to data contracts.
@@ -370,18 +379,51 @@ def backtrace(
         if not flagged_ids:
             flagged_ids = ["C02"]
 
+    # Resolve investigation reference time
+    ref_t = pd.to_datetime(reference_time, utc=True) if reference_time is not None else None
+
+    # Infer from flag timestamps if available
+    if ref_t is None and flags:
+        flag_ts = []
+        for f in flags:
+            for k in ("dx_utc", "onset_utc", "timestamp", "ts_utc", "created_at"):
+                v = f.get(k)
+                if v is not None:
+                    try:
+                        flag_ts.append(pd.to_datetime(v, utc=True))
+                    except Exception:
+                        pass
+        if flag_ts:
+            ref_t = max(flag_ts)
+
+    # If still None, default to latest timestamp in available tables
+    if ref_t is None:
+        table_ts = []
+        if lying_bouts_df is not None and len(lying_bouts_df) > 0:
+            t_col = "end_utc" if "end_utc" in lying_bouts_df.columns else ("start_utc" if "start_utc" in lying_bouts_df.columns else None)
+            if t_col and pd.notna(lying_bouts_df[t_col]).any():
+                table_ts.append(pd.to_datetime(lying_bouts_df[t_col], utc=True).max())
+        if milking_log_df is not None and len(milking_log_df) > 0:
+            t_col = "milking_time" if "milking_time" in milking_log_df.columns else ("event_datetime" if "event_datetime" in milking_log_df.columns else None)
+            if t_col and pd.notna(milking_log_df[t_col]).any():
+                table_ts.append(pd.to_datetime(milking_log_df[t_col], utc=True).max())
+        if table_ts:
+            ref_t = max(table_ts)
+
     # Execute S8 & S9 exposure analyses
     res_resting = calculate_resting_exposure(
         lying_bouts_df=lying_bouts_df,
         bedding_df=bedding_df,
         flagged_cows=flagged_ids,
         lookback_hours=lookback_hours,
+        reference_time=ref_t,
     )
     res_milking = calculate_milking_exposure(
         milking_log_df=milking_log_df if milking_log_df is not None else pd.DataFrame(),
         sanitation_df=sanitation_df,
         flagged_cows=flagged_ids,
         lookback_hours=lookback_hours,
+        reference_time=ref_t,
     )
 
     # Execute S10 combined exposure
@@ -401,6 +443,7 @@ def backtrace(
         lookback_hours=lookback_hours,
         n_permutations=n_permutations,
         seed=seed,
+        reference_time=ref_t,
     )
 
     # Synthesize implicated units/cells
@@ -439,6 +482,7 @@ def backtrace(
     return {
         "investigation_id": inv_id,
         "generated_at_utc": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "reference_time_utc": ref_t.strftime("%Y-%m-%dT%H:%M:%SZ") if ref_t is not None else None,
         "lookback_hours": lookback_hours,
         "flagged_cows": flagged_ids,
         "likely_route": perm_res["likely_route"],

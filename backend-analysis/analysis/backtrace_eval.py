@@ -85,10 +85,17 @@ def evaluate_synthetic_episode(
     n_permutations: int = 100,
     seed: int = 42,
     k_values: Sequence[int] = (1, 2, 3, 5),
+    reference_time: pd.Timestamp | str | None = None,
+    flag_metadata: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Evaluate backtrace against a single outbreak or sporadic episode."""
     all_flags = ([index_cow] if index_cow else []) + secondary_cows
-    flag_dicts = [{"cow_id": cid} for cid in all_flags]
+    flag_dicts = []
+    for cid in all_flags:
+        item = {"cow_id": cid}
+        if flag_metadata and cid in flag_metadata:
+            item.update(flag_metadata[cid])
+        flag_dicts.append(item)
 
     # 1. Full Outbreak Route Attribution
     full_res = backtrace(
@@ -100,6 +107,7 @@ def evaluate_synthetic_episode(
         sanitation_df=sanitation_df,
         n_permutations=n_permutations,
         seed=seed,
+        reference_time=reference_time,
     )
 
     pred_route = full_res.get("likely_route", "no_common_route")
@@ -113,8 +121,11 @@ def evaluate_synthetic_episode(
     rec_at_k: dict[str, float] = {}
 
     if index_cow and len(secondary_cows) > 0:
+        index_flag = {"cow_id": index_cow}
+        if flag_metadata and index_cow in flag_metadata:
+            index_flag.update(flag_metadata[index_cow])
         index_res = backtrace(
-            flags=[{"cow_id": index_cow}],
+            flags=[index_flag],
             lookback_hours=lookback_hours,
             lying_bouts_df=lying_bouts_df,
             milking_log_df=milking_log_df,
@@ -122,6 +133,7 @@ def evaluate_synthetic_episode(
             sanitation_df=sanitation_df,
             n_permutations=max(20, n_permutations // 2),
             seed=seed,
+            reference_time=reference_time,
         )
         ranked_exposed = [
             c["cow_id"]
@@ -142,6 +154,7 @@ def evaluate_synthetic_episode(
         "true_route": true_route,
         "predicted_route": pred_route,
         "route_match": bool(route_match),
+        "reference_time_utc": full_res.get("reference_time_utc"),
         "p_values": full_res.get("p_values", {}),
         "source_hit": bool(source_hit),
         "true_source": true_source,
@@ -189,6 +202,27 @@ def evaluate_backtrace_against_synthetic(
         if p.is_file():
             labels_df = pd.read_parquet(p)
 
+    # If labels_df still not provided, search default synthetic data directory
+    if labels_df is None:
+        cand_paths = [
+            Path("backend-cleaning/data/synthetic/synthetic_labels.parquet"),
+            Path("../backend-cleaning/data/synthetic/synthetic_labels.parquet"),
+            Path(__file__).resolve().parents[2] / "backend-cleaning" / "data" / "synthetic" / "synthetic_labels.parquet",
+        ]
+        for cp in cand_paths:
+            if cp.is_file():
+                labels_df = pd.read_parquet(cp)
+                synth_dir = cp.parent
+                if lying_bouts_df is None and (synth_dir / "lying_bouts.parquet").is_file():
+                    lying_bouts_df = pd.read_parquet(synth_dir / "lying_bouts.parquet")
+                if milking_log_df is None and (synth_dir / "milking_log.parquet").is_file():
+                    milking_log_df = pd.read_parquet(synth_dir / "milking_log.parquet")
+                if bedding_df is None and (synth_dir / "bedding_synthetic.parquet").is_file():
+                    bedding_df = pd.read_parquet(synth_dir / "bedding_synthetic.parquet")
+                if sanitation_df is None and (synth_dir / "sanitation.parquet").is_file():
+                    sanitation_df = pd.read_parquet(synth_dir / "sanitation.parquet")
+                break
+
     episode_evaluations: list[dict[str, Any]] = []
 
     if labels_df is not None and len(labels_df) > 0 and "scenario" in labels_df.columns:
@@ -198,10 +232,36 @@ def evaluate_backtrace_against_synthetic(
             src_raw = group["true_source"].iloc[0] if "true_source" in group.columns else {}
             true_src = _parse_source(src_raw)
 
+            # Robust index cow selection (check role == 'index', earliest onset_utc, or earliest dx_utc)
             idx_mask = group["role"] == "index" if "role" in group.columns else pd.Series(False, index=group.index)
             index_cows = group.loc[idx_mask, "cow_id"].tolist()
-            index_cow = index_cows[0] if index_cows else None
-            sec_cows = group.loc[~idx_mask, "cow_id"].tolist()
+            if index_cows:
+                index_cow = index_cows[0]
+            elif "onset_utc" in group.columns and group["onset_utc"].notna().any():
+                index_cow = str(group.sort_values("onset_utc").iloc[0]["cow_id"])
+            elif "dx_utc" in group.columns and group["dx_utc"].notna().any():
+                index_cow = str(group.sort_values("dx_utc").iloc[0]["cow_id"])
+            else:
+                index_cow = None
+
+            sec_cows = [str(c) for c in group["cow_id"].unique() if str(c) != str(index_cow)]
+
+            # Extract scenario reference time to anchor 72-hour window on historical multi-day tables
+            ref_t = None
+            for t_col in ("dx_utc", "onset_utc"):
+                if t_col in group.columns and group[t_col].notna().any():
+                    ref_t = pd.to_datetime(group[t_col], utc=True).max()
+                    break
+
+            # Metadata per cow (timestamps)
+            meta: dict[str, dict[str, Any]] = {}
+            for _, r in group.iterrows():
+                cid = str(r["cow_id"])
+                m: dict[str, Any] = {}
+                for k in ("dx_utc", "onset_utc"):
+                    if k in r and pd.notna(r[k]):
+                        m[k] = r[k]
+                meta[cid] = m
 
             # Dataframes for this episode
             b_df = lying_bouts_df
@@ -225,6 +285,8 @@ def evaluate_backtrace_against_synthetic(
                 sanitation_df=s_df,
                 n_permutations=n_permutations,
                 seed=seed,
+                reference_time=ref_t,
+                flag_metadata=meta,
             )
             episode_evaluations.append(ep_res)
     else:
