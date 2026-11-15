@@ -125,13 +125,16 @@ Dictionary keyed by `cow_id`:
 ```
 
 ### 4.2 Benchmark Results Schema (`benchmark_results.json`)
-Results of animal-disjoint group cross-validation comparing single-sensor baselines against the multimodal predictor:
+Results of animal-disjoint group cross-validation comparing single-sensor baselines against the multimodal predictor.
+The `evaluation_protocol` explicitly distinguishes `group_kfold_K (n=N)`, `leave_one_animal_out (n=N)`, or `insufficient_animals_for_cv (n=N)`:
 ```json
 {
   "dataset": "MMCows Challenge 1",
-  "evaluation_protocol": "GroupKFold by cow_id (zero animal leakage)",
+  "evaluation_protocol": "group_kfold_5 (n=10)",
   "n_groups": 10,
   "n_splits": 5,
+  "cv_unavailable": false,
+  "is_synthetic": false,
   "baselines": {
     "thi_threshold_baseline": {
       "description": "Classical environmental rule: Alert when THI >= 68.0",

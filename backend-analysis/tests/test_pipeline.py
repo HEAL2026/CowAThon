@@ -57,6 +57,7 @@ class TestPipelineIntegration(unittest.TestCase):
                 loaded_benchmarks = json.load(f)
             self.assertIn("baselines", loaded_benchmarks)
             self.assertIn("multimodal_model", loaded_benchmarks)
+            self.assertEqual(loaded_benchmarks["evaluation_protocol"], "group_kfold_5 (n=10)")
 
             # Validate Parquet file loads cleanly
             df_loaded = pd.read_parquet(timeseries_file)
@@ -105,6 +106,7 @@ class TestPipelineIntegration(unittest.TestCase):
         self.assertFalse(benchmarks["cv_unavailable"])
         self.assertEqual(benchmarks["n_groups"], 4)
         self.assertEqual(benchmarks["n_splits"], 4)
+        self.assertEqual(benchmarks["evaluation_protocol"], "leave_one_animal_out (n=4)")
 
     def test_pipeline_undersized_herd_cv_degradation(self):
         # 2 cows: below n=3 floor, skips CV and degrades confidence without crashing
@@ -114,6 +116,7 @@ class TestPipelineIntegration(unittest.TestCase):
         benchmarks = result["benchmarks"]
         self.assertTrue(benchmarks["cv_unavailable"])
         self.assertEqual(benchmarks["n_splits"], 0)
+        self.assertEqual(benchmarks["evaluation_protocol"], "insufficient_animals_for_cv (n=2)")
         self.assertIn("Need at least 3", benchmarks["cv_unavailable_reason"])
 
         # Confidence should be gracefully degraded
