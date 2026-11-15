@@ -123,6 +123,25 @@ class StateStore:
             self._flags[flag_id] = flag
             return flag
 
+    def add_flags(
+        self,
+        animal_ids: List[str],
+        flag_type: str,
+        reason: str,
+        flagged_by: str = "operator",
+        flagged_at_utc: Optional[str] = None,
+    ) -> List[FlagRecord]:
+        created: List[FlagRecord] = []
+        for aid in animal_ids:
+            created.append(self.add_flag(
+                animal_id=aid,
+                flag_type=flag_type,
+                reason=reason,
+                flagged_by=flagged_by,
+                flagged_at_utc=flagged_at_utc,
+            ))
+        return created
+
     def update_flag_status(
         self,
         flag_id: str,
@@ -153,12 +172,15 @@ class StateStore:
         target_animal_id: str,
         lookback_days: int,
         summary: Dict[str, Any],
+        target_animal_ids: Optional[List[str]] = None,
     ) -> BacktraceRun:
         with self._lock:
             run_id = f"trace_{uuid4().hex[:8]}"
+            targets = target_animal_ids or ([target_animal_id] if target_animal_id else [])
             run = BacktraceRun(
                 run_id=run_id,
                 target_animal_id=target_animal_id,
+                target_animal_ids=targets,
                 initiated_at_utc=now_utc_iso(),
                 status="completed",
                 lookback_days=lookback_days,

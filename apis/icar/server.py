@@ -118,14 +118,27 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(entry).encode("utf-8"))
 
             elif path == "/flags":
-                animal_id = payload.get("animal_id")
-                if not animal_id:
-                    self._set_headers(400)
-                    self.wfile.write(json.dumps({"error": "animal_id required."}).encode("utf-8"))
-                    return
+                animal_ids = payload.get("animal_ids")
                 flag_type = payload.get("flag_type", "manual")
                 reason = payload.get("reason", "Watch request")
                 flagged_by = payload.get("flagged_by", "operator")
+
+                if animal_ids and isinstance(animal_ids, list):
+                    flags = self.service.create_flags(
+                        animal_ids=animal_ids,
+                        flag_type=flag_type,
+                        reason=reason,
+                        flagged_by=flagged_by,
+                    )
+                    self._set_headers(201)
+                    self.wfile.write(json.dumps({"flags": flags}).encode("utf-8"))
+                    return
+
+                animal_id = payload.get("animal_id")
+                if not animal_id:
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({"error": "animal_id or animal_ids required."}).encode("utf-8"))
+                    return
                 flag = self.service.create_flag(
                     animal_id=animal_id,
                     flag_type=flag_type,
@@ -136,9 +149,13 @@ class IcarAdeHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps(flag).encode("utf-8"))
 
             elif path == "/backtrace":
-                animal_id = payload.get("animal_id") or payload.get("target_animal_id", "C02")
+                target_ids = payload.get("animal_ids")
+                if target_ids and isinstance(target_ids, list):
+                    target = target_ids
+                else:
+                    target = payload.get("animal_id") or payload.get("target_animal_id", "C02")
                 lookback_days = int(payload.get("lookback_days", 7))
-                run = self.service.run_backtrace(animal_id=animal_id, lookback_days=lookback_days)
+                run = self.service.run_backtrace(animal_id=target, lookback_days=lookback_days)
                 self._set_headers(200)
                 self.wfile.write(json.dumps(run).encode("utf-8"))
 

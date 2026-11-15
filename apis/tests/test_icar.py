@@ -212,6 +212,34 @@ class TestIcarAdeService(unittest.TestCase):
         self.assertEqual(run["targetAnimalId"], "C02")
         self.assertEqual(run["lookbackDays"], 3)
 
+    def test_group_flags_and_backtrace_circles(self):
+        # 1. Multi-cow group flag creation
+        flags = self.service.create_flags(
+            animal_ids=["C02", "C06"],
+            flag_type="manual",
+            reason="Group outbreak cluster",
+            flagged_by="operator",
+        )
+        self.assertEqual(len(flags), 2)
+        self.assertEqual(flags[0]["animalId"], "C02")
+        self.assertEqual(flags[1]["animalId"], "C06")
+
+        # 2. Multi-cow group backtrace
+        run = self.service.run_backtrace(animal_id=["C02", "C06"], lookback_days=5)
+        self.assertEqual(run["status"], "completed")
+        self.assertEqual(run["targetAnimalId"], "C02")
+        self.assertEqual(run["targetAnimalIds"], ["C02", "C06"])
+        self.assertIn("implicatedRestingCircles", run["summary"])
+        if "resting" in run["summary"]["likelyRoute"]:
+            circles = run["summary"]["implicatedRestingCircles"]
+            self.assertGreaterEqual(len(circles), 1)
+            first_c = circles[0]
+            self.assertEqual(first_c["radius_m"], 1.5)
+            self.assertIn("center_x_m", first_c)
+            self.assertIn("center_y_m", first_c)
+            self.assertIn("until_bedding_change_utc", first_c)
+            self.assertNotIn("cell_X", run["summary"]["implicatedResource"])
+
 
 if __name__ == "__main__":
     unittest.main()
