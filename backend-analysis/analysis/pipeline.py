@@ -312,7 +312,7 @@ def run_analysis_pipeline(
                 "posture_state": str(latest_row.get("posture_state", "unknown")),
                 "daily_milk_yield_kg": round(float(milk_val), 1) if milk_val is not None and not pd.isna(milk_val) else None,
                 "milk_drop_pct": round(float(latest_row.get("milk_drop_pct", 0.0)), 1),
-                "out_of_pen": bool(latest_row.get("out_of_pen", False)),
+                "out_of_pen": bool(latest_row.get("out_of_pen")) if pd.notna(latest_row.get("out_of_pen")) else False,
                 "is_stationary_hardware": is_hw,
             },
             "modalities_present": score_info["modalities_present"],
