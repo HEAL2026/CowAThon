@@ -143,10 +143,11 @@ function getGridBounds(payload) {
     isCentered: false,
   };
 }
-const configuredApiBase = window.HERDWISE_API_BASE || queryParams.get("api");
+const configuredApiBase = window.BOVIAL_API_BASE || window.HERDWISE_API_BASE || queryParams.get("api");
 const apiBase = (configuredApiBase || "http://127.0.0.1:8000").replace(/\/$/, "");
 const interactiveApiBase = (
-  window.HERDWISE_INTERACTIVE_API_BASE
+  window.BOVIAL_INTERACTIVE_API_BASE
+  || window.HERDWISE_INTERACTIVE_API_BASE
   || queryParams.get("interactiveApi")
   || configuredApiBase
   || apiBase
@@ -1504,7 +1505,7 @@ function handleAdvisorQuery(rawQuery) {
       "• <strong>Less likely (16%):</strong> Transfer from a milking cluster in the parlor. Washing milking units between cows prevents this.<br>" +
       "• <strong>Action:</strong> Check Fern's udder, clean out stalls B1–B8, and milk Fern last.";
   }
-  return "<strong>AI Herd Advisor:</strong> For North Barn (16 cows, 10 tracked), your top focus today is checking Fern 221's udder and cleaning damp bedding in Rest Zone B.";
+  return "<strong>Bovial AI Advisor:</strong> For North Barn (16 cows, 10 tracked), your top focus today is checking Fern 221's udder and cleaning damp bedding in Rest Zone B.";
 }
 
 // Inline farmer advisor form
@@ -1566,7 +1567,7 @@ if (farmerBtn3) {
 const exportClinicalBtn = document.querySelector("#export-clinical-report-btn");
 if (exportClinicalBtn) {
   exportClinicalBtn.addEventListener("click", () => {
-    const reportText = `HERDWISE CLINICAL CASE SUMMARY\nFarm: North Barn Dairy (Mike Johnson)\nDate: ${state.currentTsUtc || "Aug 4, 11:59 AM UTC"}\nPrimary Veterinarian: Dr. Maya Patel\n\nDIFFERENTIAL ATTRIBUTION:\n- Most Supported Route: Environmental Bedding Transmission (Likelihood 84%)\n- Resting Route Permutation p-value: 0.024 (Statistically Significant)\n- Milking Machine Permutation p-value: 0.412 (Non-significant)\n- Suspected Pathogens: E. coli, Streptococcus uberis, S. dysgalactiae\n\nPATIENT INVENTORY:\n- Primary Index Case: Cow C01 (Bessie 01)\n- Acute Clinical Suspect: Cow C03 (Fern 221) - Mastitis Risk 85%\n- Rest Zone Contacts: C01, C03, C04\n\nRECOMMENDED INTERVENTIONS:\n1. Complete California Mastitis Test (CMT) on C03 and C01.\n2. Initiate intramammary antimicrobial therapy if CMT score >= 2.\n3. Sanitize and renew organic bedding in Rest Zone B cubicles 1-8.\n4. Milk suspect cows last in milking sequence.`;
+    const reportText = `BOVIAL CLINICAL CASE SUMMARY\nFarm: North Barn Dairy (Mike Johnson)\nDate: ${state.currentTsUtc || "Aug 4, 11:59 AM UTC"}\nPrimary Veterinarian: Dr. Maya Patel\n\nDIFFERENTIAL ATTRIBUTION:\n- Most Supported Route: Environmental Bedding Transmission (Likelihood 84%)\n- Resting Route Permutation p-value: 0.024 (Statistically Significant)\n- Milking Machine Permutation p-value: 0.412 (Non-significant)\n- Suspected Pathogens: E. coli, Streptococcus uberis, S. dysgalactiae\n\nPATIENT INVENTORY:\n- Primary Index Case: Cow C01 (Bessie 01)\n- Acute Clinical Suspect: Cow C03 (Fern 221) - Mastitis Risk 85%\n- Rest Zone Contacts: C01, C03, C04\n\nRECOMMENDED INTERVENTIONS:\n1. Complete California Mastitis Test (CMT) on C03 and C01.\n2. Initiate intramammary antimicrobial therapy if CMT score >= 2.\n3. Sanitize and renew organic bedding in Rest Zone B cubicles 1-8.\n4. Milk suspect cows last in milking sequence.`;
     navigator.clipboard?.writeText?.(reportText);
     exportClinicalBtn.textContent = "Copied to clipboard ✓";
     setTimeout(() => { exportClinicalBtn.textContent = "Export clinical summary ↗"; }, 2500);
