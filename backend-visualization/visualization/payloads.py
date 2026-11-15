@@ -343,9 +343,17 @@ def generate_integrations_feasibility(
     """
     Constructs system integrations and cost feasibility payload.
     Provides guidance for small-farm economic adoption.
+    Dynamically consumes apis.create_default_registry() when available.
     """
     if registry_data is not None:
         return {"systems": registry_data}
+
+    try:
+        from apis import create_default_registry
+        reg = create_default_registry()
+        return reg.to_feasibility_payload()
+    except Exception:
+        pass
 
     default_systems = [
         {
