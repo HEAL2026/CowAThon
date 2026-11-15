@@ -37,7 +37,13 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
         df_proc["date"] = pd.Timestamp.now(tz="UTC").date()
 
     # Identify existing column names (accounting for aliases)
-    cbt_col = "cbt_c" if "cbt_c" in df_proc.columns else ("cbt" if "cbt" in df_proc.columns else None)
+    cbt_col = "cbt_c" if "cbt_c" in df_proc.columns else (
+        "cbt" if "cbt" in df_proc.columns else (
+            "rectal_temp_c" if "rectal_temp_c" in df_proc.columns else (
+                "rectal_temp" if "rectal_temp" in df_proc.columns else None
+            )
+        )
+    )
     thi_col = "indoor_thi" if "indoor_thi" in df_proc.columns else ("thi" if "thi" in df_proc.columns else None)
     act_col = "activity_index" if "activity_index" in df_proc.columns else (
         "neck_imu_magnitude_std" if "neck_imu_magnitude_std" in df_proc.columns else None
@@ -52,6 +58,17 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
     parity_col = "parity" if "parity" in df_proc.columns else None
     cond_col = "conductivity" if "conductivity" in df_proc.columns else None
     scc_col = "scc" if "scc" in df_proc.columns else None
+    resp_col = "respiration_rate_bpm" if "respiration_rate_bpm" in df_proc.columns else (
+        "respiration_rate" if "respiration_rate" in df_proc.columns else None
+    )
+    pulse_col = "pulse_rate_bpm" if "pulse_rate_bpm" in df_proc.columns else (
+        "pulse_rate" if "pulse_rate" in df_proc.columns else None
+    )
+    dmi_col = "dmi_kg" if "dmi_kg" in df_proc.columns else (
+        "dmi" if "dmi" in df_proc.columns else None
+    )
+    fat_col = "fat_pct" if "fat_pct" in df_proc.columns else None
+    prot_col = "protein_pct" if "protein_pct" in df_proc.columns else None
 
     # Group by cow_id and date
     records = []
@@ -167,6 +184,35 @@ def aggregate_cow_day_features(df: pd.DataFrame) -> pd.DataFrame:
             rec["scc_mean"] = round(float(group[scc_col].dropna().mean()), 1)
         else:
             rec["scc_mean"] = None
+
+        # 7. Optional External Physiology / Nutrition Indicators (e.g. Mendeley 954f6g36sb/2)
+        if resp_col and group[resp_col].notna().any():
+            resp_s = group[resp_col].dropna()
+            rec["respiration_rate_bpm_mean"] = round(float(resp_s.mean()), 1)
+            rec["respiration_rate_bpm_max"] = round(float(resp_s.max()), 1)
+        else:
+            rec["respiration_rate_bpm_mean"] = None
+            rec["respiration_rate_bpm_max"] = None
+
+        if pulse_col and group[pulse_col].notna().any():
+            rec["pulse_rate_bpm_mean"] = round(float(group[pulse_col].dropna().mean()), 1)
+        else:
+            rec["pulse_rate_bpm_mean"] = None
+
+        if dmi_col and group[dmi_col].notna().any():
+            rec["dmi_kg"] = round(float(group[dmi_col].dropna().iloc[-1]), 2)
+        else:
+            rec["dmi_kg"] = None
+
+        if fat_col and group[fat_col].notna().any():
+            rec["fat_pct"] = round(float(group[fat_col].dropna().iloc[-1]), 2)
+        else:
+            rec["fat_pct"] = None
+
+        if prot_col and group[prot_col].notna().any():
+            rec["protein_pct"] = round(float(group[prot_col].dropna().iloc[-1]), 2)
+        else:
+            rec["protein_pct"] = None
 
         records.append(rec)
 
