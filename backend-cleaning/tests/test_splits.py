@@ -13,7 +13,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from cleaning.splits import assert_no_group_leakage, group_split  # noqa: E402
+from cleaning.splits import assert_no_group_leakage, group_kfold, group_split  # noqa: E402
 
 
 def _frame(n_cows: int = 8, rows_per_cow: int = 5) -> pd.DataFrame:
@@ -99,6 +99,66 @@ def test_leakage_assertion_catches_a_bad_split():
         assert "leaks repeated measures" in str(e)
     else:
         raise AssertionError("overlapping splits should have raised")
+
+
+def test_kfold_holds_out_every_cow_exactly_once():
+    df = _frame(n_cows=10, rows_per_cow=3)
+    folds = group_kfold(df, n_splits=5, seed=0)
+    assert len(folds) == 5
+    held_out = [c for _, val in folds for c in val["cow_id"].unique()]
+    assert sorted(held_out) == sorted(df["cow_id"].unique())  # each cow once
+    for train, val in folds:
+        assert not set(train["cow_id"]) & set(val["cow_id"])
+        assert len(train) + len(val) == len(df)
+        assert len(train) > 0 and len(val) > 0
+
+
+def test_kfold_folds_are_group_balanced_not_row_balanced():
+    # cow00 has 50 rows, the rest 2 each: folds still hold 1 cow each
+    df = pd.concat([_frame(4, 2), pd.DataFrame({"cow_id": ["cow00"] * 50, "milk_yield_kg": 0})])
+    folds = group_kfold(df, n_splits=4, seed=0)
+    assert [val["cow_id"].nunique() for _, val in folds] == [1, 1, 1, 1]
+
+
+def test_kfold_deterministic_and_row_order_independent():
+    df = _frame()
+    shuffled = df.sample(frac=1.0, random_state=3).reset_index(drop=True)
+    a = [sorted(val["cow_id"].unique()) for _, val in group_kfold(df, n_splits=4, seed=5)]
+    b = [sorted(val["cow_id"].unique()) for _, val in group_kfold(shuffled, n_splits=4, seed=5)]
+    assert a == b
+    c = [sorted(val["cow_id"].unique()) for _, val in group_kfold(df, n_splits=4, seed=6)]
+    assert a != c  # seed actually matters
+
+
+def test_kfold_rejects_bad_input():
+    for n in (0, 1):
+        try:
+            group_kfold(_frame(), n_splits=n)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"n_splits={n} should have raised")
+
+    try:
+        group_kfold(_frame(n_cows=3), n_splits=5)  # more folds than cows
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("n_splits > n_groups should have raised")
+
+    try:
+        group_kfold(_frame(), by="missing_col")
+    except KeyError:
+        pass
+    else:
+        raise AssertionError("missing group column should have raised")
+
+    try:
+        group_kfold(pd.DataFrame({"cow_id": ["a", "b", None], "x": [1, 2, 3]}), n_splits=2)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("null group key should have raised")
 
 
 if __name__ == "__main__":
