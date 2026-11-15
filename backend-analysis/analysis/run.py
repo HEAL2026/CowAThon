@@ -196,6 +196,7 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
             "cow_risk_summary.json",
             "auto_flags.json",
             "benchmark_results.json",
+            "backtrace_result.json",
             "backtrace_benchmark.json",
             "analyzed_timeseries.schema.json",
             "cow_day_features.schema.json",
