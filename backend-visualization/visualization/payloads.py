@@ -635,7 +635,7 @@ def generate_pen_map(
     pen_id: str = "pen_01",
     ts_utc: Optional[str] = None,
     is_synthetic: bool = False,
-    lookback_hours: int = 48,
+    lookback_hours: int = 72,
 ) -> Dict[str, Any]:
     """
     Constructs the 2D pen map payload featuring resting heatmap derived from lying bouts,
