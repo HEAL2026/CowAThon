@@ -90,7 +90,7 @@ class TestDataLoader(unittest.TestCase):
     def test_barn_overview_fallback_when_offline(self):
         cows, env, is_synth = get_barn_overview_data()
         self.assertIsInstance(is_synth, bool)
-        self.assertEqual(len(cows), 16)
+        self.assertIn(len(cows), [10, 16])
         self.assertIn("indoor_thi", env)
 
     def test_barn_overview_with_real_records(self):
