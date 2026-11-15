@@ -318,8 +318,10 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p["grid"]["x_max_m"], 12.45)
         self.assertEqual(p["grid"]["y_min_m"], -9.31)
         self.assertEqual(p["grid"]["y_max_m"], 8.39)
-        self.assertEqual(p["resting_areas"][0]["center_x_m"], -2.4)
-        self.assertEqual(p["resting_areas"][0]["center_y_m"], 1.5)
+        self.assertEqual(len(p["resting_spots"]), 5)
+        self.assertEqual(p["resting_spots"][0]["spot_id"], "spot_01")
+        self.assertEqual(p["resting_spots"][0]["center_x_m"], 0.06)
+        self.assertEqual(p["resting_spots"][0]["center_y_m"], 0.00)
 
     def test_pen_map_positive_coordinate_system(self):
         """Verifies pen map defaults to positive coordinates for synthetic fixtures."""
@@ -328,8 +330,10 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p["grid"]["origin"], "bottom_left")
         self.assertEqual(p["grid"]["x_min_m"], 0.0)
         self.assertEqual(p["grid"]["x_max_m"], 30.0)
-        self.assertEqual(p["resting_areas"][0]["center_x_m"], 12.4)
-        self.assertEqual(p["resting_areas"][0]["center_y_m"], 10.2)
+        self.assertEqual(len(p["resting_spots"]), 5)
+        self.assertEqual(p["resting_spots"][0]["spot_id"], "spot_01")
+        self.assertEqual(p["resting_spots"][0]["center_x_m"], 12.51)
+        self.assertEqual(p["resting_spots"][0]["center_y_m"], 9.31)
 
     def test_heatmap_c11_c16_exclusion(self):
         """Verifies uninstrumented cows C11-C16 and rows with is_instrumented=False do not contribute heatmap cells."""
@@ -492,10 +496,12 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p_real["coordinate_system"], "centered")
         self.assertEqual(p_real["grid"]["origin"], "center")
 
-        # 2. Missing coordinates in centered frame: cubicle row B fallback (-2.4, 1.5)
+        # 2. Missing coordinates in centered frame: 5 canonical spots (spot_01 is (0.06, 0.00))
         p_missing_centered = generate_pen_map(cows_data=centered_cows, resting_areas=None, is_synthetic=False)
-        self.assertEqual(p_missing_centered["resting_areas"][0]["center_x_m"], -2.4)
-        self.assertEqual(p_missing_centered["resting_areas"][0]["center_y_m"], 1.5)
+        self.assertEqual(len(p_missing_centered["resting_spots"]), 5)
+        self.assertEqual(p_missing_centered["resting_spots"][0]["spot_id"], "spot_01")
+        self.assertEqual(p_missing_centered["resting_spots"][0]["center_x_m"], 0.06)
+        self.assertEqual(p_missing_centered["resting_spots"][0]["center_y_m"], 0.00)
         self.assertEqual(p_missing_centered["coordinate_system"], "centered")
         self.assertEqual(p_missing_centered["grid"]["origin"], "center")
         self.assertEqual(p_missing_centered["grid"]["x_min_m"], -12.45)
@@ -503,11 +509,13 @@ class TestS12Payloads(unittest.TestCase):
         self.assertEqual(p_missing_centered["grid"]["y_min_m"], -9.31)
         self.assertEqual(p_missing_centered["grid"]["y_max_m"], 8.39)
 
-        # 3. Missing coordinates in bottom_left (positive) frame: fallback (12.4, 10.2)
+        # 3. Missing coordinates in bottom_left (positive) frame: shifted to (12.51, 9.31)
         pos_cows = [{"cow_id": "C01", "uwb_x_m": 15.0, "uwb_y_m": 7.5}]
         p_missing_pos = generate_pen_map(cows_data=pos_cows, resting_areas=None, is_synthetic=True)
-        self.assertEqual(p_missing_pos["resting_areas"][0]["center_x_m"], 12.4)
-        self.assertEqual(p_missing_pos["resting_areas"][0]["center_y_m"], 10.2)
+        self.assertEqual(len(p_missing_pos["resting_spots"]), 5)
+        self.assertEqual(p_missing_pos["resting_spots"][0]["spot_id"], "spot_01")
+        self.assertEqual(p_missing_pos["resting_spots"][0]["center_x_m"], 12.51)
+        self.assertEqual(p_missing_pos["resting_spots"][0]["center_y_m"], 9.31)
         self.assertEqual(p_missing_pos["coordinate_system"], "positive")
         self.assertEqual(p_missing_pos["grid"]["origin"], "bottom_left")
         self.assertEqual(p_missing_pos["grid"]["x_min_m"], 0.0)
@@ -645,6 +653,30 @@ class TestS12Payloads(unittest.TestCase):
             self.assertIn("successors", stall)
             self.assertIn("predecessor", stall)
             self.assertIn("sanitized_between", stall)
+
+    def test_pen_map_resting_spots_five_rows_and_successors(self):
+        """
+        Verifies pen map resting layer emits 5 spots (spot_01..spot_05) on y ~ 0
+        carrying n_flagged, flagged_cows, and successors per docs/backtrace_spec.md §3.2 & §6.
+        """
+        payload = generate_pen_map()
+        self.assertIn("resting_spots", payload)
+        self.assertIn("resting_areas", payload)
+        spots = payload["resting_spots"]
+        self.assertEqual(len(spots), 5)
+        spot_ids = [s["spot_id"] for s in spots]
+        self.assertEqual(spot_ids, ["spot_01", "spot_02", "spot_03", "spot_04", "spot_05"])
+
+        s1 = spots[0]
+        self.assertEqual(s1["spot_id"], "spot_01")
+        self.assertIn("n_flagged", s1)
+        self.assertIn("flagged_cows", s1)
+        self.assertIn("successors", s1)
+        self.assertGreaterEqual(len(s1["successors"]), 1)
+        self.assertIn("rank", s1["successors"][0])
+        self.assertIn("lag_h", s1["successors"][0])
+        self.assertIn("w", s1["successors"][0])
+        self.assertEqual(s1["radius_m"], 1.5)
 
 
 if __name__ == "__main__":

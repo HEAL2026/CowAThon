@@ -449,13 +449,99 @@ def load_sanitation_data() -> List[Dict[str, Any]]:
     return []
 
 
+CANONICAL_RESTING_SPOTS = [
+    {
+        "spot_id": "spot_01",
+        "center_x_m": 0.06,
+        "center_y_m": 0.00,
+        "radius_m": 1.5,
+        "n_bouts": 493,
+        "n_cows": 10,
+        "dwell_min": 41137.0,
+        "zone_id": "cubicle_row_b",
+        "provenance": "real",
+        "is_synthetic": False,
+    },
+    {
+        "spot_id": "spot_02",
+        "center_x_m": -2.82,
+        "center_y_m": 0.02,
+        "radius_m": 1.5,
+        "n_bouts": 427,
+        "n_cows": 10,
+        "dwell_min": 35503.0,
+        "zone_id": "cubicle_row_b",
+        "provenance": "real",
+        "is_synthetic": False,
+    },
+    {
+        "spot_id": "spot_03",
+        "center_x_m": 4.33,
+        "center_y_m": -0.04,
+        "radius_m": 1.5,
+        "n_bouts": 219,
+        "n_cows": 10,
+        "dwell_min": 16635.0,
+        "zone_id": "cubicle_row_b",
+        "provenance": "real",
+        "is_synthetic": False,
+    },
+    {
+        "spot_id": "spot_04",
+        "center_x_m": 2.54,
+        "center_y_m": -0.02,
+        "radius_m": 1.5,
+        "n_bouts": 155,
+        "n_cows": 10,
+        "dwell_min": 11873.0,
+        "zone_id": "cubicle_row_b",
+        "provenance": "real",
+        "is_synthetic": False,
+    },
+    {
+        "spot_id": "spot_05",
+        "center_x_m": -1.16,
+        "center_y_m": 0.02,
+        "radius_m": 1.5,
+        "n_bouts": 2,
+        "n_cows": 2,
+        "dwell_min": 410.0,
+        "zone_id": "cubicle_row_b",
+        "provenance": "real",
+        "is_synthetic": False,
+    },
+]
+
+
+def load_resting_spots_data() -> List[Dict[str, Any]]:
+    """
+    Loads cubicle-level resting spots (5 rows) from backend-cleaning/data/processed/resting_spots.parquet
+    or returns the canonical 5 spots from docs/backtrace_spec.md §3.2.
+    """
+    candidates = [
+        REPO_ROOT / "backend-cleaning" / "data" / "processed" / "resting_spots.parquet",
+        Path("backend-cleaning/data/processed/resting_spots.parquet"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                import pandas as pd
+                df = pd.read_parquet(str(p))
+                records = df.to_dict(orient="records")
+                if records:
+                    return records
+            except Exception:
+                pass
+    return [dict(s) for s in CANONICAL_RESTING_SPOTS]
+
+
 def get_pen_map_data(
     ts_utc: Optional[str] = None,
     pen_id: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], bool]:
     """
     Constructs the 2D pen map payload using real location_1min (or joined_1min)
-    positions at ts_utc, real lying bouts, and analysis resting circles if available.
+    positions at ts_utc, real lying bouts, and 5-row resting spots.
     Returns (pen_map_payload, is_synthetic).
     is_synthetic is False ONLY when real cow positions are successfully resolved.
     """
@@ -481,7 +567,7 @@ def get_pen_map_data(
             except Exception:
                 pass
 
-    # 2. Check for real implicated resting circles (1.5m) and contact events from analysis backtrace
+    # 2. Check for real resting spots (5 rows) from backtrace or resting_spots table
     resting_areas = None
     contact_events = None
     bt_candidates = [
@@ -493,12 +579,16 @@ def get_pen_map_data(
             try:
                 with open(p, "r", encoding="utf-8") as f:
                     bt_data = json.load(f)
-                resting_areas = bt_data.get("implicated_resting_areas") or bt_data.get("implicated_circles")
+                resources = bt_data.get("resources") or {}
+                resting_areas = resources.get("resting_spots") or bt_data.get("implicated_resting_areas") or bt_data.get("resting_spots")
                 contact_events = bt_data.get("contact_events")
                 if resting_areas:
                     break
             except Exception as e:
-                logger.warning("Failed to parse resting circles from %s: %s", p, e)
+                logger.warning("Failed to parse resting spots from %s: %s", p, e)
+
+    if not resting_areas:
+        resting_areas = None
 
     # 3. Query real cow locations at ts_utc from location_1min.parquet
     cows_data = None
