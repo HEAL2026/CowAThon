@@ -57,8 +57,14 @@ Rules for consumers:
 A single helper owns this so the roles cannot disagree about it:
 
 ```python
-from cleaning.splits import group_split      # signature is stable
+from cleaning.splits import group_split, group_kfold   # signatures are stable
 train_df, test_df = group_split(df, by="cow_id", test_frac=0.25, seed=0)
+
+# cross-validation: every cow held out exactly once, all its rows together.
+# analysis and model call this with the same (n_splits, seed) so their
+# cross-validated numbers are on identical animal folds.
+for train_df, val_df in group_kfold(df, by="cow_id", n_splits=5, seed=0):
+    ...
 ```
 
 ## 3. Missing data
