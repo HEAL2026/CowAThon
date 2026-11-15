@@ -15,7 +15,8 @@ import json
 import sys
 from pathlib import Path
 
-from . import export, ingest, join
+from . import bouts, derive, export, ingest, join
+from .ingest import write_table
 from .locate import find_joined
 
 HERE = Path(__file__).resolve().parents[1]
@@ -29,7 +30,69 @@ def _build(a: argparse.Namespace) -> int:
     r = join.run(a.interim, a.processed)
     print(json.dumps({k: r[k] for k in ("rows", "cows", "span_utc", "imputed_counts")}, indent=2, default=str))
     print(f"-> {a.processed / 'joined_1min.parquet'}")
+    _derived(a.interim, a.processed)
     return 0
+
+
+def _config() -> dict:
+    import yaml
+    return yaml.safe_load((Path(__file__).with_name("config.yaml")).read_text())
+
+
+def _derived(interim: Path, processed: Path) -> None:
+    """Brief S3 outputs built from the joined table and the event log:
+    lying_bouts, location_1min, gap marks on joined_1min, manual, mastitis_events."""
+    import pandas as pd
+    cfg = _config()
+    joined_path = processed / "joined_1min.parquet"
+    joined = pd.read_parquet(joined_path)
+
+    # gap marks on the per-cow native channels: mark, never fill
+    gap_cols = {"cbt_c": 1, "lying": 1, "uwb_x_m": 1, "neck_imu_magnitude_mean": 1}
+    marked = bouts.mark_gaps(joined, gap_cols, mark_after_min=cfg["gaps"]["mark_after_min"])
+    for c in gap_cols:
+        ingest.UNITS.setdefault(f"{c}_gap_min", "minutes of missing run, 0 if <= threshold")
+    marked["in_pen"] = ~marked["out_of_pen"].astype(bool)
+    ingest.UNITS.setdefault("in_pen", "bool")
+    sidecar = json.loads((processed / "joined_1min.schema.json").read_text())
+    notes = {k: v for k, v in sidecar.items() if k not in ("table", "cadence", "keys", "rows", "columns")}
+    notes["gap_mark_after_min"] = cfg["gaps"]["mark_after_min"]
+    write_table(marked, processed, "joined_1min", "1min", ["cow_id", "ts_utc"], notes)
+
+    lb = bouts.lying_bouts(marked, min_duration_min=cfg["lying_bouts"]["min_duration_min"])
+    for c, u in (("start_utc", "UTC"), ("end_utc", "UTC, exclusive"), ("duration_min", "min"), ("x_m", "m"), ("y_m", "m"), ("z_m", "m"),
+                 ("n_fixes", "in-pen UWB fixes"), ("in_pen_frac", "fraction")):
+        ingest.UNITS.setdefault(c, u)
+    write_table(lb, processed, "lying_bouts", "event", ["cow_id", "start_utc"],
+                {"min_duration_min": cfg["lying_bouts"]["min_duration_min"],
+                 "resting_min_duration_min": cfg["lying_bouts"]["resting_min_duration_min"],
+                 "note": "continuous lying >= min_duration; location = median of in-pen, in-bounds UWB fixes during the bout"})
+    print(f"-> {processed / 'lying_bouts.parquet'}  ({len(lb)} bouts)")
+
+    uwb = pd.read_parquet(interim / "uwb.parquet")
+    loc = bouts.location_1min_median(uwb)
+    for c in ("x_med_m", "y_med_m", "z_med_m"):
+        ingest.UNITS.setdefault(c, "m")
+    write_table(loc, processed, "location_1min", "1min", ["cow_id", "ts_utc"],
+                {"note": "per-minute median of in-pen, in-bounds fixes; joined_1min carries the mean"})
+
+    hr_path = interim / "health_records.parquet"
+    if hr_path.exists():
+        hr = pd.read_parquet(hr_path)
+        milk = pd.read_parquet(interim / "milk.parquet") if (interim / "milk.parquet").exists() else None
+        man = derive.manual_from_health_records(hr, milk=milk)
+        for c in man.columns:
+            ingest.UNITS.setdefault(c, "")
+        write_table(man, processed, "manual", "snapshot", ["cow_id"],
+                    {"note": "parity / DIM / pregnancy derived from the real farm event log as of the first sensor row; "
+                             "not farmer-entered, so source says derived_from_health_records"})
+        me = derive.mastitis_events(hr)
+        for c in me.columns:
+            ingest.UNITS.setdefault(c, "")
+        write_table(me, processed, "mastitis_events", "event", ["cow_id", "ts_utc"],
+                    {"note": "real clinical-mastitis diagnoses / cultures / withholds from the farm log; anchors for validation, not labels",
+                     "in_sensor_window": int(me["in_sensor_window"].sum())})
+        print(f"-> {processed / 'manual.parquet'}  ({len(man)} cows)   mastitis_events: {len(me)} rows, {int(me['in_sensor_window'].sum())} inside the sensor window")
 
 
 def _export(a: argparse.Namespace) -> int:

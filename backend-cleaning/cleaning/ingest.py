@@ -42,6 +42,7 @@ UNITS = {
     "behavior_mode": "most frequent known code in the minute", "behavior_mode_name": "label",
     "behavior_known_frac": "fraction of the minute's seconds with a known label",
     "behavior_lying_frac": "fraction of known seconds labelled lying",
+    "event": "farm event type", "event_detail": "farm event subtype", "description": "free text", "is_synthetic": "bool",
 }
 
 
@@ -311,6 +312,39 @@ def ingest_collar(raw_dir: Path, out_dir: Path, report: dict) -> None:
                      "tags": sorted(u["tag_id"].unique())})
 
 
+def shape_health_records(raw: pd.DataFrame, cow_id: str) -> pd.DataFrame:
+    """Farm management event log (DairyComp-style export): one row per event,
+    lifetime of the animal, hour-granular local time. Real, not synthetic.
+    Includes 'Medical diagnosis / Clinical Mastitis', 'Treatment', 'Freshen'
+    (calving -> parity, DIM), 'Dry Off', 'Preg Check', 'Bred', 'Milk Culture'."""
+    raw = raw.rename(columns=lambda c: str(c).replace("\ufeff", "").strip())
+    ts_local = pd.to_datetime(raw["Date"], format="%Y-%m-%d %I %p", errors="coerce")
+    out = pd.DataFrame({
+        "cow_id": cow_id,
+        "ts_utc": ts_local.dt.tz_localize(TZ, ambiguous="NaT", nonexistent="NaT").dt.tz_convert("UTC"),
+        "event": raw["Event"].astype("string").str.strip(),
+        "event_detail": raw["Specific event"].astype("string").str.strip(),
+        "description": raw["Description"].astype("string").str.strip(),
+    })
+    out["is_synthetic"] = False
+    return out
+
+
+def ingest_health_records(raw_dir: Path, out_dir: Path, report: dict) -> None:
+    hr_dir = raw_dir.parent / "sub_data" / "health_records"
+    files = sorted(hr_dir.glob("C*.csv"))
+    if not files:
+        report.setdefault("skipped", []).append("health_records")
+        return
+    df = pd.concat([shape_health_records(pd.read_csv(p, encoding="utf-8-sig"), p.stem[:3]) for p in files], ignore_index=True)
+    df = _finish(df, ["cow_id", "ts_utc"], report, "health_records")
+    write_table(df, out_dir, "health_records", "event", ["cow_id", "ts_utc"],
+                {"source_files": len(files),
+                 "note": "real farm event log, lifetime per cow, hour-granular local time -> UTC; "
+                         "'Medical diagnosis'/'Clinical Mastitis' rows are real diagnoses but mostly outside the sensor window",
+                 "event_counts": df["event"].value_counts().to_dict()})
+
+
 def ingest_behavior(raw_dir: Path, out_dir: Path, report: dict) -> None:
     labels_dir = raw_dir.parent / "behavior_labels" / "individual"  # sibling of main_data/
     files = _per_cow_files(labels_dir, "C*_*.csv")
@@ -334,6 +368,7 @@ def run(raw_dir: Path, interim_dir: Path, skip_heavy: bool = False) -> dict:
     ingest_uwb(raw_dir, interim_dir, report)
     ingest_weather(raw_dir, interim_dir, report)
     ingest_behavior(raw_dir, interim_dir, report)
+    ingest_health_records(raw_dir, interim_dir, report)
     if not skip_heavy:
         ingest_collar(raw_dir, interim_dir, report)
     interim_dir.mkdir(parents=True, exist_ok=True)

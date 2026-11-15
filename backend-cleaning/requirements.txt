@@ -4,3 +4,4 @@ numpy>=1.24
 remotezip>=0.12      # scripts/fetch_mmcows.py: range-read members out of the 18 GB HF zip
 openpyxl>=3.1        # main_data/weather/*.xlsx
 pyarrow>=15         # parquet engine for interim/processed tables
+pyyaml>=6.0         # cleaning/config.yaml
