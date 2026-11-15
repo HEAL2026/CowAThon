@@ -106,9 +106,10 @@ def classify_posture_state(
     - Deep rest / lying: ~0.06 - 0.20 m/s²
     - Active walking / feeding: > 0.20 m/s² (p50 = 0.45 m/s²)
 
-    When trained behavior classifier predictions are available (behavior or behavior_name):
-    - Lying (7) or resting (5) are mapped to 'resting'
-    - Feeding (1), standing (2), walking (3), drinking (6) are mapped to 'active'
+    When trained behavior classifier predictions are available (MMCows 8-class vocabulary:
+    0 unknown, 1 walking, 2 standing, 3 feed_up, 4 feed_down, 5 licking, 6 drinking, 7 lying):
+    - Lying (7, 'lying') maps to 'resting'
+    - Active states (1 'walking', 2 'standing', 3 'feed_up', 4 'feed_down', 5 'licking', 6 'drinking') map to 'active'
     """
     arr = np.asarray(activity_index, dtype=float)
     states = np.empty(arr.shape, dtype=object)
@@ -118,14 +119,15 @@ def classify_posture_state(
     # Trained behavior classifier integration (takes precedence over pure IMU std threshold)
     if behavior_name_col is not None:
         b_names = np.asarray(behavior_name_col, dtype=object)
-        mask_rest = np.isin(b_names, ["resting", "lying"])
-        mask_active = np.isin(b_names, ["feeding", "standing", "walking", "drinking"])
+        b_lower = np.char.lower(b_names.astype(str))
+        mask_rest = (b_lower == "lying")
+        mask_active = np.isin(b_lower, ["walking", "standing", "feed_up", "feed_down", "licking", "drinking"])
         states[mask_rest] = "resting"
         states[mask_active] = "active"
     elif behavior_col is not None:
         b_nums = np.asarray(behavior_col, dtype=float)
-        mask_rest = np.isin(b_nums, [5, 7])
-        mask_active = np.isin(b_nums, [1, 2, 3, 6])
+        mask_rest = (b_nums == 7)
+        mask_active = np.isin(b_nums, [1, 2, 3, 4, 5, 6])
         states[mask_rest] = "resting"
         states[mask_active] = "active"
 
@@ -149,9 +151,11 @@ def calculate_rumination_proxy(
     """Estimate rumination index (0 - 100) from neck-mounted IMU patterns and behavior predictions.
 
     Rumination occurs predominantly during resting/lying windows in the 0.08 - 0.22 m/s² band.
-    When trained classifier predictions are available:
-    - Ruminating state (behavior=4 or 'ruminating') elevates rumination score proportionally to prob.
-    - Active conflicting behaviors ('feeding', 'walking', 'drinking') suppress rumination score.
+    When trained classifier predictions are available (MMCows 8-class vocabulary):
+    - MMCows contains no labelled rumination class; rumination remains IMU-rhythm based.
+    - Conflicting active behaviors ('walking', 'standing', 'feed_up', 'feed_down', 'licking', 'drinking')
+      strongly suppress the rumination proxy (x 0.15).
+    - Classified lying (7, 'lying') supports the resting rumination window (x 1.10).
     """
     if activity_col in df.columns:
         act = df[activity_col]
@@ -168,19 +172,18 @@ def calculate_rumination_proxy(
         rumination_score = np.where(is_lying, rumination_score * 1.10, rumination_score * 0.90)
 
     # Trained behavior classifier integration
-    prob = df[prob_col].fillna(0.8).values if prob_col in df.columns else 0.8
     if behavior_name_col in df.columns:
         b_name = df[behavior_name_col].fillna("").astype(str).str.lower().values
-        is_rum = (b_name == "ruminating")
-        is_active_conflict = np.isin(b_name, ["feeding", "walking", "drinking"])
-        rumination_score = np.where(is_rum, np.maximum(rumination_score, 70.0 + 30.0 * prob), rumination_score)
+        is_active_conflict = np.isin(b_name, ["walking", "standing", "feed_up", "feed_down", "licking", "drinking"])
+        is_clf_lying = (b_name == "lying")
         rumination_score = np.where(is_active_conflict, rumination_score * 0.15, rumination_score)
+        rumination_score = np.where(is_clf_lying, rumination_score * 1.10, rumination_score)
     elif behavior_col in df.columns:
         b_code = df[behavior_col].fillna(0).astype(int).values
-        is_rum = (b_code == 4)
-        is_active_conflict = np.isin(b_code, [1, 3, 6])
-        rumination_score = np.where(is_rum, np.maximum(rumination_score, 70.0 + 30.0 * prob), rumination_score)
+        is_active_conflict = np.isin(b_code, [1, 2, 3, 4, 5, 6])
+        is_clf_lying = (b_code == 7)
         rumination_score = np.where(is_active_conflict, rumination_score * 0.15, rumination_score)
+        rumination_score = np.where(is_clf_lying, rumination_score * 1.10, rumination_score)
 
     return pd.Series(
         np.clip(rumination_score, 0.0, 100.0),

@@ -335,6 +335,7 @@ def backtrace(
     n_permutations: int = 200,
     seed: int = 42,
     reference_time: pd.Timestamp | str | None = None,
+    is_synthetic: bool | None = None,
 ) -> dict[str, Any]:
     """Execute outbreak backtrace investigation across resting and milking transmission routes.
 
@@ -364,7 +365,8 @@ def backtrace(
             if cid and str(cid) not in flagged_ids:
                 flagged_ids.append(str(cid))
 
-    is_synthetic = False
+    if is_synthetic is None:
+        is_synthetic = False
     # If fixtures missing, generate resting scenario fallback
     if lying_bouts_df is None or len(lying_bouts_df) == 0:
         bouts_df, milk_df, bed_df, san_df = generate_synthetic_backtrace_fixtures(scenario="resting")
