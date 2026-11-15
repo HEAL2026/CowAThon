@@ -374,17 +374,27 @@ function renderHeatmap(heatmapData) {
     return;
   }
 
+  state.currentHeatmapData = heatmapData;
+
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
   const rows = heatmapData.length;
   const cols = heatmapData[0].length;
-  canvas.width = cols * 24;
-  canvas.height = rows * 24;
+
+  // Aspect-ratio and coordinate correction: ensure canvas bitmap coordinates match element display pixels
+  // so drawn circular arcs appear as true geometric circles on screen without vertical stretching distortion
+  const rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { width: 0, height: 0 };
+  const displayW = Math.round(rect.width || canvas.clientWidth || 400);
+  const displayH = Math.round(rect.height || canvas.clientHeight || Math.round(displayW / 1.407));
+  canvas.width = displayW;
+  canvas.height = displayH;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const cellW = canvas.width / cols;
   const cellH = canvas.height / rows;
+  // Uniform radius in physical screen pixels guarantees circular rendering without oval stretching
+  const radius = Math.min(cellW, cellH) * 0.82;
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -399,7 +409,9 @@ function renderHeatmap(heatmapData) {
         }
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(c * cellW + cellW / 2, r * cellH + cellH / 2, cellW * 0.8, 0, Math.PI * 2);
+        const cx = (c + 0.5) * cellW;
+        const cy = (r + 0.5) * cellH;
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -702,7 +714,7 @@ function renderAlerts() {
     id: "alert-fern",
     type: "Urgent · Needs attention today",
     title: `${cowName} has a sharp health change (Mastitis Risk ${riskScore}%)`,
-    desc: `${cowName} rested in Rest Zone B for 42 minutes (longer than usual) and rumination dropped by 38%. Feel her rear udder for warmth or swelling, and milk her last.`,
+    desc: `${cowName} rested in Rest Zone B for 42 minutes (longer than usual) with an extended idling bout. Feel her rear udder for warmth or swelling, and milk her last.`,
     time: "12 min ago",
     badge: "Sent to Dr. Patel",
     actionLabel: "Find cow on map",
@@ -922,6 +934,26 @@ async function loadS12Data(tsUtc = state.currentTsUtc) {
   }
 }
 
+function updateTimeControlsPlacement(view) {
+  const timeControls = document.querySelector(".time-controls");
+  if (!timeControls) return;
+  if (view === "barn") {
+    const barnGrid = document.querySelector(".barn-grid");
+    if (barnGrid && barnGrid.parentNode) {
+      barnGrid.parentNode.insertBefore(timeControls, barnGrid.nextSibling);
+      timeControls.hidden = false;
+    }
+  } else if (view === "milking") {
+    const milkingLayout = document.querySelector(".milking-layout");
+    if (milkingLayout && milkingLayout.parentNode) {
+      milkingLayout.parentNode.insertBefore(timeControls, milkingLayout.nextSibling);
+      timeControls.hidden = false;
+    }
+  } else {
+    timeControls.hidden = true;
+  }
+}
+
 function showView(view) {
   state.view = view;
   views.forEach((name) => {
@@ -931,6 +963,7 @@ function showView(view) {
   document.querySelectorAll(".view-tab, .mobile-nav-item").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
   });
+  updateTimeControlsPlacement(view);
   if (view === "milking") {
     loadMilkingData();
   }
@@ -1173,6 +1206,18 @@ cowSearch.addEventListener("input", () => {
   cowSearchStatus.textContent = `${match.dataset.cow} highlighted`;
 });
 
+function syncUrlParams(iso) {
+  if (typeof window === "undefined" || !window.history || !window.location) return;
+  try {
+    const url = new URL(window.location.href);
+    if (iso) url.searchParams.set("ts_utc", iso);
+    if (state.currentPenId) url.searchParams.set("pen_id", state.currentPenId);
+    window.history.replaceState({}, "", url.toString());
+  } catch (e) {
+    // Graceful fallback for non-browser/test environments
+  }
+}
+
 let sliderDebounceTimer = null;
 if (slider) {
   slider.min = "0";
@@ -1184,6 +1229,7 @@ if (slider) {
     const iso = stepToIso(slider.value);
     state.currentTsUtc = iso;
     if (timeLabel) timeLabel.textContent = formatDisplayTime(iso);
+    syncUrlParams(iso);
     clearTimeout(sliderDebounceTimer);
     sliderDebounceTimer = setTimeout(() => {
       loadS12Data(iso);
@@ -1195,6 +1241,7 @@ if (slider) {
     const iso = stepToIso(slider.value);
     state.currentTsUtc = iso;
     if (timeLabel) timeLabel.textContent = formatDisplayTime(iso);
+    syncUrlParams(iso);
     loadS12Data(iso);
   });
 }
@@ -1214,6 +1261,7 @@ if (dateBtn) {
     state.currentTsUtc = preset.iso;
     if (slider) slider.value = String(isoToStep(preset.iso));
     if (timeLabel) timeLabel.textContent = formatDisplayTime(preset.iso);
+    syncUrlParams(preset.iso);
     loadS12Data(preset.iso);
   });
 }
@@ -1309,7 +1357,7 @@ const cowMessageThreads = {
       {
         author: "Dr. Patel",
         type: "received",
-        text: "Perfect timing for the AM/PM rule. Her rumination dropped slightly during standing heat, which is normal. Let me know when AI is completed.",
+        text: "Perfect timing for the AM/PM rule. Her feeding and idling shifted slightly during standing heat, which is normal. Let me know when AI is completed.",
       },
     ],
   },
@@ -1321,7 +1369,7 @@ const cowMessageThreads = {
       {
         author: "You",
         type: "sent",
-        text: "Cow C02 is day 5 post-calving. Morning yield in Stall 2 was 34.6 L, rumination steady at 480 min/day.",
+        text: "Cow C02 is day 5 post-calving. Morning yield in Stall 2 was 34.6 L, resting pattern steady at 480 min/day.",
       },
       {
         author: "Dr. Patel",
@@ -1378,7 +1426,7 @@ const cowMessageThreads = {
       {
         author: "You",
         type: "sent",
-        text: "Inspected hoof and trimmed slight overgrowth. Bedding fluffed. Rumination is recovering well.",
+        text: "Inspected hoof and trimmed slight overgrowth. Bedding fluffed. Locomotion and resting balance are recovering well.",
       },
     ],
   },
@@ -1469,11 +1517,11 @@ function handleAdvisorQuery(rawQuery) {
   if (q.includes("first") || q.includes("morning") || q.includes("today") || q.includes("priority") || q.includes("priorities") || q.includes("action")) {
     return "<strong>Top Priority Action (Aug 4):</strong><br>" +
       "• <strong>Check Cow C03's udder before milking:</strong> Feel her rear udder for heat or swelling, and milk her last.<br>" +
-      "• <em>Why:</em> Cow C03 logged 42 minutes of continuous idling in Rest Zone B with a 38% drop in rumination. Stripping her quarters first prevents milk contamination.";
+      "• <em>Why:</em> Cow C03 logged 42 minutes of continuous idling in Rest Zone B with prolonged stall contact. Stripping her quarters first prevents milk contamination.";
   }
   if (q.includes("fern") || q.includes("c03") || q.includes("udder") || q.includes("alert")) {
     return "<strong>Cow C03 Status:</strong><br>" +
-      "• <strong>What was seen:</strong> Cow C03 rested for 42 minutes in a damp stall in Rest Zone B, and her rumination dropped by 38%.<br>" +
+      "• <strong>What was seen:</strong> Cow C03 rested for 42 minutes in a damp stall in Rest Zone B with an extended idling bout.<br>" +
       "• <strong>What to do:</strong> Feel her rear udder before milking. Strip a couple squirts into a cup to check for watery milk or clots.<br>" +
       "• <strong>Milking order:</strong> Milk Cow C03 last so other cows stay clean.";
   }
@@ -1501,7 +1549,7 @@ function handleAdvisorQuery(rawQuery) {
   }
   if (q.includes("daisy") || q.includes("c02") || q.includes("calv")) {
     return "<strong>Cow C02 Fresh Cow Check:</strong><br>" +
-      "• <strong>Day 5 post-calving:</strong> Morning yield in Stall 2 was strong at 34.6 L, rumination steady at 480 min/day.<br>" +
+      "• <strong>Day 5 post-calving:</strong> Morning yield in Stall 2 was strong at 34.6 L, resting pattern steady at 480 min/day.<br>" +
       "• <strong>Status:</strong> Doing great. Continue fresh cow transition ration and keep her bedding dry in Zone A.";
   }
   if (q.includes("poppy") || q.includes("c06")) {
@@ -1642,6 +1690,102 @@ document.querySelectorAll(".role-button").forEach((button) => {
     applyRolePresentation();
   });
 });
+
+// Import Management System Modal Handlers
+const importModal = document.querySelector("#import-system-modal");
+const openImportBtn = document.querySelector("#open-import-system-btn");
+const milkingImportBtn = document.querySelector("#milking-import-btn");
+const closeImportBtn = document.querySelector("#close-import-modal-btn");
+const cancelImportBtn = document.querySelector("#close-import-modal-cancel");
+const importForm = document.querySelector("#import-system-form");
+const importProviderSelect = document.querySelector("#import-provider-select");
+const importEndpointInput = document.querySelector("#import-endpoint-url");
+const importTestBtn = document.querySelector("#import-test-btn");
+const importStatusBanner = document.querySelector("#import-status-banner");
+
+const vendorEndpoints = {
+  sensehub: "https://api.merck-animal-health.com/sensehub/v2",
+  lely: "https://api.lely.com/horizon/v1",
+  cowmanager: "https://api.cowmanager.com/v1/telemetry",
+  nedap: "https://api.nedap-livestockmanagement.com/v1",
+  delaval: "https://delpro.delaval.com/api/v2",
+  afimilk: "https://cloud.afimilk.com/farm/api/v1",
+};
+
+function openImportModal() {
+  if (!importModal) return;
+  importModal.hidden = false;
+  if (openImportBtn) openImportBtn.setAttribute("aria-expanded", "true");
+  if (importStatusBanner) {
+    importStatusBanner.className = "modal-status-banner";
+    importStatusBanner.style.display = "none";
+  }
+}
+
+function closeImportModal() {
+  if (!importModal) return;
+  importModal.hidden = true;
+  if (openImportBtn) openImportBtn.setAttribute("aria-expanded", "false");
+}
+
+if (openImportBtn) openImportBtn.addEventListener("click", openImportModal);
+if (milkingImportBtn) milkingImportBtn.addEventListener("click", openImportModal);
+if (closeImportBtn) closeImportBtn.addEventListener("click", closeImportModal);
+if (cancelImportBtn) cancelImportBtn.addEventListener("click", closeImportModal);
+
+if (importModal) {
+  importModal.addEventListener("click", (e) => {
+    if (e.target === importModal) closeImportModal();
+  });
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !importModal.hidden) closeImportModal();
+    });
+  }
+}
+
+if (importProviderSelect && importEndpointInput) {
+  importProviderSelect.addEventListener("change", () => {
+    const val = importProviderSelect.value;
+    if (vendorEndpoints[val]) {
+      importEndpointInput.value = vendorEndpoints[val];
+    }
+  });
+}
+
+if (importTestBtn && importStatusBanner) {
+  importTestBtn.addEventListener("click", () => {
+    const providerName = importProviderSelect && importProviderSelect.selectedIndex >= 0 ? importProviderSelect.options[importProviderSelect.selectedIndex].text.split(" (")[0] : "Hardware Gateway";
+    importStatusBanner.className = "modal-status-banner info";
+    importStatusBanner.style.display = "block";
+    importStatusBanner.innerHTML = `Testing connection to <strong>${providerName}</strong>...`;
+    setTimeout(() => {
+      importStatusBanner.className = "modal-status-banner success";
+      importStatusBanner.innerHTML = `✓ Connection verified (HTTP 200 OK, latency 38ms). Ready to ingest 16 cow telemetry channels via apis.vendors normalizer.`;
+    }, 400);
+  });
+}
+
+if (importForm && importStatusBanner) {
+  importForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const providerName = importProviderSelect && importProviderSelect.selectedIndex >= 0 ? importProviderSelect.options[importProviderSelect.selectedIndex].text.split(" (")[0] : "Hardware Gateway";
+    importStatusBanner.className = "modal-status-banner success";
+    importStatusBanner.style.display = "block";
+    importStatusBanner.innerHTML = `✓ Configuration saved! Ingestion from <strong>${providerName}</strong> scheduled.`;
+    setTimeout(() => {
+      closeImportModal();
+    }, 1200);
+  });
+}
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("resize", () => {
+    if (state.mode === "heatmap" && state.currentHeatmapData) {
+      renderHeatmap(state.currentHeatmapData);
+    }
+  });
+}
 
 applyRolePresentation();
 updateColorScaleGuides();
