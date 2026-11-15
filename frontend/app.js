@@ -72,12 +72,13 @@ document.querySelectorAll('input[name="color-by"]').forEach((input) => {
       dot.style.background = colors[index % colors.length];
     });
   });
+});
 
-  function isOnWatchList(cow) {
+function isOnWatchList(cow) {
     return state.modelWatchList.has(cow) || state.manualWatchList.has(cow);
   }
 
-  function renderRestingFilter() {
+function renderRestingFilter() {
     const content = document.querySelector("#resting-filter-content");
     const empty = document.querySelector("#resting-filter-empty");
     const title = document.querySelector("#selected-cow-title");
@@ -102,20 +103,41 @@ document.querySelectorAll('input[name="color-by"]').forEach((input) => {
     document.querySelector("#flag-count").textContent = `${state.modelWatchList.size + state.manualWatchList.size} on watch list`;
   }
 
-  document.querySelector("#flag-illness").addEventListener("click", () => {
-    if (!state.selectedCow) return;
-    if (state.manualWatchList.has(state.selectedCow)) state.manualWatchList.delete(state.selectedCow);
-    else state.manualWatchList.add(state.selectedCow);
-    const selected = document.querySelector(`[data-cow="${state.selectedCow}"]`);
-    selected.classList.toggle("manual-watch", state.manualWatchList.has(state.selectedCow));
-    renderRestingFilter();
-  });
+document.querySelector("#flag-illness").addEventListener("click", () => {
+  if (!state.selectedCow) return;
+  if (state.manualWatchList.has(state.selectedCow)) state.manualWatchList.delete(state.selectedCow);
+  else state.manualWatchList.add(state.selectedCow);
+  const selected = document.querySelector(`[data-cow="${state.selectedCow}"]`);
+  selected.classList.toggle("manual-watch", state.manualWatchList.has(state.selectedCow));
+  renderRestingFilter();
+});
 
-  document.querySelector("#filter-resting").addEventListener("click", () => {
-    state.restingFilter = !state.restingFilter;
-    document.querySelector("#filter-resting").textContent = state.restingFilter ? "Clear resting filter" : "Show resting spots";
-    renderRestingFilter();
-  });
+document.querySelector("#filter-resting").addEventListener("click", () => {
+  state.restingFilter = !state.restingFilter;
+  document.querySelector("#filter-resting").textContent = state.restingFilter ? "Clear resting filter" : "Show resting spots";
+  renderRestingFilter();
+});
+
+const cowSearch = document.querySelector("#cow-search");
+const cowSearchStatus = document.querySelector("#cow-search-status");
+
+cowSearch.addEventListener("input", () => {
+  const query = cowSearch.value.trim().toLowerCase();
+  document.querySelectorAll(".cow-dot").forEach((dot) => dot.classList.remove("search-highlight"));
+  if (!query) {
+    cowSearchStatus.textContent = "";
+    return;
+  }
+  const match = [...document.querySelectorAll(".cow-dot")].find((dot) => dot.dataset.cow.toLowerCase().includes(query));
+  if (!match) {
+    cowSearchStatus.textContent = "No cow found";
+    return;
+  }
+  state.selectedCow = match.dataset.cow;
+  match.classList.add("search-highlight");
+  match.click();
+  document.querySelector("#barn-map").scrollIntoView({ behavior: "smooth", block: "center" });
+  cowSearchStatus.textContent = `${match.dataset.cow} highlighted`;
 });
 
 slider.addEventListener("input", () => {

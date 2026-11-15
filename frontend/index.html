@@ -82,6 +82,11 @@
               <button class="mode-button active" data-mode="location">Live location</button>
               <button class="mode-button" data-mode="heatmap">Activity heatmap</button>
             </div>
+            <label class="cow-search">
+              <span class="field-label">Find a cow</span>
+              <input id="cow-search" type="search" placeholder="Name or ID" autocomplete="off" />
+              <span id="cow-search-status" class="search-status" aria-live="polite"></span>
+            </label>
           </div>
           <div class="barn-grid">
             <div class="barn-map card" id="barn-map">
