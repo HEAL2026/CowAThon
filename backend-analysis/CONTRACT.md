@@ -101,10 +101,12 @@ Dictionary keyed by `cow_id`:
     "ambient_thi": 74.1,
     "thi_category": "moderate_strain",
     "activity_index": 0.12,
+    "posture_state": "resting",
     "rumination_proxy": 32.0,
     "daily_milk_yield_kg": 28.4,
     "milk_drop_pct": 14.2,
-    "out_of_pen": false
+    "out_of_pen": false,
+    "is_stationary_hardware": false
   },
   "modalities_present": ["cbt", "indoor_env", "neck_imu", "milk_yield", "uwb"],
   "missing_modalities": [],

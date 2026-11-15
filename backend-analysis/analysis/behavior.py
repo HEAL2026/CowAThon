@@ -2,8 +2,8 @@
 
 Calibrated against empirical MMCows sensor distributions:
 - Live cows: |accel| std p25 = 0.28, p50 = 0.45, p75 = 0.64 m/s²
-- Stationary tags (T13/T14 on posts): |accel| std p25 = 0.08, p50 = 0.095, p75 = 0.18 m/s²
-- Position std: stationary tags = 0.13-0.25 m vs cows = multiple meters
+- Stationary tags (T13/T14 on posts): |accel| std T13 median = 0.085, T14 median = 0.151 m/s²
+- Position std: stationary tags = 0.25-0.33 m vs cows = 4.3+ meters
 
 Uses multi-modal evidence (modality absence + spatial variance + IMU levels)
 to avoid false classification of stationary reference hardware.
@@ -47,19 +47,23 @@ def detect_stationary_hardware_candidate(
     activity_col: str = "neck_imu_magnitude_std",
     uwb_x_col: str = "uwb_x_m",
     uwb_y_col: str = "uwb_y_m",
+    pos_std_threshold: float = 0.50,
+    imu_median_threshold: float = 0.22,
     animal_modalities: tuple[str, ...] = ("cbt_c", "cbt", "lying", "milk_yield_kg", "milk_yield"),
 ) -> pd.Series:
     """Detect stationary hardware reference tags (e.g. T13/T14).
 
     Identified via structural modality absence (no CBT, lying, or milk records)
-    combined with negligible spatial excursion (UWB position std < 0.35m)
-    and low median IMU variance (< 0.15 m/s²).
+    corroborated by either low spatial excursion (UWB position std < 0.50m)
+    OR low median IMU variance (< 0.22 m/s²), well separated from cow kinematics
+    (cow position std ~4.3m, cow IMU p25 = 0.28 m/s²).
     """
     is_hardware = pd.Series(False, index=df.index, name="is_stationary_hardware")
 
     present_animal_cols = [c for c in animal_modalities if c in df.columns and df[c].notna().any()]
 
     for cow_id, group in df.groupby(group_col):
+        # 1. Structural gate: tag has no animal physiological streams
         has_animal_data = False
         for col in present_animal_cols:
             if group[col].notna().any():
@@ -69,19 +73,21 @@ def detect_stationary_hardware_candidate(
         if has_animal_data:
             continue
 
-        low_position_var = True
+        # 2. Corroborating kinematics (position variance OR IMU variance)
+        low_position_var = False
         if uwb_x_col in group.columns and uwb_y_col in group.columns:
             valid_uwb = group.dropna(subset=[uwb_x_col, uwb_y_col])
-            if len(valid_uwb) >= 5:
-                pos_std = np.sqrt(valid_uwb[uwb_x_col].std()**2 + valid_uwb[uwb_y_col].std()**2)
-                low_position_var = pos_std < 0.35
+            if len(valid_uwb) >= 2:
+                pos_std = float(np.sqrt(valid_uwb[uwb_x_col].std()**2 + valid_uwb[uwb_y_col].std()**2))
+                low_position_var = pos_std < pos_std_threshold
 
         act_series = group[activity_col] if activity_col in group.columns else None
-        low_imu_var = True
+        low_imu_var = False
         if act_series is not None and act_series.notna().any():
-            low_imu_var = act_series.median() < 0.15
+            low_imu_var = float(act_series.median()) < imu_median_threshold
 
-        if low_position_var and low_imu_var:
+        # Tag is hardware if structurally missing animal data AND either spatial or kinetic variance is hardware-level
+        if low_position_var or low_imu_var:
             is_hardware.loc[group.index] = True
 
     return is_hardware
@@ -158,6 +164,7 @@ def calculate_behavior_anomaly_score(
 
     if activity_col in df.columns:
         act = df[activity_col].values
+        # Immobility during expected daytime activity
         immobility = np.clip((0.10 - act) / 0.10, 0.0, 1.0)
         score += immobility * 10.0
 

@@ -26,13 +26,14 @@ class TestBehavior(unittest.TestCase):
 
     def test_classify_posture_state(self):
         # Calibrated against real MMCows distributions (resting < 0.20, active >= 0.20)
-        act = pd.Series([0.10, 0.45])
-        states = classify_posture_state(act, resting_threshold=0.20)
-        self.assertEqual(list(states), ["resting", "active"])
+        act = pd.Series([0.10, 0.45, 0.12])
+        is_hw = pd.Series([False, False, True])
+        states = classify_posture_state(act, resting_threshold=0.20, is_stationary_hardware=is_hw)
+        self.assertEqual(list(states), ["resting", "active", "stationary_hardware"])
 
     def test_detect_stationary_hardware_candidate(self):
         # T13 tag on post: no CBT, no milk, no lying, static UWB, low median IMU (0.095)
-        df_tag = pd.DataFrame({
+        df_t13 = pd.DataFrame({
             "cow_id": ["T13"] * 10,
             "neck_imu_magnitude_std": [0.09, 0.095, 0.10, 0.08, 0.09, 0.11, 0.095, 0.085, 0.10, 0.09],
             "uwb_x_m": [5.1, 5.12, 5.09, 5.11, 5.10, 5.11, 5.08, 5.12, 5.10, 5.09],
@@ -41,8 +42,21 @@ class TestBehavior(unittest.TestCase):
             "milk_yield_kg": [np.nan] * 10,
             "lying": [np.nan] * 10,
         })
-        is_hw = detect_stationary_hardware_candidate(df_tag)
-        self.assertTrue(is_hw.all())
+        is_hw_13 = detect_stationary_hardware_candidate(df_t13)
+        self.assertTrue(is_hw_13.all())
+
+        # T14 tag on post: empirical MMCows values (median IMU 0.151, position std ~0.32m)
+        df_t14 = pd.DataFrame({
+            "cow_id": ["T14"] * 10,
+            "neck_imu_magnitude_std": [0.14, 0.151, 0.16, 0.15, 0.152, 0.149, 0.155, 0.148, 0.151, 0.153],
+            "uwb_x_m": [5.1, 5.3, 4.9, 5.2, 5.0, 5.1, 4.8, 5.3, 5.1, 5.0],
+            "uwb_y_m": [3.2, 3.4, 3.0, 3.3, 3.1, 3.2, 2.9, 3.4, 3.2, 3.1],
+            "cbt_c": [np.nan] * 10,
+            "milk_yield_kg": [np.nan] * 10,
+            "lying": [np.nan] * 10,
+        })
+        is_hw_14 = detect_stationary_hardware_candidate(df_t14)
+        self.assertTrue(is_hw_14.all())
 
         # Live cow C01: has CBT, milk, lying, high position variance
         df_cow = pd.DataFrame({
