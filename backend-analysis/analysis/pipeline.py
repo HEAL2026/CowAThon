@@ -138,7 +138,7 @@ def run_analysis_pipeline(
         # Herd size floor: Below 3 distinct animals, animal-disjoint group splitting cannot form robust folds
         benchmarks = {
             "dataset": "MMCows Challenge 1",
-            "evaluation_protocol": "insufficient_animals_for_cv",
+            "evaluation_protocol": f"insufficient_animals_for_cv (n={n_live_cows})",
             "n_groups": n_live_cows,
             "n_splits": 0,
             "cv_unavailable": True,
@@ -157,6 +157,11 @@ def run_analysis_pipeline(
     else:
         # Adaptive splitting: clamp fold count to available herd size (e.g. 4-fold for 4 cows)
         effective_splits = min(n_cv_splits, n_live_cows)
+        if effective_splits == n_live_cows:
+            protocol_name = f"leave_one_animal_out (n={n_live_cows})"
+        else:
+            protocol_name = f"group_kfold_{effective_splits} (n={n_live_cows})"
+
         try:
             benchmarks = evaluate_baselines_vs_multimodal(
                 cv_df,
@@ -165,13 +170,14 @@ def run_analysis_pipeline(
                 n_splits=effective_splits,
                 seed=seed,
             )
+            benchmarks["evaluation_protocol"] = protocol_name
             benchmarks["is_synthetic"] = is_synthetic
             benchmarks["n_splits"] = effective_splits
             benchmarks["cv_unavailable"] = False
         except Exception as exc:
             benchmarks = {
                 "dataset": "MMCows Challenge 1",
-                "evaluation_protocol": "error_during_cv",
+                "evaluation_protocol": f"error_during_cv (n={n_live_cows})",
                 "n_groups": n_live_cows,
                 "n_splits": 0,
                 "cv_unavailable": True,
