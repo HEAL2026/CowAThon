@@ -789,6 +789,15 @@ class TestS12Payloads(unittest.TestCase):
         s2_dyn = next(s for s in p_dyn["resting_spots"] if s["spot_id"] == "spot_02")
         self.assertEqual(s2_dyn["n_flagged"], 0)
 
+    def test_pen_map_lookback_hours_default_72h(self):
+        """Verifies default lookback window is 72h per docs/backtrace_spec.md §3.1."""
+        import inspect
+        sig_pm = inspect.signature(generate_pen_map)
+        self.assertEqual(sig_pm.parameters["lookback_hours"].default, 72)
+
+        sig_gpm = inspect.signature(get_pen_map_data)
+        self.assertEqual(sig_gpm.parameters["lookback_hours"].default, 72)
+
 
 if __name__ == "__main__":
     unittest.main()

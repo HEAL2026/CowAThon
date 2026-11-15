@@ -277,7 +277,7 @@ Exposes system modularity, capability profiles, and cost metrics for small-farm 
 ### 3.7 2D Pen Map (`/api/pen-map` or `pen_map.json`)
 Visualizes pen layout, resting density heatmap generated from lying bouts (duration >= 20 min), cubicle-level resting spots layer (5 canonical spots on `y ≈ 0` centered: `spot_01`..`spot_05`, radius 1.5m, carrying `n_flagged` and forward `successors` per `docs/backtrace_spec.md §3.2 & §6`), contact event overlays, flagged cows, and exposed cows shaded by continuous exposure score.
 
-`n_flagged`, `flagged_cows`, and `dwell_min_by_flagged` are scoped to the infectious lookback window (`[ts_utc - lookback_hours, ts_utc]`, default 48h) per spec §4 Step 1, avoiding lifetime saturation and enabling highlight tiering (`n_flagged >= 2` strong highlight).
+`n_flagged`, `flagged_cows`, and `dwell_min_by_flagged` are scoped to the infectious lookback window (`[ts_utc - lookback_hours, ts_utc]`, default 72h per spec §3.1 fallback when `onset_utc` is absent: `flagged_at - 72 h`). Highlight tiering in the UI is driven by continuous `dwell_min_by_flagged` and `n_flagged >= 2` for shared spots.
 
 ```json
 {
