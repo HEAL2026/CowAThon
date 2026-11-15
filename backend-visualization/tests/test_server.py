@@ -2,11 +2,19 @@
 Unit and integration tests for backend-visualization HTTP API server.
 """
 
+import os
+import sys
 import json
 import threading
 import unittest
+from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import HTTPError
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for p in [REPO_ROOT / "backend-visualization", REPO_ROOT / "backend-cleaning", REPO_ROOT / "apis"]:
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
 from visualization.server import create_server, VisualizationAPIHandler
 

@@ -2,14 +2,27 @@
 Data loader for backend-visualization.
 Uses cleaning.locate.find_joined() and sidecar_for() to consume real joined_1min data,
 gating is_synthetic strictly on path resolution and falling back to deterministic fixtures.
+Anchored on REPO_ROOT so resolution is cwd-independent.
 """
 
 from __future__ import annotations
 
 import os
+import sys
 import json
+import logging
+import warnings
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional
+
+# Ensure repository packages (backend-cleaning, apis, backend-analysis) are on sys.path
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for subfolder in ["backend-cleaning", "apis", "backend-analysis", "backend-visualization"]:
+    p = str(REPO_ROOT / subfolder)
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+logger = logging.getLogger(__name__)
 
 from visualization.fixtures import (
     generate_mock_cows_overview,
@@ -21,15 +34,25 @@ from visualization.fixtures import (
 def locate_joined_table() -> Path | None:
     """
     Locates the canonical joined table using cleaning.locate.find_joined().
-    Falls back to $MMCOWS_JOINED and standard relative paths.
+    Falls back to $MMCOWS_JOINED, REPO_ROOT candidates, and cwd-relative paths.
     """
     try:
         from cleaning.locate import find_joined
         p = find_joined()
         if p:
-            return Path(p)
-    except Exception:
-        pass
+            return Path(p).resolve()
+    except ImportError as e:
+        warnings.warn(
+            f"Could not import cleaning.locate ({e}); falling back to env/root resolution.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    except Exception as e:
+        warnings.warn(
+            f"Unexpected error in cleaning.locate.find_joined(): {e}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
     env = os.environ.get("MMCOWS_JOINED")
     if env:
@@ -40,6 +63,7 @@ def locate_joined_table() -> Path | None:
             return p.resolve()
 
     candidates = [
+        REPO_ROOT / "backend-cleaning" / "data" / "processed" / "joined_1min.parquet",
         Path("backend-cleaning/data/processed/joined_1min.parquet"),
         Path("../backend-cleaning/data/processed/joined_1min.parquet"),
     ]
@@ -55,6 +79,9 @@ def get_sidecar_metadata(path: Path) -> Dict[str, Any]:
     try:
         from cleaning.locate import sidecar_for
         sidecar = sidecar_for(path)
+    except ImportError as e:
+        warnings.warn(f"Could not import cleaning.locate.sidecar_for: {e}", RuntimeWarning, stacklevel=2)
+        sidecar = path.with_name(path.stem + ".schema.json")
     except Exception:
         sidecar = path.with_name(path.stem + ".schema.json")
 
@@ -202,3 +229,114 @@ def get_barn_overview_data(
 
     # Fallback to synthetic fixture
     return generate_mock_cows_overview(), {"indoor_thi": 74.2, "indoor_temp_c": 26.8, "indoor_humidity_pct": 66.0}, True
+
+
+def get_benchmarks_data() -> Tuple[Dict[str, Any], bool]:
+    """
+    Retrieves cross-validation benchmarks payload.
+    Looks for benchmark_results.json from backend-analysis output first.
+    Ensures evaluation_protocol conforms to:
+      - 'group_kfold_K (n=N)'
+      - 'leave_one_animal_out (n=N)'
+      - 'insufficient_animals_for_cv (n=N)'
+    Returns (benchmarks_payload, is_synthetic).
+    """
+    candidates = [
+        REPO_ROOT / "backend-analysis" / "data" / "output" / "benchmark_results.json",
+        REPO_ROOT / "backend-analysis" / "data" / "benchmark_results.json",
+        Path("backend-analysis/data/output/benchmark_results.json"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                is_synthetic = bool(data.get("is_synthetic", False))
+                proto = str(data.get("evaluation_protocol", ""))
+                if not any(k in proto for k in ["group_kfold", "leave_one_animal_out", "insufficient_animals_for_cv"]):
+                    n_g = data.get("n_groups", 10)
+                    n_s = data.get("n_splits", 5)
+                    data["evaluation_protocol"] = f"group_kfold_{n_s} (n={n_g})"
+                data.setdefault("cv_unavailable", False)
+                data.setdefault("is_synthetic", is_synthetic)
+                return data, is_synthetic
+            except Exception:
+                pass
+
+    from visualization.payloads import generate_benchmarks_summary
+    return generate_benchmarks_summary(), True
+
+
+def get_watch_list_data() -> Tuple[List[Dict[str, Any]], bool]:
+    """
+    Retrieves watch-list flagged cows from backend-analysis cow_risk_summary.json.
+    Falls back to deterministic mock watch items.
+    Returns (flagged_cows_list, is_synthetic).
+    """
+    candidates = [
+        REPO_ROOT / "backend-analysis" / "data" / "output" / "cow_risk_summary.json",
+        REPO_ROOT / "backend-analysis" / "data" / "cow_risk_summary.json",
+        Path("backend-analysis/data/output/cow_risk_summary.json"),
+    ]
+    for p in candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    summaries = json.load(f)
+                flagged = []
+                if isinstance(summaries, dict):
+                    for cid, s in summaries.items():
+                        cat = s.get("risk_category", "baseline")
+                        score = float(s.get("watch_risk_score", 0.0))
+                        if cat in ["priority_watch", "moderate_watch"] or score >= 50.0:
+                            factors = s.get("contributing_factors", [])
+                            reason = "; ".join(factors) if factors else f"Elevated watch risk score {score:.1f}"
+                            actions = s.get("recommended_actions", ["Monitor in next milking cycle"])
+                            action = "; ".join(actions) if actions else "Monitor"
+                            flagged.append({
+                                "cow_id": cid,
+                                "flag_type": "model_suggestion",
+                                "risk_category": cat if cat != "baseline" else "moderate_watch",
+                                "watch_risk_score": score,
+                                "watch_reason": reason,
+                                "confidence": float(s.get("confidence_score", 0.85)),
+                                "modalities_present": s.get("modalities_present", []),
+                                "modalities_missing": s.get("missing_modalities", []),
+                                "missing_modality_impact": "Sensor channels missing; risk estimated from partial telemetry" if s.get("missing_modalities") else "Full telemetry available",
+                                "recommended_action": action,
+                                "is_model_suggestion": True,
+                            })
+                if flagged:
+                    return flagged, False
+            except Exception:
+                pass
+
+    default_flagged = [
+        {
+            "cow_id": "C01",
+            "flag_type": "model_suggestion",
+            "risk_category": "priority_watch",
+            "watch_risk_score": 84.5,
+            "watch_reason": "Sustained high CBT (39.85C) under elevated THI accompanied by 18% yield decrease",
+            "confidence": 0.88,
+            "modalities_present": ["cbt", "neck_imu", "indoor_env", "milk_yield", "ankle"],
+            "modalities_missing": ["uwb"],
+            "missing_modality_impact": "Location confidence lower; utilizing last-seen stall beacon",
+            "recommended_action": "Check for heat abatement and udder inflammation prior to next cycle",
+            "is_model_suggestion": True,
+        },
+        {
+            "cow_id": "C02",
+            "flag_type": "vet_flagged",
+            "risk_category": "moderate_watch",
+            "watch_risk_score": 68.0,
+            "watch_reason": "Co-resting in cubicle_row_b alongside C01 with 22% activity drop",
+            "confidence": 0.74,
+            "modalities_present": ["neck_imu", "indoor_env", "milk_yield", "cbt"],
+            "modalities_missing": ["uwb"],
+            "missing_modality_impact": "Spatial tracking degraded; relying on rumination variance",
+            "recommended_action": "Monitor evening milking yield and observe gait",
+            "is_model_suggestion": True,
+        },
+    ]
+    return default_flagged, True

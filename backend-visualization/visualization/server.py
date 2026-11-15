@@ -3,12 +3,22 @@ Zero-dependency HTTP server for backend-visualization API endpoints.
 Enables frontend clients to fetch view payloads with CORS support.
 """
 
+import os
+import sys
 import json
 import re
 import argparse
+from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 from typing import Tuple, Dict, Any, Optional
+
+# Ensure repository packages are resolvable regardless of cwd
+REPO_ROOT = Path(__file__).resolve().parents[2]
+for subfolder in ["backend-cleaning", "apis", "backend-analysis", "backend-visualization"]:
+    p = str(REPO_ROOT / subfolder)
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from visualization.payloads import (
     generate_barn_overview,
@@ -26,6 +36,8 @@ from visualization.fixtures import (
 from visualization.data_loader import (
     get_barn_overview_data,
     get_cow_timeseries_data,
+    get_benchmarks_data,
+    get_watch_list_data,
 )
 
 
@@ -84,36 +96,15 @@ class VisualizationAPIHandler(BaseHTTPRequestHandler):
             return 200, generate_milking_stalls()
 
         if path == "/api/watch-list":
-            flagged = [
-                {
-                    "cow_id": "C01",
-                    "flag_type": "model_suggestion",
-                    "risk_category": "priority_watch",
-                    "watch_risk_score": 84.5,
-                    "watch_reason": "Sustained high CBT (39.85C) under elevated THI accompanied by 18% yield decrease",
-                    "confidence": 0.88,
-                    "modalities_present": ["cbt", "neck_imu", "indoor_env", "milk_yield", "ankle"],
-                    "modalities_missing": ["uwb"],
-                    "missing_modality_impact": "Location confidence lower; utilizing last-seen stall beacon",
-                    "recommended_action": "Check for heat abatement and udder inflammation prior to next cycle",
-                },
-                {
-                    "cow_id": "C02",
-                    "flag_type": "vet_flagged",
-                    "risk_category": "moderate_watch",
-                    "watch_risk_score": 68.0,
-                    "watch_reason": "Co-resting in cubicle_row_b alongside C01 with 22% activity drop",
-                    "confidence": 0.74,
-                    "modalities_present": ["neck_imu", "indoor_env", "milk_yield", "cbt"],
-                    "modalities_missing": ["uwb"],
-                    "missing_modality_impact": "Spatial tracking degraded; relying on rumination variance",
-                    "recommended_action": "Monitor evening milking yield and observe gait",
-                },
-            ]
-            return 200, generate_watch_list(flagged)
+            flagged, is_synth = get_watch_list_data()
+            payload = generate_watch_list(flagged)
+            payload["is_synthetic"] = is_synth
+            return 200, payload
 
         if path == "/api/benchmarks":
-            return 200, generate_benchmarks_summary()
+            payload, is_synth = get_benchmarks_data()
+            payload["is_synthetic"] = is_synth
+            return 200, payload
 
         if path == "/api/integrations":
             return 200, generate_integrations_feasibility()
