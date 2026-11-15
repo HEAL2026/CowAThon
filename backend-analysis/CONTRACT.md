@@ -95,6 +95,22 @@ Dictionary keyed by `cow_id`:
   "watch_risk_score": 74.5,
   "risk_category": "priority_watch",
   "confidence_score": 0.92,
+  "health_index": 72.5,
+  "vitality_tier": "stable_monitoring",
+  "vitality_components": {
+    "thermal_vitality": 18.0,
+    "behavior_vitality": 17.5,
+    "activity_vitality": 19.0,
+    "production_vitality": 18.0
+  },
+  "acute_mastitis_risk": 34.2,
+  "mastitis_rule_score": 38.0,
+  "mastitis_anomaly_score": 28.5,
+  "mastitis_top_signals": [
+    "Daily Milk Yield Kg depressed (z=-1.4)"
+  ],
+  "baseline_tier": "own_history",
+  "baseline_confidence": 0.92,
   "metrics": {
     "cbt_c": 39.85,
     "cbt_strain_score": 26.2,
@@ -120,8 +136,35 @@ Dictionary keyed by `cow_id`:
     "Inspect water availability and intake",
     "Queue for closer observation at next milking"
   ],
-  "is_model_suggestion": true
+  "is_model_suggestion": true,
+  "is_synthetic": false
 }
+```
+
+### 4.2 Auto-Flags Schema (`auto_flags.json`)
+List of triggered auto-flags when `acute_mastitis_risk >= 70.0`:
+```json
+[
+  {
+    "cow_id": "C02",
+    "flag_type": "auto_mastitis_watch",
+    "risk_score": 78.4,
+    "rule_score": 75.0,
+    "anomaly_score": 83.5,
+    "threshold": 70.0,
+    "top_contributing_signals": [
+      "Conductivity Max elevated (z=+3.2)",
+      "Daily Milk Yield Kg depressed (z=-2.8)",
+      "Cbt Mean elevated (z=+2.6)"
+    ],
+    "recommended_actions": [
+      "Perform California Mastitis Test (CMT) & foremilk check at next milking",
+      "Inspect udder quarter swelling, heat, or abnormal milk consistency",
+      "Log observation in farm health event records"
+    ],
+    "is_model_suggestion": true
+  }
+]
 ```
 
 ### 4.2 Benchmark Results Schema (`benchmark_results.json`)

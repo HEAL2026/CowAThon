@@ -184,23 +184,35 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
     if not args.quiet:
         cow_summaries = result["cow_summaries"]
         benchmarks = result["benchmarks"]
-        print("\n" + "=" * 70)
-        print(" MMCows Multi-Modal Pipeline Run Complete")
+        auto_flags = result.get("auto_flags", [])
+        print("\n" + "=" * 80)
+        print(" MMCows Multi-Modal Dairy Health & Mastitis Risk Pipeline Run")
         print(f" Data Source: {'Real MMCows Parquet' if not is_synthetic else 'Synthetic Fixture Fallback'}")
         print(f" Entities Analyzed: {len(cow_summaries)} | Output Directory: {out_dir}")
-        print("=" * 70)
+        print("=" * 80)
 
-        header = f"{'Cow ID':<8} {'Risk Score':<12} {'Category':<16} {'Confidence':<12} {'Posture State':<16}"
+        header = f"{'Cow ID':<8} {'Watch Risk':<12} {'Health Idx':<12} {'Mastitis':<12} {'Baseline Tier':<16} {'Category':<16}"
         print(header)
         print("-" * len(header))
         for cid, summary in sorted(cow_summaries.items()):
             score = summary.get("watch_risk_score", 0.0)
             category = summary.get("risk_category", "unknown")
-            conf = summary.get("confidence_score", 0.0)
-            posture = summary.get("metrics", {}).get("posture_state", "unknown")
-            print(f"{cid:<8} {score:<12.1f} {category:<16} {conf:<12.2f} {posture:<16}")
+            h_idx = summary.get("health_index")
+            h_str = f"{h_idx:.1f}" if h_idx is not None else "N/A"
+            m_risk = summary.get("acute_mastitis_risk", 0.0)
+            b_tier = summary.get("baseline_tier", "none")
+            print(f"{cid:<8} {score:<12.1f} {h_str:<12} {m_risk:<12.1f} {b_tier:<16} {category:<16}")
+
+        if auto_flags:
+            print("\nTriggered Auto-Flags (Mastitis Risk >= 70.0):")
+            for flag in auto_flags:
+                cid = flag["cow_id"]
+                risk = flag["risk_score"]
+                signals = "; ".join(flag["top_contributing_signals"][:2])
+                print(f"  [AUTO-FLAG] Cow {cid}: Risk = {risk:.1f} | Signals: {signals}")
 
         print("\nAnimal-Disjoint Cross-Validation Benchmarks (ROC-AUC):")
+        print(f"  Protocol: {benchmarks.get('evaluation_protocol', 'unknown')}")
         baselines = benchmarks.get("baselines", {})
         multimodal = benchmarks.get("multimodal_model", {})
         for name, b_info in baselines.items():
@@ -218,7 +230,7 @@ def run_cli(args_list: Optional[Sequence[str]] = None) -> int:
             print(f"  - Ankle Concordance   : {gt_val.get('ankle_sensor_ground_truth_concordance', 0.0):.2%}")
             posture_acc = gt_val.get("imu_posture_model", {}).get("accuracy", 0.0)
             print(f"  - IMU Posture Accuracy: {posture_acc:.2%}")
-        print("=" * 70 + "\n")
+        print("=" * 80 + "\n")
 
     return 0
 
