@@ -93,13 +93,21 @@ class TestBehavior(unittest.TestCase):
         self.assertAlmostEqual(rum.iloc[1], 0.0, delta=0.1)
 
     def test_rumination_proxy_with_classifier(self):
-        # Conflicting active behaviors (feed_down, feed_up, walking, standing) suppress rumination proxy
+        # Conflicting active locomotive/oral behaviors (feed_down, feed_up, walking, drinking, licking) suppress rumination
         df_active = pd.DataFrame({
             "activity_index": [0.12],  # In resting band, but behavior classifier identifies feed_down
             "behavior_name": ["feed_down"],
         })
         rum_suppressed = calculate_rumination_proxy(df_active)
         self.assertLess(rum_suppressed.iloc[0], 25.0)
+
+        # Standing rumination is preserved: standing does not suppress score
+        df_standing = pd.DataFrame({
+            "activity_index": [0.12],  # In rhythmic rumination band
+            "behavior_name": ["standing"],
+        })
+        rum_standing = calculate_rumination_proxy(df_standing)
+        self.assertGreaterEqual(rum_standing.iloc[0], 85.0)
 
         # Classified lying state supports the resting rumination window
         df_lying = pd.DataFrame({
@@ -108,6 +116,15 @@ class TestBehavior(unittest.TestCase):
         })
         rum_lying = calculate_rumination_proxy(df_lying)
         self.assertGreaterEqual(rum_lying.iloc[0], 95.0)
+
+        # Dual sensor concordance (ankle lying + classifier lying) applies explicit 1.15x boost
+        df_concordant = pd.DataFrame({
+            "activity_index": [0.12],
+            "lying": [1],
+            "behavior_name": ["lying"],
+        })
+        rum_dual = calculate_rumination_proxy(df_concordant)
+        self.assertAlmostEqual(rum_dual.iloc[0], 100.0, delta=1.0)
 
     def test_behavior_anomaly_score(self):
         df = pd.DataFrame({

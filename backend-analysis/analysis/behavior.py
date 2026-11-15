@@ -151,11 +151,15 @@ def calculate_rumination_proxy(
     """Estimate rumination index (0 - 100) from neck-mounted IMU patterns and behavior predictions.
 
     Rumination occurs predominantly during resting/lying windows in the 0.08 - 0.22 m/s² band.
+    Standing rumination is also physiological and preserved (standing does not suppress score).
+
     When trained classifier predictions are available (MMCows 8-class vocabulary):
-    - MMCows contains no labelled rumination class; rumination remains IMU-rhythm based.
-    - Conflicting active behaviors ('walking', 'standing', 'feed_up', 'feed_down', 'licking', 'drinking')
-      strongly suppress the rumination proxy (x 0.15).
-    - Classified lying (7, 'lying') supports the resting rumination window (x 1.10).
+    - Conflicting locomotive and oral behaviors ('walking', 'feed_up', 'feed_down', 'licking', 'drinking')
+      strongly suppress the rumination proxy (x 0.15). Standing is neutral.
+    - Posture concordance combines ankle lying sensor and collar classifier:
+      * Both agree on lying: x 1.15 boost
+      * Single sensor indicates lying: x 1.05 boost
+      * Upright / standing (neither lying): x 0.90
     """
     if activity_col in df.columns:
         act = df[activity_col]
@@ -166,24 +170,43 @@ def calculate_rumination_proxy(
     rhythm_score = np.exp(-((act - 0.12) ** 2) / (2 * (0.04**2))) * 100.0
     rumination_score = np.where(in_resting_zone, rhythm_score, 0.0)
 
-    # Ankle lying sensor concordance
-    if lying_col in df.columns:
-        is_lying = df[lying_col].fillna(0).astype(int) == 1
-        rumination_score = np.where(is_lying, rumination_score * 1.10, rumination_score * 0.90)
+    # 1. Posture determination (ankle sensor and/or classifier)
+    has_ankle = lying_col in df.columns
+    ankle_lying = (df[lying_col].fillna(0).astype(int) == 1).values if has_ankle else None
 
-    # Trained behavior classifier integration
-    if behavior_name_col in df.columns:
+    has_clf = False
+    clf_lying = None
+    is_active_conflict = None
+
+    if behavior_name_col in df.columns and df[behavior_name_col].notna().any():
+        has_clf = True
         b_name = df[behavior_name_col].fillna("").astype(str).str.lower().values
-        is_active_conflict = np.isin(b_name, ["walking", "standing", "feed_up", "feed_down", "licking", "drinking"])
-        is_clf_lying = (b_name == "lying")
-        rumination_score = np.where(is_active_conflict, rumination_score * 0.15, rumination_score)
-        rumination_score = np.where(is_clf_lying, rumination_score * 1.10, rumination_score)
-    elif behavior_col in df.columns:
+        clf_lying = (b_name == "lying")
+        # Walking, feeding (head up/down), licking, drinking preclude rumination; standing is neutral
+        is_active_conflict = np.isin(b_name, ["walking", "feed_up", "feed_down", "licking", "drinking"])
+    elif behavior_col in df.columns and df[behavior_col].notna().any():
+        has_clf = True
         b_code = df[behavior_col].fillna(0).astype(int).values
-        is_active_conflict = np.isin(b_code, [1, 2, 3, 4, 5, 6])
-        is_clf_lying = (b_code == 7)
+        clf_lying = (b_code == 7)
+        # 1: walking, 3: feed_up, 4: feed_down, 5: licking, 6: drinking preclude rumination; 2: standing is neutral
+        is_active_conflict = np.isin(b_code, [1, 3, 4, 5, 6])
+
+    # Explicit, non-compounding posture modulation
+    if has_ankle and has_clf and ankle_lying is not None and clf_lying is not None:
+        posture_mult = np.where(
+            ankle_lying & clf_lying,
+            1.15,
+            np.where(ankle_lying | clf_lying, 1.05, 0.90),
+        )
+        rumination_score = rumination_score * posture_mult
+    elif has_ankle and ankle_lying is not None:
+        rumination_score = np.where(ankle_lying, rumination_score * 1.10, rumination_score * 0.90)
+    elif has_clf and clf_lying is not None:
+        rumination_score = np.where(clf_lying, rumination_score * 1.10, rumination_score * 0.90)
+
+    # 2. Active behavior conflict suppression
+    if is_active_conflict is not None:
         rumination_score = np.where(is_active_conflict, rumination_score * 0.15, rumination_score)
-        rumination_score = np.where(is_clf_lying, rumination_score * 1.10, rumination_score)
 
     return pd.Series(
         np.clip(rumination_score, 0.0, 100.0),
