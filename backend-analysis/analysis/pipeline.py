@@ -26,6 +26,10 @@ from .behavior import (
 )
 from .risk_scorer import MultimodalRiskScorer
 from .baselines import evaluate_baselines_vs_multimodal
+from .cow_day_features import aggregate_cow_day_features
+from .tiered_baselines import compute_tiered_baselines
+from .health_index import compute_health_index
+from .mastitis_risk import evaluate_acute_mastitis_risk
 
 
 def run_analysis_pipeline(
@@ -93,22 +97,57 @@ def run_analysis_pipeline(
     df_proc["risk_category"] = scored_df["risk_category"]
     df_proc["confidence_score"] = scored_df["confidence_score"]
 
-    # 5. Group Summaries per Animal (Latest Status)
+    # 5. Daily Aggregation, Tiered Baselines, Health Index & Acute Mastitis Risk (S5–S7)
+    cow_day_df = aggregate_cow_day_features(df_proc)
+    live_cow_days = (
+        cow_day_df[~cow_day_df["is_stationary_hardware"]].copy()
+        if "is_stationary_hardware" in cow_day_df.columns
+        else cow_day_df
+    )
+    baselines_by_cow = compute_tiered_baselines(pd.DataFrame(), live_cow_days)
+
+    auto_flags: list[dict[str, Any]] = []
+
+    # 6. Group Summaries per Animal (Latest Status)
     cow_summaries: dict[str, Any] = {}
     for cow_id, group in df_proc.groupby("cow_id"):
+        cid = str(cow_id)
         latest_row = group.sort_values("ts_utc").iloc[-1]
         score_info = scorer.score_record(latest_row)
 
         cbt_val = latest_row.get("cbt_c") if latest_row.get("cbt_c") is not None else latest_row.get("cbt")
         thi_val = latest_row.get("indoor_thi") if latest_row.get("indoor_thi") is not None else latest_row.get("thi")
         milk_val = latest_row.get("milk_yield_kg") if latest_row.get("milk_yield_kg") is not None else latest_row.get("milk_yield")
+        is_hw = bool(latest_row.get("is_stationary_hardware", False))
 
-        cow_summaries[str(cow_id)] = {
-            "cow_id": str(cow_id),
+        c_base = baselines_by_cow.get(cid, {})
+        h_info = compute_health_index(c_base) if not is_hw else {"health_index": None, "vitality_tier": "hardware", "components": {}}
+        m_info = evaluate_acute_mastitis_risk(c_base, all_cows_baseline_info=baselines_by_cow) if not is_hw else {
+            "mastitis_risk": 0.0,
+            "rule_score": 0.0,
+            "anomaly_score": 0.0,
+            "top_contributing_signals": ["Stationary reference hardware tag"],
+            "auto_flag": None,
+        }
+
+        if m_info.get("auto_flag"):
+            auto_flags.append(m_info["auto_flag"])
+
+        cow_summaries[cid] = {
+            "cow_id": cid,
             "latest_ts_utc": str(latest_row.get("ts_utc", "")),
             "watch_risk_score": score_info["watch_risk_score"],
             "risk_category": score_info["risk_category"],
             "confidence_score": score_info["confidence_score"],
+            "health_index": h_info["health_index"],
+            "vitality_tier": h_info["vitality_tier"],
+            "vitality_components": h_info["components"],
+            "acute_mastitis_risk": m_info["mastitis_risk"],
+            "mastitis_rule_score": m_info["rule_score"],
+            "mastitis_anomaly_score": m_info["anomaly_score"],
+            "mastitis_top_signals": m_info["top_contributing_signals"],
+            "baseline_tier": c_base.get("primary_baseline_tier", "literature_prior") if not is_hw else "none",
+            "baseline_confidence": c_base.get("overall_baseline_confidence", 0.0) if not is_hw else 0.0,
             "metrics": {
                 "cbt_c": round(float(cbt_val), 2) if cbt_val is not None and not pd.isna(cbt_val) else None,
                 "cbt_strain_score": round(float(latest_row.get("cbt_strain_score", 0.0)), 1),
@@ -120,7 +159,7 @@ def run_analysis_pipeline(
                 "daily_milk_yield_kg": round(float(milk_val), 1) if milk_val is not None and not pd.isna(milk_val) else None,
                 "milk_drop_pct": round(float(latest_row.get("milk_drop_pct", 0.0)), 1),
                 "out_of_pen": bool(latest_row.get("out_of_pen", False)),
-                "is_stationary_hardware": bool(latest_row.get("is_stationary_hardware", False)),
+                "is_stationary_hardware": is_hw,
             },
             "modalities_present": score_info["modalities_present"],
             "missing_modalities": score_info["missing_modalities"],
@@ -130,7 +169,7 @@ def run_analysis_pipeline(
             "is_synthetic": is_synthetic,
         }
 
-    # 6. Animal-Disjoint Cross-Validation Benchmarks (filter out hardware tags from model CV)
+    # 7. Animal-Disjoint Cross-Validation Benchmarks (filter out hardware tags from model CV)
     cv_df = df_proc.loc[~df_proc["is_stationary_hardware"]].copy() if "is_stationary_hardware" in df_proc.columns else df_proc
     n_live_cows = int(cv_df["cow_id"].nunique()) if "cow_id" in cv_df.columns else 0
 
@@ -200,6 +239,10 @@ def run_analysis_pipeline(
         with open(summary_file, "w", encoding="utf-8") as f:
             json.dump(cow_summaries, f, indent=2)
 
+        flags_file = out_path / "auto_flags.json"
+        with open(flags_file, "w", encoding="utf-8") as f:
+            json.dump(auto_flags, f, indent=2)
+
         benchmark_file = out_path / "benchmark_results.json"
         with open(benchmark_file, "w", encoding="utf-8") as f:
             json.dump(benchmarks, f, indent=2)
@@ -207,8 +250,15 @@ def run_analysis_pipeline(
         timeseries_file = out_path / "analyzed_timeseries.parquet"
         df_proc.to_parquet(timeseries_file, index=False)
 
+        if len(cow_day_df) > 0:
+            cow_day_file = out_path / "cow_day_features.parquet"
+            cow_day_df.to_parquet(cow_day_file, index=False)
+
     return {
         "cow_summaries": cow_summaries,
+        "auto_flags": auto_flags,
         "benchmarks": benchmarks,
         "analyzed_df": df_proc,
+        "cow_day_df": cow_day_df,
+        "tiered_baselines": baselines_by_cow,
     }
